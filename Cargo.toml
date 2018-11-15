@@ -1,0 +1,15 @@
+[package]
+name = "cinit"
+version = "0.1.0"
+authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
+           "Jan Veen <jan.veen@posteo.de>"]
+
+[dependencies]
+clap = "~2.27.0"
+log = "0.4"
+simple_logger = "1.0.1"
+serde = "1.0.80"
+serde_derive = "1.0"
+serde_yaml = "0.8.7"
+
+[dev-dependencies]
