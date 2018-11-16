@@ -5,6 +5,7 @@ extern crate simple_logger;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_yaml;
+extern crate nix;
 
 mod cli_parser;
 mod config;
@@ -30,6 +31,8 @@ fn main() {
 
     info!("Perform analysis on programs");
     let mut manager = runtime::process::ProcessManager::from(process_tree);
+
+    debug!("Manager dump: {:?}", manager);
 
     manager.start();
 }
