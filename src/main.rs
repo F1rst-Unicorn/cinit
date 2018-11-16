@@ -31,8 +31,6 @@ fn main() {
     info!("Perform analysis on programs");
     let mut manager = runtime::process::ProcessManager::from(process_tree);
 
-    debug!("Manager dump: {:?}", manager);
-
     manager.start();
 }
 
