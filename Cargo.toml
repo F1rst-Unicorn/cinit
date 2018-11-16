@@ -3,6 +3,9 @@ name = "cinit"
 version = "0.1.0"
 authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
            "Jan Veen <jan.veen@posteo.de>"]
+description = "init daemon for other programs, suitable for containers"
+
+license-file = "LICENSE"
 
 [dependencies]
 clap = "~2.27.0"
@@ -12,4 +15,3 @@ serde = "1.0.80"
 serde_derive = "1.0"
 serde_yaml = "0.8.7"
 
-[dev-dependencies]

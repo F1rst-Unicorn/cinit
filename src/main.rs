@@ -7,30 +7,35 @@ extern crate serde_derive;
 extern crate serde_yaml;
 
 mod cli_parser;
-mod config_parser;
-mod process_tree;
+mod config;
+mod runtime;
 
 use log::Level;
+use config::config_parser;
 
 fn main() {
 
     let arguments = cli_parser::parse_arguments();
-    initialise_log(&arguments);
+    initialise_log(arguments.is_present(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
 
-    let config_path = arguments.value_of("config").unwrap();
+    let config_path = arguments.value_of(cli_parser::FLAG_CONFIG)
+            .expect("Missing default value in cli_parser");
     info!("Config is at {}", config_path );
 
+    info!("Parsing config");
     let process_tree = config_parser::parse_config(config_path);
     debug!("Config dump: {:?}", process_tree);
-    info!("Config parsed, starting children");
 
-    process_tree.start();
+    info!("Perform analysis on programs");
+    let mut manager = runtime::process::ProcessManager::from(process_tree);
+
+    manager.start();
 }
 
-fn initialise_log(arguments: &clap::ArgMatches) {
-    if arguments.is_present("verbose") {
+fn initialise_log(verbose: bool) {
+    if verbose {
         simple_logger::init_with_level(Level::Trace).unwrap();
     } else {
         simple_logger::init_with_level(Level::Info).unwrap();

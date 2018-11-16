@@ -6,16 +6,16 @@ use std::io;
 
 use serde_yaml;
 
-use process_tree::ProcessTree;
+use config::process_tree::Config;
 
 
-pub fn parse_config(path: &str) -> ProcessTree {
+pub fn parse_config(path: &str) -> Config {
     debug!("Complete configuration:");
     read_config(path)
 }
 
 
-pub fn read_config(path: &str) -> ProcessTree {
+pub fn read_config(path: &str) -> Config {
     let metadata_result = fs::metadata(path);
 
     if metadata_result.is_err() {
@@ -25,7 +25,7 @@ pub fn read_config(path: &str) -> ProcessTree {
         exit(1);
     }
 
-    let mut configuration: ProcessTree;
+    let mut configuration: Config;
     let metadata = metadata_result.unwrap();
 
     if metadata.file_type().is_dir() {
@@ -38,7 +38,7 @@ pub fn read_config(path: &str) -> ProcessTree {
             exit(1);
         }
 
-        configuration = ProcessTree::new();
+        configuration = Config::new();
 
         for entry in content.unwrap() {
             if entry.is_err() {
@@ -64,13 +64,13 @@ pub fn read_config(path: &str) -> ProcessTree {
         }
     } else {
         warn!("Ignoring file {}", path);
-        configuration = ProcessTree::new();
+        configuration = Config::new();
     }
 
     configuration
 }
 
-pub fn read_file(file_path: &str) -> Result<ProcessTree, io::Error> {
+pub fn read_file(file_path: &str) -> Result<Config, io::Error> {
     let mut file = File::open(file_path)?;
     let mut content = String::new();
     file.read_to_string(&mut content)?;
