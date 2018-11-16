@@ -27,7 +27,6 @@ fn main() {
 
     info!("Parsing config");
     let process_tree = config_parser::parse_config(config_path);
-    debug!("Config dump: {:?}", process_tree);
 
     info!("Perform analysis on programs");
     let mut manager = runtime::process::ProcessManager::from(process_tree);

@@ -11,8 +11,10 @@ use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
 use nix::sys::wait;
+use nix::unistd;
 use nix::unistd::Pid;
 use nix::unistd::read;
+use nix::unistd::fork;
 
 #[derive(Debug, PartialEq)]
 enum ProcessState {
@@ -42,8 +44,8 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn start(&mut self) {
-        self.description.start();
+    pub fn start(&mut self) -> Pid {
+        self.description.start()
     }
 }
 
@@ -89,9 +91,30 @@ impl ProcessDescription {
         }
     }
 
-    pub fn start(&mut self) {
-        self.state = ProcessState::Running;
+    pub fn start(&mut self) -> Pid {
         info!("Starting {}", self.name);
+
+        let fork_result = fork();
+
+        match fork_result {
+            Ok(unistd::ForkResult::Parent {child: child_pid}) => {
+                self.state = ProcessState::Running;
+                self.pid = child_pid;
+                child_pid
+            },
+            Ok(unistd::ForkResult::Child) => {
+                self.setup_child()
+            },
+            _ => {
+                error!("Forking failed");
+                exit(4)
+            }
+        }
+    }
+
+    fn setup_child(&mut self) -> ! {
+        unistd::sleep(3);
+        exit(0);
     }
 }
 
@@ -152,7 +175,7 @@ fn convert_env(env: &HashMap<String, Option<String>>) -> HashMap<String, String>
 
 #[derive(Debug)]
 pub struct ProcessNode {
-    after: Vec<usize>,
+    before: Vec<usize>,
 
     predecessor_count: usize,
 }
@@ -220,12 +243,16 @@ impl ProcessManager {
         }
 
         debug!("Entering poll loop");
-        while self.keep_running {
+        while self.keep_running &&
+                    (self.running_count != 0 ||
+                    self.runnable.len() != 0) {
+
             self.kick_off_children();
+            self.dispatch_epoll();
             self.handle_finished_children();
-            self.dispatch_epoll()
         }
 
+        self.handle_finished_children();
         info!("Exiting");
     }
 
@@ -255,7 +282,7 @@ impl ProcessManager {
             }
         }
 
-        for successor_index in self.processes[child_index].node_info.after.clone() {
+        for successor_index in self.processes[child_index].node_info.before.clone() {
             let mut successor = &mut self.processes[successor_index];
             successor.node_info.predecessor_count -= 1;
             if successor.node_info.predecessor_count == 0 {
@@ -367,7 +394,8 @@ impl ProcessManager {
     fn kick_off_children(&mut self) {
         while ! self.runnable.is_empty() {
             let child_index = self.runnable.pop_back().unwrap();
-            self.processes[child_index].start();
+            let child_pid = self.processes[child_index].start();
+            self.pid_dict.insert(child_pid, child_index);
             self.running_count += 1;
         }
     }
@@ -402,7 +430,7 @@ impl ProcessManager {
 
         for _ in 0..config.programs.len() {
             result.push(ProcessNode {
-                after: Vec::new(),
+                before: Vec::new(),
                 predecessor_count: 0,
             });
         }
@@ -411,25 +439,25 @@ impl ProcessManager {
             let current_index = name_dict.get(&process_config.name).expect("Invalid index in name_dict").clone();
             {
                 let mut current = result.get_mut(current_index).expect("Invalid index in name_dict");
-                for successor in &process_config.after {
-                    let dependant_index = name_dict.get(successor).expect("Invalid index in name_dict").clone();
-                    current.after.push(dependant_index);
+                for predecessor_name in &process_config.before {
+                    let predecessor_index = name_dict.get(predecessor_name).expect("Invalid index in name_dict").clone();
+                    current.before.push(predecessor_index);
                 }
 
-                current.predecessor_count += process_config.before.len();
+                current.predecessor_count += process_config.after.len();
 
             }
 
-            for successor in &process_config.after {
-                let dependant_index = name_dict.get(successor).expect("Invalid index in name_dict").clone();
-                let mut dependant = result.get_mut(dependant_index).expect("Invalid index in name_dict");
-                dependant.predecessor_count += 1;
+            for predecessor_name in &process_config.before {
+                let predecessor_index = name_dict.get(predecessor_name).expect("Invalid index in name_dict").clone();
+                let mut predecessor = result.get_mut(predecessor_index).expect("Invalid index in name_dict");
+                predecessor.predecessor_count += 1;
             }
 
-            for predecessor in &process_config.before {
+            for predecessor in &process_config.after {
                 let dependency_index = name_dict.get(predecessor).expect("Invalid index in name_dict").clone();
                 let mut dependency = result.get_mut(dependency_index).expect("Invalid index in name_dict");
-                dependency.after.push(current_index);
+                dependency.before.push(current_index);
             }
         }
 
