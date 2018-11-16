@@ -260,10 +260,14 @@ impl ProcessManager {
         let mut wait_args = wait::WaitPidFlag::empty();
         wait_args.insert(wait::WaitPidFlag::WNOHANG);
         while let Ok(status) = wait::waitpid(Pid::from_raw(0), Some(wait_args)) {
+            debug!("Got signal from child: {:?}", status);
             match status {
                 wait::WaitStatus::Exited(pid, rc) => {
                     self.handle_finished_child(&pid, rc)
                 },
+                wait::WaitStatus::StillAlive => {
+                    break;
+                }
                 _ => {}
             }
         }
