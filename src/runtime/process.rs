@@ -3,16 +3,16 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
-use config;
 use super::ioctl;
+use config;
 
 use nix;
 use nix::fcntl;
+use nix::pty;
+use nix::sys::termios;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
-use nix::sys::termios;
-use nix::pty;
 
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
@@ -148,10 +148,7 @@ impl ProcessDescription {
         let mut termios: termios::Termios;
 
         unsafe {
-            ioctl_result = ioctl::get_terminal_size(
-                stdin,
-                &mut winsize
-            );
+            ioctl_result = ioctl::get_terminal_size(stdin, &mut winsize);
         }
 
         if tcget_result.is_err() {
@@ -167,36 +164,29 @@ impl ProcessDescription {
                 ws_row: 24,
                 ws_col: 80,
                 ws_xpixel: 0,
-                ws_ypixel: 0
+                ws_ypixel: 0,
             };
         }
         termios.input_flags.insert(
-            termios::InputFlags::BRKINT |
-            termios::InputFlags::ICRNL |
-            termios::InputFlags::INPCK |
-            termios::InputFlags::ISTRIP |
-            termios::InputFlags::IXON
+            termios::InputFlags::BRKINT
+                | termios::InputFlags::ICRNL
+                | termios::InputFlags::INPCK
+                | termios::InputFlags::ISTRIP
+                | termios::InputFlags::IXON,
         );
         termios.output_flags.insert(termios::OutputFlags::OPOST);
         termios.local_flags.insert(
-            termios::LocalFlags::ECHO |
-            termios::LocalFlags::ICANON |
-            termios::LocalFlags::IEXTEN |
-            termios::LocalFlags::ISIG
+            termios::LocalFlags::ECHO
+                | termios::LocalFlags::ICANON
+                | termios::LocalFlags::IEXTEN
+                | termios::LocalFlags::ISIG,
         );
 
-        let stdout = pty::openpty(
-            Some(&winsize),
-            Some(&termios)
-        )?;
-        let stderr = pty::openpty(
-            Some(&winsize),
-            Some(&termios)
-        )?;
+        let stdout = pty::openpty(Some(&winsize), Some(&termios))?;
+        let stderr = pty::openpty(Some(&winsize), Some(&termios))?;
 
         info!("Pseudo terminals created");
-        Ok(((stdout.master, stdout.slave),
-            (stderr.master, stderr.slave)))
+        Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))
     }
 
     fn create_pipes(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
