@@ -3,13 +3,14 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
-use super::ioctl;
+use super::libc_helpers;
 use config;
 
 use nix;
 use nix::fcntl;
 use nix::pty;
 use nix::sys::termios;
+use nix::sys::stat;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
@@ -56,9 +57,9 @@ pub struct ProcessDescription {
 
     pub process_type: config::config::ProcessType,
 
-    pub uid: u32,
+    pub uid: unistd::Uid,
 
-    pub gid: u32,
+    pub gid: unistd::Gid,
 
     pub emulate_pty: bool,
 
@@ -119,13 +120,13 @@ impl ProcessDescription {
 
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
-        unistd::close(stdout)?;
-
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
+
+        unistd::close(stdout)?;
         unistd::close(stderr)?;
 
-        unistd::setuid(unistd::Uid::from_raw(self.uid))?;
-        unistd::setgid(unistd::Gid::from_raw(self.gid))?;
+        unistd::setuid(self.uid)?;
+        unistd::setgid(self.gid)?;
 
         unistd::execve(
             &CString::new(self.path.to_owned()).unwrap(),
@@ -148,7 +149,7 @@ impl ProcessDescription {
         let mut termios: termios::Termios;
 
         unsafe {
-            ioctl_result = ioctl::get_terminal_size(stdin, &mut winsize);
+            ioctl_result = libc_helpers::get_terminal_size(stdin, &mut winsize);
         }
 
         if tcget_result.is_err() {
@@ -184,6 +185,19 @@ impl ProcessDescription {
 
         let stdout = pty::openpty(Some(&winsize), Some(&termios))?;
         let stderr = pty::openpty(Some(&winsize), Some(&termios))?;
+
+        let stdout_name = libc_helpers::ttyname(stdout.slave)?;
+        let stderr_name = libc_helpers::ttyname(stderr.slave)?;
+
+        unistd::chown(stdout_name.to_bytes(), Some(self.uid), Some(self.gid))?;
+        unistd::chown(stderr_name.to_bytes(), Some(self.uid), Some(self.gid))?;
+
+        let mut mode = stat::Mode::empty();
+        mode.insert(stat::Mode::S_IRUSR);
+        mode.insert(stat::Mode::S_IWUSR);
+        mode.insert(stat::Mode::S_IWGRP);
+        stat::fchmod(stdout.slave, mode)?;
+        stat::fchmod(stderr.slave, mode)?;
 
         info!("Pseudo terminals created");
         Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))

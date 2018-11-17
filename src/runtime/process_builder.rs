@@ -4,6 +4,8 @@ use std::ffi::CString;
 use config;
 
 use nix::unistd::Pid;
+use nix::unistd::Uid;
+use nix::unistd::Gid;
 
 use super::process::{ProcessDescription, ProcessState};
 
@@ -14,8 +16,8 @@ impl ProcessDescription {
             path: config.path.to_owned(),
             args: Vec::new(),
             process_type: config.process_type,
-            uid: map_unix_name(&config.uid, &config.user, &config.name),
-            gid: map_unix_name(&config.gid, &config.group, &config.name),
+            uid: Uid::from_raw(map_unix_name(&config.uid, &config.user, &config.name)),
+            gid: Gid::from_raw(map_unix_name(&config.gid, &config.group, &config.name)),
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: convert_env(&config.env),
