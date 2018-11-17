@@ -5,14 +5,12 @@ use std::collections::VecDeque;
 use std::process::exit;
 
 use config::config::Config;
-use runtime::process::{Process, ProcessNode, ProcessDescription, ProcessState};
+use runtime::process::{Process, ProcessDescription, ProcessNode, ProcessState};
 
 use nix::sys::signalfd;
 
-
 impl ProcessManager {
     pub fn from(config: Config) -> ProcessManager {
-
         let descriptions = ProcessManager::copy_processes(&config);
 
         let name_dict = ProcessManager::build_name_dict(&descriptions);
@@ -74,27 +72,44 @@ impl ProcessManager {
         }
 
         for process_config in &config.programs {
-            let current_index = name_dict.get(&process_config.name).expect("Invalid index in name_dict").clone();
+            let current_index = name_dict
+                .get(&process_config.name)
+                .expect("Invalid index in name_dict")
+                .clone();
             {
-                let mut current = result.get_mut(current_index).expect("Invalid index in name_dict");
+                let mut current = result
+                    .get_mut(current_index)
+                    .expect("Invalid index in name_dict");
                 for predecessor_name in &process_config.before {
-                    let predecessor_index = name_dict.get(predecessor_name).expect("Invalid index in name_dict").clone();
+                    let predecessor_index = name_dict
+                        .get(predecessor_name)
+                        .expect("Invalid index in name_dict")
+                        .clone();
                     current.before.push(predecessor_index);
                 }
 
                 current.predecessor_count += process_config.after.len();
-
             }
 
             for predecessor_name in &process_config.before {
-                let predecessor_index = name_dict.get(predecessor_name).expect("Invalid index in name_dict").clone();
-                let mut predecessor = result.get_mut(predecessor_index).expect("Invalid index in name_dict");
+                let predecessor_index = name_dict
+                    .get(predecessor_name)
+                    .expect("Invalid index in name_dict")
+                    .clone();
+                let mut predecessor = result
+                    .get_mut(predecessor_index)
+                    .expect("Invalid index in name_dict");
                 predecessor.predecessor_count += 1;
             }
 
             for predecessor in &process_config.after {
-                let dependency_index = name_dict.get(predecessor).expect("Invalid index in name_dict").clone();
-                let mut dependency = result.get_mut(dependency_index).expect("Invalid index in name_dict");
+                let dependency_index = name_dict
+                    .get(predecessor)
+                    .expect("Invalid index in name_dict")
+                    .clone();
+                let mut dependency = result
+                    .get_mut(dependency_index)
+                    .expect("Invalid index in name_dict");
                 dependency.before.push(current_index);
             }
         }
@@ -123,6 +138,4 @@ impl ProcessManager {
         }
         result
     }
-
-
 }

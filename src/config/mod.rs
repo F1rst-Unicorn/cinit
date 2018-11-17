@@ -1,2 +1,2 @@
-pub mod config_parser;
 pub mod config;
+pub mod config_parser;

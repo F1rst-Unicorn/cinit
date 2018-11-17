@@ -1,36 +1,41 @@
-use std::process::exit;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
 use std::io;
+use std::io::Read;
+use std::process::exit;
 
 use serde_yaml;
 
 use config::config::Config;
 
-
 pub fn parse_config(path: &str) -> Config {
     let raw_config = read_config(path);
-    debug!("Complete configuration:\n{}",
-            raw_config.iter().flat_map(|s| s.chars()).collect::<String>());
+    debug!(
+        "Complete configuration:\n{}",
+        raw_config
+            .iter()
+            .flat_map(|s| s.chars())
+            .collect::<String>()
+    );
     parse_raw_config(raw_config)
 }
 
 fn parse_raw_config(raw_config: Vec<String>) -> Config {
-    raw_config.iter()
-            .map(|s| serde_yaml::from_str(s)
-                    .expect("Failed to parse config"))
-
-            .fold(Config::new(), Config::merge)
+    raw_config
+        .iter()
+        .map(|s| serde_yaml::from_str(s).expect("Failed to parse config"))
+        .fold(Config::new(), Config::merge)
 }
 
 pub fn read_config(path: &str) -> Vec<String> {
     let metadata_result = fs::metadata(path);
 
     if metadata_result.is_err() {
-        error!("Failed to read metadata of {}: {}",
-                path,
-                metadata_result.unwrap_err());
+        error!(
+            "Failed to read metadata of {}: {}",
+            path,
+            metadata_result.unwrap_err()
+        );
         exit(1);
     }
 
@@ -38,12 +43,13 @@ pub fn read_config(path: &str) -> Vec<String> {
     let metadata = metadata_result.unwrap();
 
     if metadata.file_type().is_dir() {
-
         let content = fs::read_dir(path);
         if content.is_err() {
-            error!("Failed to get directory content of {}: {}",
-                    path,
-                    content.unwrap_err());
+            error!(
+                "Failed to get directory content of {}: {}",
+                path,
+                content.unwrap_err()
+            );
             exit(1);
         }
 
@@ -51,9 +57,7 @@ pub fn read_config(path: &str) -> Vec<String> {
 
         for entry in content.unwrap() {
             if entry.is_err() {
-                error!("Failed to read {}: {}",
-                        path,
-                        entry.unwrap_err());
+                error!("Failed to read {}: {}", path, entry.unwrap_err());
                 exit(1);
             }
             let entry_path = entry.unwrap().path();
@@ -62,13 +66,12 @@ pub fn read_config(path: &str) -> Vec<String> {
 
             result.extend(content);
         }
-
     } else if metadata.file_type().is_file() {
         match read_file(path) {
             Err(error) => {
                 error!("Failed to read file {}: {}", path, error);
                 exit(1);
-            },
+            }
             Ok(content) => {
                 result = vec![content];
             }
@@ -90,8 +93,8 @@ pub fn read_file(file_path: &str) -> Result<String, io::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::config::ProcessType;
+    use super::*;
     use std::collections::HashMap;
 
     #[test]

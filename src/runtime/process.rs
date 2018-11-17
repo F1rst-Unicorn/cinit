@@ -1,18 +1,17 @@
-use std::process::exit;
 use std::ffi::CString;
-use std::os::unix::io::RawFd;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::io::RawFd;
+use std::process::exit;
 
 use config;
 
-use nix::unistd;
-use nix::unistd::Pid;
-use nix::unistd::fork;
 use nix::fcntl;
+use nix::unistd;
+use nix::unistd::fork;
+use nix::unistd::Pid;
 
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
-
     /// The process cannot be started because of dependencies not having
     /// finished yet.
     Blocked,
@@ -69,41 +68,43 @@ pub struct ProcessDescription {
 }
 
 impl ProcessDescription {
-
     pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
-
         info!("Starting {}", self.name);
 
         let stdout = unistd::pipe().unwrap();
         let stderr = unistd::pipe().unwrap();
-        fcntl::fcntl(stdout.0, fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC))?;
-        fcntl::fcntl(stderr.0, fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC))?;
+        fcntl::fcntl(
+            stdout.0,
+            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+        )?;
+        fcntl::fcntl(
+            stderr.0,
+            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+        )?;
 
         let fork_result = fork();
 
         match fork_result {
-            Ok(unistd::ForkResult::Parent {child: child_pid}) => {
+            Ok(unistd::ForkResult::Parent { child: child_pid }) => {
                 info!("Started child {}", child_pid);
                 self.state = ProcessState::Running;
                 self.pid = child_pid;
                 unistd::close(stdout.1)?;
                 unistd::close(stderr.1)?;
                 Ok((child_pid, stdout.0, stderr.0))
-            },
-            Ok(unistd::ForkResult::Child) => {
-                match self.setup_child(stdout.1, stderr.1) {
-                    Ok(_) => {
-                        assert!(false, "exec() was successful but did not replace program");
-                        exit(1);
-                    }
-                    Err(nix::Error::Sys(errno)) => {
-                        error!("Could not exec child {}: {}", self.name, errno.desc());
-                        exit(0);
-                    },
-                    _ => {
-                        error!("Could not exec child {}", self.name);
-                        exit(0);
-                    }
+            }
+            Ok(unistd::ForkResult::Child) => match self.setup_child(stdout.1, stderr.1) {
+                Ok(_) => {
+                    assert!(false, "exec() was successful but did not replace program");
+                    exit(1);
+                }
+                Err(nix::Error::Sys(errno)) => {
+                    error!("Could not exec child {}: {}", self.name, errno.desc());
+                    exit(0);
+                }
+                _ => {
+                    error!("Could not exec child {}", self.name);
+                    exit(0);
                 }
             },
             _ => {
@@ -120,9 +121,11 @@ impl ProcessDescription {
         unistd::setuid(unistd::Uid::from_raw(self.uid))?;
         unistd::setgid(unistd::Gid::from_raw(self.gid))?;
 
-        unistd::execve(&CString::new(self.path.to_owned()).unwrap(),
-                       self.args.as_slice(),
-                       self.env.as_slice())?;
+        unistd::execve(
+            &CString::new(self.path.to_owned()).unwrap(),
+            self.args.as_slice(),
+            self.env.as_slice(),
+        )?;
         Ok(())
     }
 }

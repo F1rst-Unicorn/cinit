@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::process::exit;
-use std::os::unix::io::RawFd;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::io::RawFd;
+use std::process::exit;
 
 use runtime::process::{Process, ProcessState};
 
@@ -10,8 +10,8 @@ use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
 use nix::sys::wait;
-use nix::unistd::Pid;
 use nix::unistd::read;
+use nix::unistd::Pid;
 
 #[derive(Debug)]
 pub struct ProcessManager {
@@ -34,22 +34,18 @@ pub struct ProcessManager {
 
 impl ProcessManager {
     pub fn start(&mut self) {
-
         match self.setup() {
             Err(content) => {
                 error!("Failed to register with epoll: {}", content);
                 exit(3);
-            },
+            }
             _ => {
                 debug!("setup successful");
             }
         }
 
         debug!("Entering poll loop");
-        while self.keep_running &&
-                    (self.pid_dict.len() != 0 ||
-                    self.runnable.len() != 0) {
-
+        while self.keep_running && (self.pid_dict.len() != 0 || self.runnable.len() != 0) {
             self.kick_off_children();
             self.dispatch_epoll();
             self.look_for_finished_children(false);
@@ -61,15 +57,15 @@ impl ProcessManager {
 
     fn look_for_finished_children(&mut self, wait_for_all: bool) {
         let mut wait_args = wait::WaitPidFlag::empty();
-        if ! wait_for_all {
+        if !wait_for_all {
             wait_args.insert(wait::WaitPidFlag::WNOHANG);
         }
         while let Ok(status) = wait::waitpid(Pid::from_raw(-1), Some(wait_args)) {
             match status {
-                wait::WaitStatus::Exited(pid, rc)  => {
+                wait::WaitStatus::Exited(pid, rc) => {
                     debug!("Got signal from child: {:?}", status);
                     self.handle_finished_child(&pid, rc)
-                },
+                }
                 wait::WaitStatus::Signaled(pid, signal, _) => {
                     debug!("Got signal from child: {:?}", status);
                     self.handle_finished_child(&pid, signal as i32)
@@ -117,7 +113,7 @@ impl ProcessManager {
                     let event = event_buffer[i];
                     self.handle_event(event);
                 }
-            },
+            }
             Err(error) => {
                 error!("Could not complete epoll: {:#?}", error);
             }
@@ -142,10 +138,15 @@ impl ProcessManager {
 
     fn setup_epoll_fd(&mut self) -> Result<RawFd, nix::Error> {
         let epoll_fd = epoll::epoll_create1(epoll::EpollCreateFlags::EPOLL_CLOEXEC)?;
-        epoll::epoll_ctl(epoll_fd,
-                         epoll::EpollOp::EpollCtlAdd,
-                         self.signal_fd.as_raw_fd(),
-                         &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.signal_fd.as_raw_fd() as u64))?;
+        epoll::epoll_ctl(
+            epoll_fd,
+            epoll::EpollOp::EpollCtlAdd,
+            self.signal_fd.as_raw_fd(),
+            &mut epoll::EpollEvent::new(
+                epoll::EpollFlags::EPOLLIN,
+                self.signal_fd.as_raw_fd() as u64,
+            ),
+        )?;
         Ok(epoll_fd)
     }
 
@@ -168,9 +169,7 @@ impl ProcessManager {
         match self.signal_fd.read_signal() {
             Ok(Some(signal)) => {
                 match signal::Signal::from_c_int(signal.ssi_signo as i32).unwrap() {
-                    signal::SIGINT |
-                    signal::SIGTERM |
-                    signal::SIGQUIT => {
+                    signal::SIGINT | signal::SIGTERM | signal::SIGQUIT => {
                         info!("Received termination signal, killing children");
                         self.keep_running = false;
                         for child in &self.processes {
@@ -179,15 +178,18 @@ impl ProcessManager {
                                     .expect("Could not transmit signal to child");
                             }
                         }
-                    },
+                    }
                     signal::SIGCHLD => {
-                        debug!("Child {} has exited with {}", signal.ssi_pid, signal.ssi_status);
+                        debug!(
+                            "Child {} has exited with {}",
+                            signal.ssi_pid, signal.ssi_status
+                        );
                     }
                     other => {
                         debug!("Received unknown signal: {:?}", other);
-                    },
+                    }
                 }
-            },
+            }
             Ok(None) => {
                 debug!("No signal received");
             }
@@ -198,10 +200,12 @@ impl ProcessManager {
     }
 
     fn register_fd(&mut self, fd: RawFd, child: usize) {
-        let epoll_result = epoll::epoll_ctl(self.epoll_file,
-                                            epoll::EpollOp::EpollCtlAdd,
-                                            fd,
-                                            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64));
+        let epoll_result = epoll::epoll_ctl(
+            self.epoll_file,
+            epoll::EpollOp::EpollCtlAdd,
+            fd,
+            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
+        );
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
@@ -210,10 +214,15 @@ impl ProcessManager {
 
     fn deregister_fd(&mut self, fd: RawFd) {
         info!("client has closed fd");
-        let epoll_result = epoll::epoll_ctl(self.epoll_file,
-                                            epoll::EpollOp::EpollCtlDel,
-                                            fd as RawFd,
-                                            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.signal_fd.as_raw_fd() as u64));
+        let epoll_result = epoll::epoll_ctl(
+            self.epoll_file,
+            epoll::EpollOp::EpollCtlDel,
+            fd as RawFd,
+            &mut epoll::EpollEvent::new(
+                epoll::EpollFlags::EPOLLIN,
+                self.signal_fd.as_raw_fd() as u64,
+            ),
+        );
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
@@ -227,7 +236,9 @@ impl ProcessManager {
         if length.is_ok() {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
-            let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")].description.name;
+            let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")]
+                .description
+                .name;
 
             for line in output {
                 if !line.is_empty() {
@@ -238,7 +249,7 @@ impl ProcessManager {
     }
 
     fn kick_off_children(&mut self) {
-        while ! self.runnable.is_empty() {
+        while !self.runnable.is_empty() {
             let child_index = self.runnable.pop_back().unwrap();
             let child_result = self.processes[child_index].start();
 

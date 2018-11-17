@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
-
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
 pub enum ProcessType {
-
     #[serde(rename = "oneshot")]
     Oneshot,
 
@@ -14,7 +12,6 @@ pub enum ProcessType {
 fn default_process_type() -> ProcessType {
     ProcessType::Oneshot
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct ProcessConfig {
@@ -54,7 +51,6 @@ pub struct ProcessConfig {
     pub env: HashMap<String, Option<String>>,
 }
 
-
 #[derive(Debug, Deserialize)]
 pub struct Config {
     pub programs: Vec<ProcessConfig>,
@@ -63,7 +59,7 @@ pub struct Config {
 impl Config {
     pub fn new() -> Config {
         Config {
-            programs: Vec::new()
+            programs: Vec::new(),
         }
     }
 
@@ -72,4 +68,3 @@ impl Config {
         self
     }
 }
-

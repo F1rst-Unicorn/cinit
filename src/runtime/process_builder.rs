@@ -26,17 +26,19 @@ impl ProcessDescription {
         result.args.push(CString::new(result.path.clone()).unwrap());
 
         result.args.append(
-            &mut config.args.iter().map(|x| CString::new(x.clone()).unwrap()).collect());
+            &mut config
+                .args
+                .iter()
+                .map(|x| CString::new(x.clone()).unwrap())
+                .collect(),
+        );
 
         result
     }
 }
 
 /// Can be used to get either user id or group id
-fn map_unix_name(id: &Option<u32>,
-                 name: &Option<String>,
-                 process: &String) -> u32 {
-
+fn map_unix_name(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
     if id.is_some() && name.is_some() {
         warn!("Both id and name set for {}, taking only id", process);
         id.unwrap()
@@ -53,14 +55,15 @@ fn map_unix_name(id: &Option<u32>,
 
 fn convert_env(env: &HashMap<String, Option<String>>) -> Vec<CString> {
     let mut result: HashMap<String, String> = HashMap::new();
-    let default_env = ["HOME", "LANG", "LANGUAGE", "LOGNAME", "PATH",
-        "PWD", "SHELL", "TERM", "USER"];
+    let default_env = [
+        "HOME", "LANG", "LANGUAGE", "LOGNAME", "PATH", "PWD", "SHELL", "TERM", "USER",
+    ];
 
     for key in default_env.iter() {
         match std::env::var(key) {
             Err(_) => {
                 result.insert(key.to_string(), String::from(""));
-            },
+            }
             Ok(real_value) => {
                 result.insert(key.to_string(), real_value);
             }
@@ -69,14 +72,12 @@ fn convert_env(env: &HashMap<String, Option<String>>) -> Vec<CString> {
 
     for (key, value) in env {
         match value {
-            None => {
-                match std::env::var(key) {
-                    Err(_) => {
-                        result.insert(key.to_string(), String::from(""));
-                    },
-                    Ok(real_value) => {
-                        result.insert(key.to_string(), real_value);
-                    }
+            None => match std::env::var(key) {
+                Err(_) => {
+                    result.insert(key.to_string(), String::from(""));
+                }
+                Ok(real_value) => {
+                    result.insert(key.to_string(), real_value);
                 }
             },
             Some(real_value) => {

@@ -1,4 +1,5 @@
-//! Init program for UNIX processes
+//! Init program for UNIX processes. Original development was done
+//! [here](https://github.com/vs-eth/scinit)
 //!
 //! ## Configuration
 //!
@@ -32,6 +33,7 @@
 //!       - other program name
 //!
 //!     # Emulate a pseudo-terminal for this program
+//!     # Ignored for now
 //!     emulate_pty: false
 //!
 //!     # Give capabilities to this program
@@ -70,6 +72,8 @@
 //!
 //! ## Program types
 //!
+//! Supported are `oneshot` and `service`. There is no difference as of now.
+//!
 //! ## Environment
 //!
 //! By default the following environment variables will be forwarded from the
@@ -90,6 +94,8 @@
 //!
 //! ## Capabilities
 //!
+//! Planned
+//!
 //! ## Dependencies
 //!
 //! Programs are allowed to depend on each other via the `before` and `after`
@@ -101,33 +107,32 @@
 //! started and cinit terminates.
 //!
 
-
 extern crate clap;
 #[macro_use]
 extern crate log;
 extern crate simple_logger;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_yaml;
 extern crate nix;
+extern crate serde_yaml;
 
 pub mod cli_parser;
 pub mod config;
 pub mod runtime;
 
-use log::Level;
 use config::config_parser;
+use log::Level;
 use runtime::process_manager::ProcessManager;
 
 fn main() {
-
     let arguments = cli_parser::parse_arguments();
     initialise_log(arguments.is_present(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
 
-    let config_path = arguments.value_of(cli_parser::FLAG_CONFIG)
-            .expect("Missing default value in cli_parser");
+    let config_path = arguments
+        .value_of(cli_parser::FLAG_CONFIG)
+        .expect("Missing default value in cli_parser");
     info!("Config is at {}", config_path);
 
     info!("Parsing config");
