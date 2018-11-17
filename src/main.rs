@@ -13,6 +13,7 @@ mod runtime;
 
 use log::Level;
 use config::config_parser;
+use runtime::process_manager::ProcessManager;
 
 fn main() {
 
@@ -29,7 +30,7 @@ fn main() {
     let process_tree = config_parser::parse_config(config_path);
 
     info!("Perform analysis on programs");
-    let mut manager = runtime::process::ProcessManager::from(process_tree);
+    let mut manager = ProcessManager::from(process_tree);
 
     manager.start();
 }
