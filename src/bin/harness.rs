@@ -22,7 +22,8 @@ fn main() {
             .takes_value(true)
             .default_value("0"))
         .arg(Arg::with_name("rest")
-            .help("Anything else to pass")).get_matches();
+            .help("Anything else to pass")
+            .multiple(true)).get_matches();
 
     dump();
 
