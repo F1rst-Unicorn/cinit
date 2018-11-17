@@ -35,7 +35,6 @@ impl ProcessManager {
             pid_dict: HashMap::new(),
             keep_running: true,
             runnable,
-            running_count: 0,
             epoll_file: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).unwrap(),
         }

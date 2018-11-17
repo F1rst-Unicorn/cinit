@@ -27,8 +27,6 @@ pub struct ProcessManager {
 
     pub runnable: VecDeque<usize>,
 
-    pub running_count: u32,
-
     pub epoll_file: RawFd,
 
     pub signal_fd: signalfd::SignalFd,
@@ -42,52 +40,63 @@ impl ProcessManager {
                 error!("Failed to register with epoll: {}", content);
                 exit(3);
             },
-            _ => {}
+            _ => {
+                debug!("setup successful");
+            }
         }
 
         debug!("Entering poll loop");
         while self.keep_running &&
-                    (self.running_count != 0 ||
+                    (self.pid_dict.len() != 0 ||
                     self.runnable.len() != 0) {
 
             self.kick_off_children();
             self.dispatch_epoll();
-            self.handle_finished_children();
+            self.look_for_finished_children(false);
         }
 
-        self.handle_finished_children();
+        self.look_for_finished_children(true);
         info!("Exiting");
     }
 
-    fn handle_finished_children(&mut self) {
+    fn look_for_finished_children(&mut self, wait_for_all: bool) {
         let mut wait_args = wait::WaitPidFlag::empty();
-        wait_args.insert(wait::WaitPidFlag::WNOHANG);
-        while let Ok(status) = wait::waitpid(Pid::from_raw(0), Some(wait_args)) {
-            debug!("Got signal from child: {:?}", status);
+        if ! wait_for_all {
+            wait_args.insert(wait::WaitPidFlag::WNOHANG);
+        }
+        while let Ok(status) = wait::waitpid(Pid::from_raw(-1), Some(wait_args)) {
             match status {
-                wait::WaitStatus::Exited(pid, rc) => {
+                wait::WaitStatus::Exited(pid, rc)  => {
+                    debug!("Got signal from child: {:?}", status);
                     self.handle_finished_child(&pid, rc)
                 },
+                wait::WaitStatus::Signaled(pid, signal, _) => {
+                    debug!("Got signal from child: {:?}", status);
+                    self.handle_finished_child(&pid, signal as i32)
+                }
                 wait::WaitStatus::StillAlive => {
                     break;
                 }
-                _ => {}
+                _ => {
+                    debug!("Got unknown result {:#?}", status);
+                }
             }
         }
     }
 
     fn handle_finished_child(&mut self, pid: &Pid, rc: i32) {
-        self.running_count -= 1;
         let child_index = *self.pid_dict.get(&pid).expect("PID not found");
         {
             let child = &mut self.processes[child_index];
-            info!("Child {} exited with {}", child.description.name, rc);
             child.description.state = if rc == 0 {
+                info!("Child {} exited successfully", child.description.name);
                 ProcessState::Done
             } else {
+                warn!("Child {} crashed with {}", child.description.name, rc);
                 ProcessState::Crashed
             }
         }
+        self.pid_dict.remove(pid);
 
         for successor_index in self.processes[child_index].node_info.before.clone() {
             let mut successor = &mut self.processes[successor_index];
@@ -109,7 +118,9 @@ impl ProcessManager {
                     self.handle_event(event);
                 }
             },
-            Err(_) => {}
+            Err(error) => {
+                error!("Could not complete epoll: {:#?}", error);
+            }
         }
     }
 
@@ -168,10 +179,20 @@ impl ProcessManager {
                             }
                         }
                     },
-                    _ => {},
+                    signal::SIGCHLD => {
+                        debug!("Child {} has exited with {}", signal.ssi_pid, signal.ssi_status);
+                    }
+                    other => {
+                        debug!("Received unknown signal: {:?}", other);
+                    },
                 }
             },
-            _ => {}
+            Ok(None) => {
+                debug!("No signal received");
+            }
+            Err(other) => {
+                debug!("Received unknown signal: {:?}", other);
+            }
         }
     }
 
@@ -203,7 +224,6 @@ impl ProcessManager {
             let child_index = self.runnable.pop_back().unwrap();
             let child_pid = self.processes[child_index].start();
             self.pid_dict.insert(child_pid, child_index);
-            self.running_count += 1;
         }
     }
 }
