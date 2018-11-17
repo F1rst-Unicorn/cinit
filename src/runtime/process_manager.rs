@@ -175,7 +175,8 @@ impl ProcessManager {
                         self.keep_running = false;
                         for child in &self.processes {
                             if child.description.state == ProcessState::Running {
-                                signal::kill(child.description.pid, signal::SIGTERM);
+                                signal::kill(child.description.pid, signal::SIGTERM)
+                                    .expect("Could not transmit signal to child");
                             }
                         }
                     },
