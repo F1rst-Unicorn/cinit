@@ -6,7 +6,7 @@ use std::os::unix::io::AsRawFd;
 use std::ffi::CString;
 
 use config;
-use config::process_tree::Config;
+use config::config::Config;
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -58,7 +58,7 @@ pub struct ProcessDescription {
 
     args: Vec<CString>,
 
-    process_type: config::process_tree::ProcessType,
+    process_type: config::config::ProcessType,
 
     uid: u32,
 
@@ -76,7 +76,7 @@ pub struct ProcessDescription {
 }
 
 impl ProcessDescription {
-    pub fn from(config: &config::process_tree::ProcessConfig) -> ProcessDescription {
+    pub fn from(config: &config::config::ProcessConfig) -> ProcessDescription {
         let mut result = ProcessDescription {
             name: config.name.to_owned(),
             path: config.path.to_owned(),

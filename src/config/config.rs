@@ -1,11 +1,18 @@
 use std::collections::HashMap;
 
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
 pub enum ProcessType {
 
     #[serde(rename = "oneshot")]
-    Oneshot
+    Oneshot,
+
+    #[serde(rename = "service")]
+    Service,
+}
+
+fn default_process_type() -> ProcessType {
+    ProcessType::Oneshot
 }
 
 
@@ -14,19 +21,25 @@ pub struct ProcessConfig {
     pub name: String,
 
     pub path: String,
+
+    #[serde(default)]
     pub args: Vec<String>,
 
     #[serde(rename = "type")]
+    #[serde(default = "default_process_type")]
     pub process_type: ProcessType,
 
     pub uid: Option<u32>,
+
     pub gid: Option<u32>,
 
     pub user: Option<String>,
+
     pub group: Option<String>,
 
     #[serde(default)]
     pub before: Vec<String>,
+
     #[serde(default)]
     pub after: Vec<String>,
 
@@ -34,11 +47,13 @@ pub struct ProcessConfig {
     #[serde(default)]
     pub emulate_pty: bool,
 
+    #[serde(default)]
     pub capabilities: Vec<String>,
 
     #[serde(default)]
     pub env: HashMap<String, Option<String>>,
 }
+
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -52,10 +67,9 @@ impl Config {
         }
     }
 
-    pub fn merge(&mut self, other: Config) {
-        for program in other.programs {
-            self.programs.push(program);
-        }
+    pub fn merge(mut self, mut other: Self) -> Self {
+        self.programs.append(&mut other.programs);
+        self
     }
 }
 
