@@ -114,11 +114,11 @@ impl ProcessDescription {
     }
 
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
-        unistd::setuid(unistd::Uid::from_raw(self.uid))?;
-        unistd::setgid(unistd::Gid::from_raw(self.gid))?;
-
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
+
+        unistd::setuid(unistd::Uid::from_raw(self.uid))?;
+        unistd::setgid(unistd::Gid::from_raw(self.gid))?;
 
         unistd::execve(&CString::new(self.path.to_owned()).unwrap(),
                        self.args.as_slice(),
