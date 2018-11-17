@@ -10,7 +10,7 @@ use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
 use nix::sys::wait;
-use nix::unistd::read;
+use nix::unistd;
 use nix::unistd::Pid;
 
 #[derive(Debug)]
@@ -200,6 +200,7 @@ impl ProcessManager {
     }
 
     fn register_fd(&mut self, fd: RawFd, child: usize) {
+        debug!("Registering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
             self.epoll_file,
             epoll::EpollOp::EpollCtlAdd,
@@ -210,10 +211,11 @@ impl ProcessManager {
             warn!("Could not unregister fd from epoll");
         }
         self.fd_dict.insert(fd, child);
+        debug!("{:?}", self.fd_dict);
     }
 
     fn deregister_fd(&mut self, fd: RawFd) {
-        info!("client has closed fd");
+        debug!("Deregistering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
             self.epoll_file,
             epoll::EpollOp::EpollCtlDel,
@@ -226,12 +228,19 @@ impl ProcessManager {
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
+
+        let close_result = unistd::close(fd);
+        if close_result.is_err() {
+            warn!("Could not close fd {}", fd);
+        }
+
         self.fd_dict.remove(&(fd as RawFd));
+        debug!("{:?}", self.fd_dict);
     }
 
     fn handle_child_output(&mut self, fd: RawFd) {
         let mut buffer = [0 as u8; 4096];
-        let length = read(fd, &mut buffer);
+        let length = unistd::read(fd, &mut buffer);
 
         if length.is_ok() {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);

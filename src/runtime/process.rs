@@ -111,11 +111,25 @@ impl ProcessDescription {
     }
 
     fn create_std_fds(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+        let result;
         if self.emulate_pty {
-            self.create_ptys()
+            result = self.create_ptys();
         } else {
-            self.create_pipes()
+            result = self.create_pipes();
         }
+
+        if result.is_ok() {
+            let fds = result.unwrap();
+            fcntl::fcntl(
+                (fds.0).0,
+                fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+            )?;
+            fcntl::fcntl(
+                (fds.1).0,
+                fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+            )?;
+        }
+        result
     }
 
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
@@ -206,14 +220,6 @@ impl ProcessDescription {
     fn create_pipes(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
         let stdout = unistd::pipe().unwrap();
         let stderr = unistd::pipe().unwrap();
-        fcntl::fcntl(
-            stdout.0,
-            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
-        )?;
-        fcntl::fcntl(
-            stderr.0,
-            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
-        )?;
         Ok((stdout, stderr))
     }
 }
