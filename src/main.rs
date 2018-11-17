@@ -32,6 +32,7 @@ fn main() {
     info!("Perform analysis on programs");
     let mut manager = ProcessManager::from(process_tree);
 
+    info!("Spawning processes");
     manager.start();
 }
 

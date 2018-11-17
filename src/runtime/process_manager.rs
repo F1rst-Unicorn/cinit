@@ -124,7 +124,7 @@ impl ProcessManager {
         }
     }
 
-    pub fn setup(&mut self) -> Result<(), nix::Error> {
+    fn setup(&mut self) -> Result<(), nix::Error> {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
         self.epoll_file = self.setup_epoll_fd()?;
         Ok(())
@@ -149,7 +149,7 @@ impl ProcessManager {
         Ok(epoll_fd)
     }
 
-    pub fn handle_event(&mut self, event: epoll::EpollEvent) {
+    fn handle_event(&mut self, event: epoll::EpollEvent) {
         if event.events().contains(epoll::EpollFlags::EPOLLIN) {
             let fd = event.data() as RawFd;
             if fd == self.signal_fd.as_raw_fd() {
@@ -158,13 +158,13 @@ impl ProcessManager {
                 self.handle_child_output(fd);
             }
         } else if event.events().contains(epoll::EpollFlags::EPOLLHUP) {
-            self.deregister_fd(event);
+            self.deregister_fd(event.data() as RawFd);
         } else {
             warn!("Received unknown event");
         }
     }
 
-    pub fn handle_signal(&mut self) {
+    fn handle_signal(&mut self) {
         match self.signal_fd.read_signal() {
             Ok(Some(signal)) => {
                 match signal::Signal::from_c_int(signal.ssi_signo as i32).unwrap() {
@@ -196,9 +196,19 @@ impl ProcessManager {
         }
     }
 
-    fn deregister_fd(&mut self, event: epoll::EpollEvent) {
+    fn register_fd(&mut self, fd: RawFd, child: usize) {
+        let epoll_result = epoll::epoll_ctl(self.epoll_file,
+                                            epoll::EpollOp::EpollCtlAdd,
+                                            fd,
+                                            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64));
+        if epoll_result.is_err() {
+            warn!("Could not unregister fd from epoll");
+        }
+        self.fd_dict.insert(fd, child);
+    }
+
+    fn deregister_fd(&mut self, fd: RawFd) {
         info!("client has closed fd");
-        let fd = event.data();
         let epoll_result = epoll::epoll_ctl(self.epoll_file,
                                             epoll::EpollOp::EpollCtlDel,
                                             fd as RawFd,
@@ -209,21 +219,37 @@ impl ProcessManager {
         self.fd_dict.remove(&(fd as RawFd));
     }
 
-    pub fn handle_child_output(&mut self, fd: RawFd) {
+    fn handle_child_output(&mut self, fd: RawFd) {
         let mut buffer = [0 as u8; 4096];
-        read(fd, &mut buffer);
+        let length = read(fd, &mut buffer);
 
-        let output = String::from_utf8_lossy(&buffer);
-        let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")].description.name;
+        if length.is_ok() {
+            let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
+            let output = raw_output.lines();
+            let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")].description.name;
 
-        info!("Child {}: {}", child_name, output);
+            for line in output {
+                if !line.is_empty() {
+                    info!("Child {}: {}", child_name, line);
+                }
+            }
+        }
     }
 
     fn kick_off_children(&mut self) {
         while ! self.runnable.is_empty() {
             let child_index = self.runnable.pop_back().unwrap();
-            let child_pid = self.processes[child_index].start();
-            self.pid_dict.insert(child_pid, child_index);
+            let child_result = self.processes[child_index].start();
+
+            if child_result.is_err() {
+                error!("Failed to spawn child: {}", child_result.unwrap_err());
+                return;
+            }
+            let child_desc = child_result.unwrap();
+
+            self.pid_dict.insert(child_desc.0, child_index);
+            self.register_fd(child_desc.1, child_index);
+            self.register_fd(child_desc.2, child_index);
         }
     }
 }
