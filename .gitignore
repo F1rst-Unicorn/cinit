@@ -3,3 +3,7 @@
 
 *.iml
 .idea
+
+tests/resources/manual
+
+test-output
