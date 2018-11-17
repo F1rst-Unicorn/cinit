@@ -1,10 +1,8 @@
 # cinit
 
-A small init daemon for containers. Inspired by
+Init program for UNIX processes. Inspired by
 [scinit](https://github.com/vs-eth/scinit).
 
 ## Usage
 
-Run `cinit -h` for a list of all available arguments
-
-## Configuration
+Run `cargo doc --no-deps && cargo doc --open` to view extensive documentation.

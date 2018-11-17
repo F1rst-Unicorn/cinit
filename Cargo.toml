@@ -3,7 +3,7 @@ name = "cinit"
 version = "0.1.0"
 authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
            "Jan Veen <jan.veen@posteo.de>"]
-description = "init daemon for other programs, suitable for containers"
+description = "Init program for UNIX processes"
 
 license-file = "LICENSE"
 
