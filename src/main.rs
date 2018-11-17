@@ -113,6 +113,8 @@ extern crate log;
 extern crate simple_logger;
 #[macro_use]
 extern crate serde_derive;
+extern crate libc;
+#[macro_use]
 extern crate nix;
 extern crate serde_yaml;
 

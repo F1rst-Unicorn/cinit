@@ -4,11 +4,15 @@ use std::os::unix::io::RawFd;
 use std::process::exit;
 
 use config;
+use super::ioctl;
 
+use nix;
 use nix::fcntl;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
+use nix::sys::termios;
+use nix::pty;
 
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
@@ -71,16 +75,7 @@ impl ProcessDescription {
     pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
         info!("Starting {}", self.name);
 
-        let stdout = unistd::pipe().unwrap();
-        let stderr = unistd::pipe().unwrap();
-        fcntl::fcntl(
-            stdout.0,
-            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
-        )?;
-        fcntl::fcntl(
-            stderr.0,
-            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
-        )?;
+        let (stdout, stderr) = self.create_std_fds()?;
 
         let fork_result = fork();
 
@@ -114,9 +109,20 @@ impl ProcessDescription {
         }
     }
 
+    fn create_std_fds(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+        if self.emulate_pty {
+            self.create_ptys()
+        } else {
+            self.create_pipes()
+        }
+    }
+
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
+        unistd::close(stdout)?;
+
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
+        unistd::close(stderr)?;
 
         unistd::setuid(unistd::Uid::from_raw(self.uid))?;
         unistd::setgid(unistd::Gid::from_raw(self.gid))?;
@@ -127,6 +133,84 @@ impl ProcessDescription {
             self.env.as_slice(),
         )?;
         Ok(())
+    }
+
+    fn create_ptys(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+        let stdin = std::io::stdin().as_raw_fd();
+        let tcget_result = termios::tcgetattr(stdin);
+        let ioctl_result: Result<libc::c_int, nix::Error>;
+        let mut winsize = pty::Winsize {
+            ws_row: 0,
+            ws_col: 0,
+            ws_xpixel: 0,
+            ws_ypixel: 0,
+        };
+        let mut termios: termios::Termios;
+
+        unsafe {
+            ioctl_result = ioctl::get_terminal_size(
+                stdin,
+                &mut winsize
+            );
+        }
+
+        if tcget_result.is_err() {
+            debug!("Could not get terminal flags, aborting");
+            return Err(tcget_result.err().unwrap());
+        } else {
+            termios = tcget_result.unwrap();
+        }
+
+        if ioctl_result.is_err() {
+            debug!("Not running inside tty, using sane defaults");
+            winsize = pty::Winsize {
+                ws_row: 24,
+                ws_col: 80,
+                ws_xpixel: 0,
+                ws_ypixel: 0
+            };
+        }
+        termios.input_flags.insert(
+            termios::InputFlags::BRKINT |
+            termios::InputFlags::ICRNL |
+            termios::InputFlags::INPCK |
+            termios::InputFlags::ISTRIP |
+            termios::InputFlags::IXON
+        );
+        termios.output_flags.insert(termios::OutputFlags::OPOST);
+        termios.local_flags.insert(
+            termios::LocalFlags::ECHO |
+            termios::LocalFlags::ICANON |
+            termios::LocalFlags::IEXTEN |
+            termios::LocalFlags::ISIG
+        );
+
+        let stdout = pty::openpty(
+            Some(&winsize),
+            Some(&termios)
+        )?;
+        let stderr = pty::openpty(
+            Some(&winsize),
+            Some(&termios)
+        )?;
+
+        info!("Pseudo terminals created");
+        Ok(((stdout.master, stdout.slave),
+            (stderr.master, stderr.slave)))
+    }
+
+    fn create_pipes(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+        let stdout = unistd::pipe().unwrap();
+        let stderr = unistd::pipe().unwrap();
+        fcntl::fcntl(
+            stdout.0,
+            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+        )?;
+        fcntl::fcntl(
+            stderr.0,
+            fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
+        )?;
+        Ok((stdout, stderr))
     }
 }
 
