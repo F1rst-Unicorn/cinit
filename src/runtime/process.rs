@@ -102,7 +102,20 @@ impl ProcessDescription {
                 child_pid
             },
             Ok(unistd::ForkResult::Child) => {
-                self.setup_child()
+                match self.setup_child() {
+                    Ok(_) => {
+                        assert!(false, "exec() was successful but did not replace program");
+                        exit(1);
+                    }
+                    Err(nix::Error::Sys(errno)) => {
+                        error!("Could not exec child {}: {}", self.name, errno.desc());
+                        exit(0);
+                    },
+                    _ => {
+                        error!("Could not exec child {}", self.name);
+                        exit(0);
+                    }
+                }
             },
             _ => {
                 error!("Forking failed");
@@ -111,26 +124,15 @@ impl ProcessDescription {
         }
     }
 
-    fn setup_child(&mut self) -> ! {
-        unistd::setuid(unistd::Uid::from_raw(self.uid));
-        unistd::setgid(unistd::Gid::from_raw(self.gid));
+    fn setup_child(&mut self) -> Result<(), nix::Error> {
+        unistd::setuid(unistd::Uid::from_raw(self.uid))?;
+        unistd::setgid(unistd::Gid::from_raw(self.gid))?;
 
-        let result = unistd::execve(&CString::new(self.path.to_owned()).unwrap(),
-                                    self.args.as_slice(),
-                                    self.env.as_slice());
-
-        match result {
-            Ok(_) => {
-                assert!(false, "exec() was successful but did not replace program");
-                exit(1);
-            }
-            Err(_) => {
-                error!("Could not exec child {}", self.name);
-                exit(0);
-            }
-        }
+        unistd::execve(&CString::new(self.path.to_owned()).unwrap(),
+                       self.args.as_slice(),
+                       self.env.as_slice())?;
+        Ok(())
     }
-
 }
 
 /// Can be used to get either user id or group id
