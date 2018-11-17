@@ -12,6 +12,7 @@ use clap::App;
 use clap::AppSettings;
 
 use nix::unistd;
+use nix::sys::signalfd;
 
 
 fn main() {
@@ -43,11 +44,27 @@ fn main() {
             .help("Anything else to pass")
             .multiple(true)).get_matches();
 
+
     dump(arguments.value_of("output").unwrap());
+
 
     let sleep_seconds = arguments.value_of("sleep").unwrap()
             .parse::<u64>().expect("invalid sleep seconds");
-    thread::sleep(time::Duration::from_secs(sleep_seconds));
+
+    let mask = signalfd::SigSet::all();
+    let mut sfd = signalfd::SignalFd::with_flags(&mask, signalfd::SfdFlags::SFD_NONBLOCK)
+            .expect("Could not setup signalfd");
+
+    for _ in 0..sleep_seconds {
+        thread::sleep(time::Duration::from_secs(1));
+        match sfd.read_signal() {
+            Ok(Some(_)) => {
+                break;
+            }
+            _ => ()
+        }
+    }
+
 
     exit(arguments.value_of("return-code").unwrap()
             .parse::<i32>().expect("invalid return code"));
