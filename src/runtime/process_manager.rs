@@ -32,6 +32,16 @@ pub struct ProcessManager {
     pub signal_fd: signalfd::SignalFd,
 }
 
+impl Drop for ProcessManager {
+    fn drop(&mut self) {
+        let result = unistd::close(self.signal_fd.as_raw_fd());
+
+        if result.is_err() {
+            error!("Could not close signal fd");
+        }
+    }
+}
+
 impl ProcessManager {
     pub fn start(&mut self) {
         match self.setup() {
