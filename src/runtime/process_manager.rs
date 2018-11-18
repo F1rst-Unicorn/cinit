@@ -48,18 +48,20 @@ impl ProcessManager {
         while self.keep_running && (self.pid_dict.len() != 0 || self.runnable.len() != 0) {
             self.kick_off_children();
             self.dispatch_epoll();
-            self.look_for_finished_children(false);
+            self.look_for_finished_children();
         }
 
-        self.look_for_finished_children(true);
+        info!("Shutting down");
+        while self.fd_dict.len() != 0 || self.pid_dict.len() != 0 {
+            self.dispatch_epoll();
+            self.look_for_finished_children();
+        }
         info!("Exiting");
     }
 
-    fn look_for_finished_children(&mut self, wait_for_all: bool) {
+    fn look_for_finished_children(&mut self) {
         let mut wait_args = wait::WaitPidFlag::empty();
-        if !wait_for_all {
-            wait_args.insert(wait::WaitPidFlag::WNOHANG);
-        }
+        wait_args.insert(wait::WaitPidFlag::WNOHANG);
         while let Ok(status) = wait::waitpid(Pid::from_raw(-1), Some(wait_args)) {
             match status {
                 wait::WaitStatus::Exited(pid, rc) => {
