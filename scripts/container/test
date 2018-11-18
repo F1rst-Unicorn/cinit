@@ -7,3 +7,5 @@ U=$(getent passwd $USER_ID | tr ':' ' ' | awk '{ print $1 }')
 su $U -c 'cargo build --target=x86_64-unknown-linux-musl -j 8'
 su $U -c 'cargo test --target=x86_64-unknown-linux-musl'
 su $U -c 'cargo doc'
+
+system-tests/test

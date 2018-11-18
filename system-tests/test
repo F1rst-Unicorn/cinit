@@ -12,5 +12,5 @@ fi
 rm -rf child-dump
 mkdir child-dump
 
-python -m unittest -v
+python3 -m unittest discover -v -s "$PROJECT_ROOT"/system-tests -p '*.py'
 
