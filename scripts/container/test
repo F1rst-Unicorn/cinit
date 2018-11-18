@@ -10,4 +10,3 @@ su $U -c 'cargo doc'
 
 system-tests/test
 
-find . -user root -exec rm -rf {} \; || true

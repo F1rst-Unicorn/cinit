@@ -1,6 +1,5 @@
-import os
-import unittest
 from driver import *
+
 
 class Test(CinitTest):
 
@@ -8,18 +7,18 @@ class Test(CinitTest):
         self.run_cinit(self.get_test_dir(__file__))
 
         self.assert_on_trace()                                              \
-                .that(Sequential(                                           \
-                        ChildSpawned("first"),                              \
+                .that(Sequential(
+                        ChildSpawned("first"),
                         ChildExited("first")))                              \
-                .then(Parallel(                                             \
-                        Sequential(                                         \
-                                ChildSpawned("second"),                     \
-                                ChildExited("second")),                     \
-                        Sequential(                                         \
-                                ChildSpawned("third"),                      \
+                .then(Parallel(
+                        Sequential(
+                                ChildSpawned("second"),
+                                ChildExited("second")),
+                        Sequential(
+                                ChildSpawned("third"),
                                 ChildExited("third"))))                     \
-                .then(Sequential(                                           \
-                        ChildSpawned("fourth"),                             \
+                .then(Sequential(
+                        ChildSpawned("fourth"),
                         ChildExited("fourth")))                             \
 
 

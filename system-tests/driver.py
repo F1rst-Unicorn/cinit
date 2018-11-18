@@ -1,12 +1,12 @@
 import re
 import os
-import sys
 import unittest
 import subprocess
 
 UUT_PATH = os.environ['UUT']
 PROJECT_ROOT = os.environ['PROJECT_ROOT']
 VERBOSE = os.environ.get('VERBOSE', "0")
+
 
 class CinitTest(unittest.TestCase):
 
@@ -28,7 +28,7 @@ class CinitTest(unittest.TestCase):
                 cwd=PROJECT_ROOT)
 
         cinit.wait()
-        output = cinit.stdout.read().decode("utf-8").split("\n");
+        output = cinit.stdout.read().decode("utf-8").split("\n")
         cinit.stdout.close()
 
         self.trace = Trace(self, output)
@@ -40,8 +40,10 @@ class CinitTest(unittest.TestCase):
     def assert_on_trace(self):
         return self.trace
 
-    def get_test_dir(self, path):
+    @staticmethod
+    def get_test_dir(path):
         return os.path.dirname(os.path.abspath(path))
+
 
 class Trace:
 
@@ -61,15 +63,24 @@ class Trace:
         for line in self.trace[self.index:]:
             print(line)
 
+        self.dump()
         self.test.fail("Event '" + str(assertion) + "' has not occured")
 
     def then(self, assertion):
         return self.that(assertion)
 
+    def dump(self):
+        print("")
+        for line in self.trace:
+            if re.fullmatch(".* TRACE .*", line) is not None:
+                print(line)
+
+
 class Assert:
 
     def matches(self, logline):
         return False
+
 
 class Sequential(Assert):
 
@@ -88,6 +99,7 @@ class Sequential(Assert):
             self.matchers.pop(0)
 
         return len(self.matchers) == 0
+
 
 class Parallel(Assert):
 
@@ -112,6 +124,7 @@ class Parallel(Assert):
 
         return len(self.matchers) == 0
 
+
 class RegexMatcher(Assert):
 
     def __init__(self, regex):
@@ -121,11 +134,12 @@ class RegexMatcher(Assert):
         return self.regex
 
     def matches(self, logline):
-        if None != re.fullmatch(
-                ".*TRACE.*{}".format(self.regex), logline):
+        if re.fullmatch(
+                ".*TRACE.*{}".format(self.regex), logline) is not None:
             return True
         else:
             return False
+
 
 class CycleDetected(RegexMatcher):
     def __init__(self):
@@ -135,6 +149,7 @@ class CycleDetected(RegexMatcher):
     def __str__(self):
         return self.regex
 
+
 class ChildSpawned(RegexMatcher):
     def __init__(self, name):
         super(ChildSpawned, self).__init__(
@@ -142,6 +157,7 @@ class ChildSpawned(RegexMatcher):
 
     def __str__(self):
         return self.regex
+
 
 class ChildExited(RegexMatcher):
     def __init__(self, name):
@@ -151,6 +167,7 @@ class ChildExited(RegexMatcher):
     def __str__(self):
         return self.regex
 
+
 class ChildCrashed(RegexMatcher):
     def __init__(self, name):
         super(ChildCrashed, self).__init__(
@@ -159,18 +176,19 @@ class ChildCrashed(RegexMatcher):
     def __str__(self):
         return self.regex
 
+
 class ChildProcess:
 
-    def __init__(name):
+    def __init__(self, name):
         pass
 
     def assert_env(self, key, value):
         pass
 
-    def assert_uid(uid):
+    def assert_uid(self, uid):
         pass
 
-    def assert_gid(gid):
+    def assert_gid(self, gid):
         pass
 
 

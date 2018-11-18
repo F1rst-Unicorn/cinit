@@ -15,8 +15,8 @@ if [[ ! -f "$UUT" ]] ; then
     exit 1
 fi
 
-rm -rf child-dump
-mkdir child-dump
+rm -rf "$PROJECT_ROOT"/system-tests/child-dump
+mkdir "$PROJECT_ROOT"/system-tests/child-dump
 
-python3 -m unittest discover -s "$PROJECT_ROOT"/system-tests -p '__init__.py'
+python3 -B -m unittest discover -s "$PROJECT_ROOT"/system-tests -p '__init__.py'
 

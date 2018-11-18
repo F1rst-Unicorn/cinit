@@ -66,6 +66,14 @@ impl ProcessManager {
             self.dispatch_epoll();
             self.look_for_finished_children();
         }
+
+        if self.processes
+            .iter()
+            .any(|p| p.description.state == ProcessState::Blocked) {
+            error!("No runnable processes found, check for cycles");
+            trace!("No runnable processes found, check for cycles");
+        }
+
         info!("Exiting");
     }
 
