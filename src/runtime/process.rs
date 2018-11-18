@@ -182,6 +182,7 @@ impl ProcessDescription {
                 ws_ypixel: 0,
             };
         }
+        termios.input_flags = termios::InputFlags::empty();
         termios.input_flags.insert(
             termios::InputFlags::BRKINT
                 | termios::InputFlags::ICRNL
@@ -189,7 +190,9 @@ impl ProcessDescription {
                 | termios::InputFlags::ISTRIP
                 | termios::InputFlags::IXON,
         );
+        termios.output_flags = termios::OutputFlags::empty();
         termios.output_flags.insert(termios::OutputFlags::OPOST);
+        termios.local_flags = termios::LocalFlags::empty();
         termios.local_flags.insert(
             termios::LocalFlags::ECHO
                 | termios::LocalFlags::ICANON
