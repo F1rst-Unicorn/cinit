@@ -9,6 +9,7 @@ use std::io::Write;
 use std::process::exit;
 use std::thread;
 use std::time;
+use std::os::unix::io::AsRawFd;
 
 use clap::App;
 use clap::AppSettings;
@@ -84,20 +85,34 @@ fn main() {
 fn dump(output: &str) {
     let mut file = File::create(output).expect("Failed to open output file");
 
+    file.write_fmt(format_args!("programs:\n"))
+        .expect("Failed to open output file");
+
+    file.write_fmt(format_args!("  - args:\n"))
+        .expect("Failed to open output file");
     for arg in std::env::args() {
-        file.write_fmt(format_args!("{} ", arg.as_str()))
+        file.write_fmt(format_args!("      - '{}'\n", arg.as_str()))
             .expect("Failed to dump");
     }
-    file.write_fmt(format_args!("\n")).expect("Failed to dump");
 
-    file.write_fmt(format_args!("uid {}\n", unistd::getuid()))
+    file.write_fmt(format_args!("    uid: {}\n", unistd::getuid()))
         .expect("Failed to dump");
 
-    file.write_fmt(format_args!("gid {}\n", unistd::getgid()))
+    file.write_fmt(format_args!("    gid: {}\n", unistd::getgid()))
         .expect("Failed to dump");
 
+    file.write_fmt(format_args!("    pty: {}\n",
+                                unistd::isatty(std::io::stdout().as_raw_fd()).unwrap_or(false)
+                                && unistd::isatty(std::io::stderr().as_raw_fd()).unwrap_or(false)))
+        .expect("Failed to dump");
+
+    file.write_fmt(format_args!("    capabilities: []\n"))
+        .expect("Failed to dump");
+
+    file.write_fmt(format_args!("    env:\n"))
+        .expect("Failed to open output file");
     for (key, value) in std::env::vars() {
-        file.write_fmt(format_args!("{} = {}\n", key, value))
+        file.write_fmt(format_args!("      {}: '{}'\n", key, value))
             .expect("Failed to dump");
     }
 

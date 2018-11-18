@@ -17,6 +17,7 @@ fi
 
 rm -rf "$PROJECT_ROOT"/system-tests/child-dump
 mkdir "$PROJECT_ROOT"/system-tests/child-dump
+chmod a+rwx "$PROJECT_ROOT"/system-tests/child-dump
 
 python3 -B -m unittest discover -s "$PROJECT_ROOT"/system-tests -p '__init__.py'
 

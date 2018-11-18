@@ -1,0 +1,20 @@
+programs:
+  - args:
+      - 'target/x86_64-unknown-linux-musl/debug/harness'
+      - '-o'
+      - 'system-tests/child-dump/fourth.yml'
+    uid: 1000
+    gid: 100
+    pty: true
+    capabilities: []
+    env:
+      HOME: '/root'
+      LANGUAGE: ''
+      LOGNAME: ''
+      PATH: '/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+      PWD: '/usr/src/cinit'
+      SHELL: ''
+      USER: ''
+      LANG: ''
+      TERM: 'xterm'
+

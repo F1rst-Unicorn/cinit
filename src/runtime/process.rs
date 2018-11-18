@@ -137,12 +137,17 @@ impl ProcessDescription {
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
 
+        println!("Closing duplicated stdout");
         unistd::close(stdout)?;
+        println!("Closing duplicated stderr");
         unistd::close(stderr)?;
 
-        unistd::setuid(self.uid)?;
+        println!("Setting gid");
         unistd::setgid(self.gid)?;
+        println!("Setting uid");
+        unistd::setuid(self.uid)?;
 
+        println!("Doing execve");
         unistd::execve(
             &CString::new(self.path.to_owned()).unwrap(),
             self.args.as_slice(),

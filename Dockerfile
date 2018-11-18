@@ -2,6 +2,13 @@ FROM rust:stretch
 
 RUN rustup target add x86_64-unknown-linux-musl
 
+RUN apt update && \
+        apt install -y --no-install-recommends python3-yaml && \
+        rm -rf /var/lib/apt/lists/* && \
+        rm -rf /var/tmp && \
+        rm -rf /tmp/*
+
+
 ARG USER_ID
 ARG GROUP_ID
 

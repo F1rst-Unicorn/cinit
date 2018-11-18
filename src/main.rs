@@ -33,7 +33,7 @@
 //!       - other program name
 //!
 //!     # Emulate a pseudo-terminal for this program
-//!     emulate_pty: false
+//!     pty: false
 //!
 //!     # Give capabilities to this program
 //!     capabilities:

@@ -1,5 +1,6 @@
 import re
 import os
+import yaml
 import unittest
 import subprocess
 
@@ -9,11 +10,6 @@ VERBOSE = os.environ.get('VERBOSE', "0")
 
 
 class CinitTest(unittest.TestCase):
-
-    def tearDown(self):
-        child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
-        for file in os.listdir(child_dumps):
-            os.unlink(child_dumps + file)
 
     def run_cinit(self, test_dir):
         cinit = subprocess.Popen([
@@ -179,16 +175,47 @@ class ChildCrashed(RegexMatcher):
 
 class ChildProcess:
 
-    def __init__(self, name):
-        pass
+    def __init__(self, name, test):
+        self.test = test
+        child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
+        with open(child_dumps + name + ".yml") as stream:
+            dump = yaml.load(stream)
+            program = dump['programs'][0]
+            self.args = program['args']
+            self.uid = program['uid']
+            self.gid = program['gid']
+            self.pty = program['pty']
+            self.capabilities = set(program['capabilities'])
+            self.env = program['env']
 
-    def assert_env(self, key, value):
-        pass
+    def assert_arg(self, arg):
+        self.test.assertTrue(arg in self.args,
+                             arg + " not found in " + str(self.args))
+        return self
 
     def assert_uid(self, uid):
-        pass
+        self.test.assertEqual(uid, self.uid, "uid mismatch")
+        return self
 
     def assert_gid(self, gid):
-        pass
+        self.test.assertEqual(gid, self.gid, "gid mismatch")
+        return self
+
+    def assert_pty(self, pty):
+        self.test.assertEqual(pty, self.pty, "pty mismatch")
+        return self
+
+    def assert_capabilities(self, caps):
+        self.test.assertEqual(self.capabilities, set(caps))
+        return self
+
+    def assert_env(self, key, value):
+        self.test.assertTrue(key in self.env and self.env[key] == value)
+        return self
+
+    def assert_not_env(self, key):
+        self.test.assertFalse(key in self.env)
+        return self
+
 
 
