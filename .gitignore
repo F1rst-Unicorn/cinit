@@ -4,6 +4,7 @@
 *.iml
 .idea
 
-tests/resources/manual
+system-tests/child_dump
 
-test-output
+__pycache__
+

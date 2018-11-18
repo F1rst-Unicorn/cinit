@@ -98,9 +98,11 @@ impl ProcessManager {
             let child = &mut self.processes[child_index];
             child.description.state = if rc == 0 {
                 info!("Child {} exited successfully", child.description.name);
+                trace!("Child {} exited successfully", child.description.name);
                 ProcessState::Done
             } else {
                 warn!("Child {} crashed with {}", child.description.name, rc);
+                trace!("Child {} crashed with {}", child.description.name, rc);
                 ProcessState::Crashed
             }
         }

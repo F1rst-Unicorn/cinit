@@ -1,0 +1,16 @@
+#!/bin/bash
+
+export PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/.."
+
+export UUT="$PROJECT_ROOT/target/x86_64-unknown-linux-musl/debug/cinit"
+
+if [[ ! -f "$UUT" ]] ; then
+    echo "cinit not found"
+    exit 1
+fi
+
+rm -rf child-dump
+mkdir child-dump
+
+python -m unittest -v
+

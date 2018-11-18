@@ -23,6 +23,7 @@ impl ProcessManager {
 
         if runnable.len() == 0 {
             error!("No runnable processes found, check for cycles");
+            trace!("No runnable processes found, check for cycles");
             exit(2);
         }
 

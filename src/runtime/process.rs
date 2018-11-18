@@ -82,6 +82,7 @@ impl ProcessDescription {
 
         match fork_result {
             Ok(unistd::ForkResult::Parent { child: child_pid }) => {
+                trace!("Started child {}", self.name);
                 info!("Started child {}", child_pid);
                 self.state = ProcessState::Running;
                 self.pid = child_pid;

@@ -1,0 +1,29 @@
+programs:
+  - name: first
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/first.yml
+    uid: 1000
+    gid: 100
+
+  - name: second
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/second.yml
+    after:
+      - first
+    uid: 1000
+    gid: 100
+
+  - name: third
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/third.yml
+    after:
+      - first
+    uid: 1000
+    gid: 100
+
