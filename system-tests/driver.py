@@ -6,6 +6,7 @@ import subprocess
 
 UUT_PATH = os.environ['UUT']
 PROJECT_ROOT = os.environ['PROJECT_ROOT']
+VERBOSE = os.environ.get('VERBOSE', "0")
 
 class CinitTest(unittest.TestCase):
 
@@ -17,6 +18,7 @@ class CinitTest(unittest.TestCase):
     def run_cinit(self, test_dir):
         cinit = subprocess.Popen([
                         UUT_PATH,
+                        "--verbose",
                         "--verbose",
                         "--config",
                         test_dir + "/config"],
@@ -30,9 +32,10 @@ class CinitTest(unittest.TestCase):
         cinit.stdout.close()
 
         self.trace = Trace(self, output)
-        self.children = {}
 
-        child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
+        if VERBOSE == "1":
+            for line in output:
+                print(line)
 
     def assert_on_trace(self):
         return self.trace
@@ -50,10 +53,12 @@ class Trace:
     def that(self, assertion):
         while self.index < len(self.trace):
             if assertion.matches(self.trace[self.index]):
+                self.index = self.index + 1
                 return self
+
             self.index = self.index + 1
 
-        for line in self.trace:
+        for line in self.trace[self.index:]:
             print(line)
 
         self.test.fail("Event '" + str(assertion) + "' has not occured")
@@ -63,14 +68,54 @@ class Trace:
 
 class Assert:
 
-    def matches():
+    def matches(self, logline):
         return False
+
+class Sequential(Assert):
+
+    def __init__(self, *args):
+        self.matchers = list(args)
+
+    def __str__(self):
+        result = "Sequential(\n"
+        for matcher in self.matchers:
+            result += "    " + str(matcher) + "\n"
+
+        return result
+
+    def matches(self, logline):
+        if self.matchers[0].matches(logline):
+            self.matchers.pop(0)
+
+        return len(self.matchers) == 0
+
+class Parallel(Assert):
+
+    def __init__(self, *args):
+        self.matchers = list(args)
+
+    def __str__(self):
+        result = "Parallel(\n"
+        for matcher in self.matchers:
+            result += "    " + str(matcher) + "\n"
+
+        return result
+
+    def matches(self, logline):
+        success_indices = []
+        for i in range(0, len(self.matchers)):
+            if self.matchers[i].matches(logline):
+                success_indices.append(i)
+
+        for i in reversed(success_indices):
+            self.matchers.pop(i)
+
+        return len(self.matchers) == 0
 
 class RegexMatcher(Assert):
 
-    def __init__(self, regex, test):
+    def __init__(self, regex):
         self.regex = regex
-        self.test = test
 
     def __str__(self):
         return self.regex
@@ -83,24 +128,36 @@ class RegexMatcher(Assert):
             return False
 
 class CycleDetected(RegexMatcher):
-    def __init__(self, test):
+    def __init__(self):
         super(CycleDetected, self).__init__(
-                "No runnable processes found, check for cycles", test)
+                "No runnable processes found, check for cycles")
+
+    def __str__(self):
+        return self.regex
 
 class ChildSpawned(RegexMatcher):
-    def __init__(self, name, test):
+    def __init__(self, name):
         super(ChildSpawned, self).__init__(
-                "Started child " + name, test)
+                "Started child " + name)
+
+    def __str__(self):
+        return self.regex
 
 class ChildExited(RegexMatcher):
-    def __init__(self, name, test):
+    def __init__(self, name):
         super(ChildExited, self).__init__(
-                "Child " + name + " exited successfully", test)
+                "Child " + name + " exited successfully")
+
+    def __str__(self):
+        return self.regex
 
 class ChildCrashed(RegexMatcher):
-    def __init__(self, name, test):
+    def __init__(self, name):
         super(ChildCrashed, self).__init__(
-                "Child " + name + " crashed with \d+", test)
+                "Child " + name + " crashed with \d+")
+
+    def __str__(self):
+        return self.regex
 
 class ChildProcess:
 

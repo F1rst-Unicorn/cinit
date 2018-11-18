@@ -153,7 +153,7 @@ impl ProcessDescription {
 
     fn create_ptys(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
         let stdin = std::io::stdin().as_raw_fd();
-        let tcget_result = termios::tcgetattr(stdin);
+        let mut tcget_result = termios::tcgetattr(stdin);
         let ioctl_result: Result<libc::c_int, nix::Error>;
         let mut winsize = pty::Winsize {
             ws_row: 0,
@@ -161,17 +161,33 @@ impl ProcessDescription {
             ws_xpixel: 0,
             ws_ypixel: 0,
         };
-        let mut termios: termios::Termios;
 
         unsafe {
             ioctl_result = libc_helpers::get_terminal_size(stdin, &mut winsize);
         }
 
         if tcget_result.is_err() {
-            debug!("Could not get terminal flags, aborting");
-            return Err(tcget_result.err().unwrap());
+            info!("Could not get terminal flags");
         } else {
-            termios = tcget_result.unwrap();
+            let mut termios = tcget_result.unwrap();
+            termios.input_flags = termios::InputFlags::empty();
+            termios.input_flags.insert(
+                termios::InputFlags::BRKINT
+                    | termios::InputFlags::ICRNL
+                    | termios::InputFlags::INPCK
+                    | termios::InputFlags::ISTRIP
+                    | termios::InputFlags::IXON,
+            );
+            termios.output_flags = termios::OutputFlags::empty();
+            termios.output_flags.insert(termios::OutputFlags::OPOST);
+            termios.local_flags = termios::LocalFlags::empty();
+            termios.local_flags.insert(
+                termios::LocalFlags::ECHO
+                    | termios::LocalFlags::ICANON
+                    | termios::LocalFlags::IEXTEN
+                    | termios::LocalFlags::ISIG,
+            );
+            tcget_result = Ok(termios);
         }
 
         if ioctl_result.is_err() {
@@ -183,26 +199,9 @@ impl ProcessDescription {
                 ws_ypixel: 0,
             };
         }
-        termios.input_flags = termios::InputFlags::empty();
-        termios.input_flags.insert(
-            termios::InputFlags::BRKINT
-                | termios::InputFlags::ICRNL
-                | termios::InputFlags::INPCK
-                | termios::InputFlags::ISTRIP
-                | termios::InputFlags::IXON,
-        );
-        termios.output_flags = termios::OutputFlags::empty();
-        termios.output_flags.insert(termios::OutputFlags::OPOST);
-        termios.local_flags = termios::LocalFlags::empty();
-        termios.local_flags.insert(
-            termios::LocalFlags::ECHO
-                | termios::LocalFlags::ICANON
-                | termios::LocalFlags::IEXTEN
-                | termios::LocalFlags::ISIG,
-        );
 
-        let stdout = pty::openpty(Some(&winsize), Some(&termios))?;
-        let stderr = pty::openpty(Some(&winsize), Some(&termios))?;
+        let stdout = pty::openpty(Some(&winsize), &tcget_result.clone().ok())?;
+        let stderr = pty::openpty(Some(&winsize), &tcget_result.ok())?;
 
         let stdout_name = libc_helpers::ttyname(stdout.slave)?;
         let stderr_name = libc_helpers::ttyname(stderr.slave)?;

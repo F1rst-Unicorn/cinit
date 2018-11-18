@@ -9,3 +9,5 @@ su $U -c 'cargo test --target=x86_64-unknown-linux-musl'
 su $U -c 'cargo doc'
 
 system-tests/test
+
+find . -user root -exec rm -rf {} \; || true

@@ -20,6 +20,7 @@ pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
                 .short("v")
                 .long(FLAG_VERBOSE)
                 .help("Output information while running")
+                .multiple(true)
                 .takes_value(false),
         );
     app.get_matches()

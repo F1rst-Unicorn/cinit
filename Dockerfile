@@ -9,6 +9,7 @@ RUN groupadd --gid $GROUP_ID builder || true
 
 RUN useradd -M -N --uid $USER_ID --gid $GROUP_ID builder || true
 
-RUN echo 'ENV_PATH        PATH=/usr/local/cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games' >> /etc/login.defs
+RUN echo 'ENV_PATH PATH=/usr/local/cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games' \
+        >> /etc/login.defs
 
 CMD ["exit"]

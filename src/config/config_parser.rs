@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn parse_omitting_all_optional_values() {
-        let mut expected_env = HashMap::new();
+        let expected_env = HashMap::new();
 
         let output = parse_raw_config(vec![MINIMAL_CONFIG.to_owned()]);
 

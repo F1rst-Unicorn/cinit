@@ -225,7 +225,6 @@ impl ProcessManager {
             warn!("Could not unregister fd from epoll");
         }
         self.fd_dict.insert(fd, child);
-        debug!("{:?}", self.fd_dict);
     }
 
     fn deregister_fd(&mut self, fd: RawFd) {
@@ -249,7 +248,6 @@ impl ProcessManager {
         }
 
         self.fd_dict.remove(&(fd as RawFd));
-        debug!("{:?}", self.fd_dict);
     }
 
     fn handle_child_output(&mut self, fd: RawFd) {

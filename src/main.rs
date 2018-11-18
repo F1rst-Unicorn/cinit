@@ -127,7 +127,7 @@ use runtime::process_manager::ProcessManager;
 
 fn main() {
     let arguments = cli_parser::parse_arguments();
-    initialise_log(arguments.is_present(cli_parser::FLAG_VERBOSE));
+    initialise_log(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
 
@@ -146,10 +146,16 @@ fn main() {
     manager.start();
 }
 
-fn initialise_log(verbose: bool) {
-    if verbose {
-        simple_logger::init_with_level(Level::Trace).unwrap();
-    } else {
-        simple_logger::init_with_level(Level::Info).unwrap();
+fn initialise_log(verbose: u64) {
+    match verbose {
+        2 => {
+            simple_logger::init_with_level(Level::Trace).unwrap();
+        }
+        1 => {
+            simple_logger::init_with_level(Level::Debug).unwrap();
+        }
+        _ => {
+            simple_logger::init_with_level(Level::Info).unwrap();
+        }
     }
 }
