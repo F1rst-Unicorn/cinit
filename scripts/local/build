@@ -1,0 +1,28 @@
+#!/bin/bash
+
+set -e
+
+PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/../.."
+
+USER_ID=$(ls -lnd $PROJECT_ROOT | awk '{ print $3 }')
+GROUP_ID=$(ls -lnd $PROJECT_ROOT | awk '{ print $4 }')
+
+DOCKER_NAME=cinit
+DOCKER_TAG="$DOCKER_NAME:build"
+DOCKER_PROJECT_ROOT=/usr/src/cinit
+
+docker build -t $DOCKER_TAG                                                 \
+        --build-arg USER_ID=$USER_ID                                        \
+        --build-arg GROUP_ID=$GROUP_ID                                      \
+        .
+
+docker run --rm                                                             \
+        --tty                                                               \
+        --interactive                                                       \
+        --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
+        --workdir "$DOCKER_PROJECT_ROOT"                                    \
+        --name $DOCKER_NAME                                                 \
+        --env USER_ID=$USER_ID                                              \
+        --env GROUP_ID=$GROUP_ID                                            \
+        $DOCKER_TAG                                                         \
+        $DOCKER_PROJECT_ROOT/scripts/container/test
