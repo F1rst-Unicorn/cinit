@@ -2,11 +2,12 @@ FROM rust:stretch
 
 RUN rustup target add x86_64-unknown-linux-musl
 
+# Development dependencies
 RUN apt update && \
-        apt install -y --no-install-recommends python3-yaml && \
-        rm -rf /var/lib/apt/lists/* && \
-        rm -rf /var/tmp && \
-        rm -rf /tmp/*
+        apt install -y --no-install-recommends \
+                libcap-dev \
+                python3-yaml && \
+        rm -rf /var/lib/apt/lists/*
 
 
 ARG USER_ID

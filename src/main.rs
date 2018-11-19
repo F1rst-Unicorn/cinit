@@ -116,6 +116,7 @@ extern crate libc;
 #[macro_use]
 extern crate nix;
 extern crate serde_yaml;
+extern crate capabilities;
 
 pub mod cli_parser;
 pub mod config;
