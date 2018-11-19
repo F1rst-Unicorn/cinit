@@ -16,13 +16,15 @@ class Test(CinitTest):
                                 ChildExited("second")),
                         Sequential(
                                 ChildSpawned("third"),
-                                ChildExited("third"))))                     \
+                                ChildCrashed("third", 42))))                \
                 .then(Sequential(
                         ChildSpawned("fourth"),
                         ChildExited("fourth")))                             \
 
 
         ChildProcess("first", self)\
+            .assert_arg("-o")\
+            .assert_arg("system-tests/child-dump/first.yml")\
             .assert_uid(0)\
             .assert_gid(0)\
             .assert_pty(True)

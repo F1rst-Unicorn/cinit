@@ -65,6 +65,10 @@ class Trace:
     def then(self, assertion):
         return self.that(assertion)
 
+    def restart_trace(self):
+        self.index = 0
+        return self
+
     def dump(self):
         print("")
         for line in self.trace:
@@ -165,9 +169,9 @@ class ChildExited(RegexMatcher):
 
 
 class ChildCrashed(RegexMatcher):
-    def __init__(self, name):
+    def __init__(self, name, rc):
         super(ChildCrashed, self).__init__(
-                "Child " + name + " crashed with \d+")
+                "Child " + name + " crashed with {}".format(rc))
 
     def __str__(self):
         return self.regex

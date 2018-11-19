@@ -8,5 +8,12 @@ su $U -c 'cargo build --target=x86_64-unknown-linux-musl -j 8'
 su $U -c 'cargo test --target=x86_64-unknown-linux-musl'
 su $U -c 'cargo doc'
 
+
+GREEN='\033[1;32m'
+NC='\033[0m'
+
+echo
+echo -e "    ${GREEN}Running system tests${NC}"
+
 system-tests/test
 

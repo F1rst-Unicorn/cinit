@@ -4,7 +4,7 @@
 *.iml
 .idea
 
-system-tests/child_dump
+system-tests/child-dump
 
 __pycache__
 *.pyc
