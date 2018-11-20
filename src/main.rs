@@ -93,7 +93,10 @@
 //!
 //! ## Capabilities
 //!
-//! Planned
+//! Processes can be restricted in what they are allowed to do. This can also
+//! mean that non-root process get elevated capabilities. See
+//! [here](http://man7.org/linux/man-pages/man7/capabilities.7.html)
+//! for a list of all capabilities.
 //!
 //! ## Dependencies
 //!
