@@ -17,8 +17,6 @@ use nix::unistd::Pid;
 pub struct ProcessManager {
     pub processes: Vec<Process>,
 
-    pub name_dict: HashMap<String, usize>,
-
     pub fd_dict: HashMap<RawFd, usize>,
 
     pub pid_dict: HashMap<Pid, usize>,

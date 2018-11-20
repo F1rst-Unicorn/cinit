@@ -29,7 +29,6 @@ impl ProcessManager {
 
         ProcessManager {
             processes,
-            name_dict,
             fd_dict: HashMap::new(),
             pid_dict: HashMap::new(),
             keep_running: true,
