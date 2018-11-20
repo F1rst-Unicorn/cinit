@@ -30,5 +30,6 @@ docker run --rm                                                             \
         --name $DOCKER_NAME                                                 \
         --env USER_ID=$USER_ID                                              \
         --env GROUP_ID=$GROUP_ID                                            \
+        --env BUILD_FLAGS="$BUILD_FLAGS"                                    \
         $DOCKER_TAG                                                         \
         $DOCKER_PROJECT_ROOT/scripts/container/test

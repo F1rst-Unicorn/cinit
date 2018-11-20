@@ -7,6 +7,9 @@ description = "Init program for UNIX processes"
 license-file = "LICENSE"
 build = "build.rs"
 
+[profile.release]
+lto = true
+
 [dependencies]
 clap = "~2.27.0"
 log = "0.4"
