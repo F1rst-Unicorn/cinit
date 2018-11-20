@@ -7,11 +7,11 @@ use nix::unistd::Pid;
 use nix::unistd::Uid;
 use nix::unistd::Gid;
 
-use super::process::{ProcessDescription, ProcessState};
+use super::process::{Process, ProcessState};
 
-impl ProcessDescription {
-    pub fn from(config: &config::config::ProcessConfig) -> ProcessDescription {
-        let mut result = ProcessDescription {
+impl Process {
+    pub fn from(config: &config::config::ProcessConfig) -> Process {
+        let mut result = Process {
             name: config.name.to_owned(),
             path: config.path.to_owned(),
             args: Vec::new(),

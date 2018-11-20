@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
 use runtime::process::{Process, ProcessState};
+use runtime::dependency_graph;
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -23,7 +23,7 @@ pub struct ProcessManager {
 
     pub keep_running: bool,
 
-    pub runnable: VecDeque<usize>,
+    pub dependency_manager: dependency_graph::DependencyManager,
 
     pub epoll_file: RawFd,
 
@@ -53,7 +53,7 @@ impl ProcessManager {
         }
 
         debug!("Entering poll loop");
-        while self.keep_running && (self.pid_dict.len() != 0 || self.runnable.len() != 0) {
+        while self.keep_running && (self.pid_dict.len() != 0 || self.dependency_manager.has_runnables()) {
             self.kick_off_children();
             self.dispatch_epoll();
             self.look_for_finished_children();
@@ -67,7 +67,7 @@ impl ProcessManager {
 
         if self.processes
             .iter()
-            .any(|p| p.description.state == ProcessState::Blocked) {
+            .any(|p| p.state == ProcessState::Blocked) {
             error!("No runnable processes found, check for cycles");
             trace!("No runnable processes found, check for cycles");
         }
@@ -103,24 +103,21 @@ impl ProcessManager {
         let child_index = *self.pid_dict.get(&pid).expect("PID not found");
         {
             let child = &mut self.processes[child_index];
-            child.description.state = if rc == 0 {
-                info!("Child {} exited successfully", child.description.name);
-                trace!("Child {} exited successfully", child.description.name);
+            child.state = if rc == 0 {
+                info!("Child {} exited successfully", child.name);
+                trace!("Child {} exited successfully", child.name);
                 ProcessState::Done
             } else {
-                warn!("Child {} crashed with {}", child.description.name, rc);
-                trace!("Child {} crashed with {}", child.description.name, rc);
+                warn!("Child {} crashed with {}", child.name, rc);
+                trace!("Child {} crashed with {}", child.name, rc);
                 ProcessState::Crashed
             }
         }
         self.pid_dict.remove(pid);
+        let ready_children = self.dependency_manager.notify_process_finished(child_index);
 
-        for successor_index in self.processes[child_index].node_info.before.clone() {
-            let mut successor = &mut self.processes[successor_index];
-            successor.node_info.predecessor_count -= 1;
-            if successor.node_info.predecessor_count == 0 {
-                self.runnable.push_back(successor_index);
-            }
+        for i in ready_children {
+            self.processes[i].state = ProcessState::Ready;
         }
     }
 
@@ -194,8 +191,8 @@ impl ProcessManager {
                         info!("Received termination signal, killing children");
                         self.keep_running = false;
                         for child in &self.processes {
-                            if child.description.state == ProcessState::Running {
-                                signal::kill(child.description.pid, signal::SIGTERM)
+                            if child.state == ProcessState::Running {
+                                signal::kill(child.pid, signal::SIGTERM)
                                     .expect("Could not transmit signal to child");
                             }
                         }
@@ -265,7 +262,6 @@ impl ProcessManager {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
             let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")]
-                .description
                 .name;
 
             for line in output {
@@ -277,19 +273,18 @@ impl ProcessManager {
     }
 
     fn kick_off_children(&mut self) {
-        while !self.runnable.is_empty() {
-            let child_index = self.runnable.pop_back().unwrap();
+        while let Some(child_index) = self.dependency_manager.pop_runnable() {
             let child_result = self.processes[child_index].start();
 
             if child_result.is_err() {
                 error!("Failed to spawn child: {}", child_result.unwrap_err());
                 return;
             }
-            let child_desc = child_result.unwrap();
+            let child = child_result.unwrap();
 
-            self.pid_dict.insert(child_desc.0, child_index);
-            self.register_fd(child_desc.1, child_index);
-            self.register_fd(child_desc.2, child_index);
+            self.pid_dict.insert(child.0, child_index);
+            self.register_fd(child.1, child_index);
+            self.register_fd(child.2, child_index);
         }
     }
 }

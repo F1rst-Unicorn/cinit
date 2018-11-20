@@ -42,19 +42,6 @@ pub enum ProcessState {
 
 #[derive(Debug)]
 pub struct Process {
-    pub description: ProcessDescription,
-
-    pub node_info: ProcessNode,
-}
-
-impl Process {
-    pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
-        self.description.start()
-    }
-}
-
-#[derive(Debug)]
-pub struct ProcessDescription {
     pub name: String,
 
     pub path: String,
@@ -78,7 +65,7 @@ pub struct ProcessDescription {
     pub pid: Pid,
 }
 
-impl ProcessDescription {
+impl Process {
     pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
         info!("Starting {}", self.name);
 
@@ -284,13 +271,4 @@ impl ProcessDescription {
         let stderr = unistd::pipe().unwrap();
         Ok((stdout, stderr))
     }
-}
-
-/// Process information relevant for dependency resolution
-/// via ongoing topological sorting
-#[derive(Debug)]
-pub struct ProcessNode {
-    pub before: Vec<usize>,
-
-    pub predecessor_count: usize,
 }

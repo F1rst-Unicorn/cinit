@@ -1,52 +1,38 @@
 use super::process_manager::ProcessManager;
 
 use std::collections::HashMap;
-use std::collections::VecDeque;
 use std::process::exit;
 
 use config::config::Config;
-use runtime::process::{Process, ProcessDescription, ProcessNode, ProcessState};
+use runtime::process::{Process};
+use runtime::dependency_graph::{DependencyManager, ProcessNode};
 
 use nix::sys::signalfd;
 
 impl ProcessManager {
     pub fn from(config: Config) -> ProcessManager {
-        let descriptions = ProcessManager::copy_processes(&config);
+        let processes = config.programs.iter()
+            .map(Process::from)
+            .collect();
 
-        let name_dict = ProcessManager::build_name_dict(&descriptions);
+        let name_dict = ProcessManager::build_name_dict(&processes);
 
         let nodes = ProcessManager::build_dependencies(&config, &name_dict);
 
-        let mut processes = ProcessManager::merge(descriptions, nodes);
-
-        let runnable = ProcessManager::find_runnables(&mut processes);
-
-        if runnable.len() == 0 {
-            error!("No runnable processes found, check for cycles");
-            trace!("No runnable processes found, check for cycles");
-            exit(2);
-        }
+        let dependency_manager = DependencyManager::with_nodes(nodes);
 
         ProcessManager {
             processes,
             fd_dict: HashMap::new(),
             pid_dict: HashMap::new(),
             keep_running: true,
-            runnable,
+            dependency_manager,
             epoll_file: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).unwrap(),
         }
     }
 
-    fn copy_processes(config: &Config) -> Vec<ProcessDescription> {
-        let mut result = Vec::with_capacity(config.programs.len());
-        for program in &config.programs {
-            result.push(ProcessDescription::from(program));
-        }
-        result
-    }
-
-    fn build_name_dict(descriptions: &Vec<ProcessDescription>) -> HashMap<String, usize> {
+    fn build_name_dict(descriptions: &Vec<Process>) -> HashMap<String, usize> {
         let mut result = HashMap::new();
 
         for (i, desc) in descriptions.into_iter().enumerate() {
@@ -114,28 +100,6 @@ impl ProcessManager {
             }
         }
 
-        result
-    }
-
-    fn find_runnables(processes: &mut Vec<Process>) -> VecDeque<usize> {
-        let mut result = VecDeque::new();
-        for (i, process) in processes.iter_mut().enumerate() {
-            if process.node_info.predecessor_count == 0 {
-                result.push_back(i);
-                process.description.state = ProcessState::Ready;
-            }
-        }
-        result
-    }
-
-    fn merge(descriptions: Vec<ProcessDescription>, nodes: Vec<ProcessNode>) -> Vec<Process> {
-        let mut result = Vec::with_capacity(descriptions.len());
-        for (desc, node) in descriptions.into_iter().zip(nodes.into_iter()) {
-            result.push(Process {
-                description: desc,
-                node_info: node,
-            })
-        }
         result
     }
 }
