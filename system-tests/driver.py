@@ -180,6 +180,15 @@ class Exited(RegexMatcher):
         return self.regex
 
 
+class ConfigError(RegexMatcher):
+    def __init__(self):
+        super(ConfigError, self).__init__(
+                "Error in configuration file")
+
+    def __str__(self):
+        return self.regex
+
+
 class ChildCrashed(RegexMatcher):
     def __init__(self, name, rc):
         super(ChildCrashed, self).__init__(
