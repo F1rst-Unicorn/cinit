@@ -5,10 +5,11 @@ RUN rustup target add x86_64-unknown-linux-musl
 # Development dependencies
 RUN apt update && \
         apt install -y --no-install-recommends \
-                libcap-dev \
                 python3-yaml && \
         rm -rf /var/lib/apt/lists/*
 
+COPY scripts/container/compile-libcap /tmp
+RUN /tmp/compile-libcap
 
 ARG USER_ID
 ARG GROUP_ID

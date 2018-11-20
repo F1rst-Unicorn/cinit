@@ -2,8 +2,10 @@ use std::ffi::CString;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
+use std::str::FromStr;
 
 use super::libc_helpers;
+use super::libc_helpers::map_to_errno;
 use config;
 
 use nix;
@@ -14,6 +16,10 @@ use nix::sys::stat;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
+
+use capabilities::Capabilities;
+use capabilities::Capability;
+use capabilities::Flag;
 
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
@@ -90,20 +96,22 @@ impl ProcessDescription {
                 unistd::close(stderr.1)?;
                 Ok((child_pid, stdout.0, stderr.0))
             }
-            Ok(unistd::ForkResult::Child) => match self.setup_child(stdout.1, stderr.1) {
-                Ok(_) => {
-                    assert!(false, "exec() was successful but did not replace program");
-                    exit(1);
+            Ok(unistd::ForkResult::Child) => {
+                match self.setup_child(stdout.1, stderr.1) {
+                    Ok(_) => {
+                        assert!(false, "exec() was successful but did not replace program");
+                        exit(1);
+                    }
+                    Err(nix::Error::Sys(errno)) => {
+                        println!("Could not exec child {}: {}", self.name, errno.desc());
+                        exit(4);
+                    }
+                    _ => {
+                        println!("Could not exec child {}", self.name);
+                        exit(4);
+                    }
                 }
-                Err(nix::Error::Sys(errno)) => {
-                    error!("Could not exec child {}: {}", self.name, errno.desc());
-                    exit(0);
-                }
-                _ => {
-                    error!("Could not exec child {}", self.name);
-                    exit(0);
-                }
-            },
+            }
             _ => {
                 error!("Forking failed");
                 exit(4)
@@ -137,22 +145,68 @@ impl ProcessDescription {
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
 
-        println!("Closing duplicated stdout");
         unistd::close(stdout)?;
-        println!("Closing duplicated stderr");
         unistd::close(stderr)?;
 
-        println!("Setting gid");
-        unistd::setgid(self.gid)?;
-        println!("Setting uid");
-        unistd::setuid(self.uid)?;
+        self.set_user_and_caps()?;
 
-        println!("Doing execve");
         unistd::execve(
             &CString::new(self.path.to_owned()).unwrap(),
             self.args.as_slice(),
             self.env.as_slice(),
         )?;
+        Ok(())
+    }
+
+    fn set_user_and_caps(&mut self) -> Result<(), nix::Error> {
+        let mut temporary_caps = Capabilities::new().map_err(map_to_errno)?;
+        let mut actual_caps = Capabilities::new().map_err(map_to_errno)?;
+        let flags = [Capability::CAP_SETUID, Capability::CAP_SETGID, Capability::CAP_SETPCAP, Capability::CAP_SETFCAP];
+        temporary_caps.update(&flags, Flag::Permitted, true);
+        temporary_caps.update(&flags, Flag::Effective, true);
+        temporary_caps.update(&flags, Flag::Inheritable, true);
+        for raw_cap in &self.capabilities {
+            let new_cap = Capability::from_str(raw_cap);
+            match new_cap {
+                Ok(cap) => {
+                    actual_caps.update(&[cap], Flag::Permitted, true);
+                    actual_caps.update(&[cap], Flag::Effective, true);
+                    actual_caps.update(&[cap], Flag::Inheritable, true);
+                    temporary_caps.update(&[cap], Flag::Permitted, true);
+                    temporary_caps.update(&[cap], Flag::Effective, true);
+                    temporary_caps.update(&[cap], Flag::Inheritable, true);
+                }
+                _ => {
+                    println!("Failed to set {}", raw_cap);
+                }
+            }
+        }
+
+        temporary_caps.apply().map_err(map_to_errno)?;
+        libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 1)?;
+        unistd::setgid(self.gid)?;
+        unistd::setuid(self.uid)?;
+        libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 0)?;
+        temporary_caps.apply().map_err(map_to_errno)?;
+
+        libc_helpers::prctl_four(libc::PR_CAP_AMBIENT,
+                                 libc::PR_CAP_AMBIENT_CLEAR_ALL as libc::c_ulong,
+                                 0, 0, 0)?;
+        for raw_cap in &self.capabilities {
+            let new_cap = Capability::from_str(raw_cap);
+            match new_cap {
+                Ok(cap) => {
+                    libc_helpers::prctl_four(libc::PR_CAP_AMBIENT,
+                                             libc::PR_CAP_AMBIENT_RAISE as libc::c_ulong,
+                                             cap as libc::c_ulong, 0, 0)?
+                }
+                _ => {
+                    println!("Failed to set {}", raw_cap);
+                }
+            }
+        }
+
+        actual_caps.apply().map_err(map_to_errno)?;
         Ok(())
     }
 
@@ -172,7 +226,7 @@ impl ProcessDescription {
         }
 
         if tcget_result.is_err() {
-            info!("Could not get terminal flags");
+            debug!("Could not get terminal flags");
         } else {
             let mut termios = tcget_result.unwrap();
             termios.input_flags = termios::InputFlags::empty();

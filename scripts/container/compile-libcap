@@ -1,0 +1,20 @@
+#!/bin/bash
+
+cd /usr/src
+
+git clone https://git.kernel.org/pub/scm/libs/libcap/libcap.git libcap
+
+cd libcap
+
+CFLAGS="-D_FORTIFY_SOURCE=0 -O2 -pipe -fstack-protector-strong -fno-plt -march=x86-64 -mtune=generic"
+LDFLAGS="-Wl,-O1,--sort-common,--as-needed,-z,relro,-z,now"
+
+sed -i "s/CFLAGS :=/CFLAGS += $CFLAGS/" Make.Rules
+sed -i "s/LDFLAGS :=/LDFLAGS += $LDFLAGS/" Make.Rules
+
+make
+
+make prefix=/ lib=/usr/lib/ RAISE_SETFCAP=no install
+
+cd ..
+rm -rf libcap

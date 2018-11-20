@@ -75,6 +75,7 @@ impl ProcessManager {
         }
 
         info!("Exiting");
+        trace!("Exiting");
     }
 
     fn look_for_finished_children(&mut self) {

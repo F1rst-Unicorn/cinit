@@ -1,0 +1,12 @@
+programs:
+  - name: first
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/first.yml
+    uid: 1000
+    gid: 100
+    pty: true
+    capabilities:
+      - CAP_KILL
+      - CAP_NET_RAW

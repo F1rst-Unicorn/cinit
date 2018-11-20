@@ -3,6 +3,7 @@
 
 extern crate clap;
 extern crate nix;
+extern crate capabilities;
 
 use std::fs::File;
 use std::io::Write;
@@ -17,6 +18,8 @@ use clap::Arg;
 
 use nix::sys::signalfd;
 use nix::unistd;
+
+use capabilities::Capabilities;
 
 fn main() {
     let arguments = App::new("cinit-harness")
@@ -106,8 +109,24 @@ fn dump(output: &str) {
                                 && unistd::isatty(std::io::stderr().as_raw_fd()).unwrap_or(false)))
         .expect("Failed to dump");
 
-    file.write_fmt(format_args!("    capabilities: []\n"))
+    file.write_fmt(format_args!("    capabilities:"))
         .expect("Failed to dump");
+    let mut cap_string = Capabilities::from_current_proc()
+        .expect("Could not get capabilities")
+        .to_string();
+    if cap_string.len() < 2 {
+        file.write_fmt(format_args!(" []\n"))
+            .expect("Failed to dump");
+    } else {
+        cap_string = cap_string.split_off(2);
+        cap_string = cap_string.split("+").next().expect("Could not parse caps").to_string();
+        file.write_fmt(format_args!("\n"))
+            .expect("Failed to dump");
+        for cap in cap_string.split(",") {
+            file.write_fmt(format_args!("      - '{}'\n", cap.to_ascii_uppercase()))
+                .expect("Failed to dump");
+        }
+    }
 
     file.write_fmt(format_args!("    env:\n"))
         .expect("Failed to open output file");

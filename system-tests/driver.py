@@ -11,7 +11,12 @@ VERBOSE = os.environ.get('VERBOSE', "0")
 
 class CinitTest(unittest.TestCase):
 
-    def run_cinit(self, test_dir):
+    def tearDown(self):
+        child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
+        for file in os.listdir(child_dumps):
+            os.unlink(child_dumps + file)
+
+    def run_cinit(self, test_dir, dump_log=False):
         cinit = subprocess.Popen([
                         UUT_PATH,
                         "--verbose",
@@ -20,7 +25,7 @@ class CinitTest(unittest.TestCase):
                         test_dir + "/config"],
                 stdout=subprocess.PIPE,
                 stdin=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=subprocess.STDOUT,
                 cwd=PROJECT_ROOT)
 
         cinit.wait()
@@ -29,9 +34,8 @@ class CinitTest(unittest.TestCase):
 
         self.trace = Trace(self, output)
 
-        if VERBOSE == "1":
-            for line in output:
-                print(line)
+        if VERBOSE == "1" or dump_log:
+            self.trace.dump()
 
     def assert_on_trace(self):
         return self.trace
@@ -72,8 +76,7 @@ class Trace:
     def dump(self):
         print("")
         for line in self.trace:
-            if re.fullmatch(".* TRACE .*", line) is not None:
-                print(line)
+            print(line)
 
 
 class Assert:
@@ -168,6 +171,15 @@ class ChildExited(RegexMatcher):
         return self.regex
 
 
+class Exited(RegexMatcher):
+    def __init__(self):
+        super(Exited, self).__init__(
+                "Exiting")
+
+    def __str__(self):
+        return self.regex
+
+
 class ChildCrashed(RegexMatcher):
     def __init__(self, name, rc):
         super(ChildCrashed, self).__init__(
@@ -179,12 +191,14 @@ class ChildCrashed(RegexMatcher):
 
 class ChildProcess:
 
-    def __init__(self, name, test):
+    def __init__(self, name, test, dump=False):
         self.test = test
         child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
         with open(child_dumps + name + ".yml") as stream:
-            dump = yaml.load(stream)
-            program = dump['programs'][0]
+            tree = yaml.load(stream)
+            if dump:
+                print(tree)
+            program = tree['programs'][0]
             self.args = program['args']
             self.uid = program['uid']
             self.gid = program['gid']
@@ -213,6 +227,17 @@ class ChildProcess:
         self.test.assertEqual(self.capabilities, set(caps))
         return self
 
+    def assert_default_env(self):
+        self.assert_env_is_keys(ChildProcess.get_default_env())
+        return self
+
+    def assert_env_is_keys(self, keys):
+        self.test.assertEqual(keys, set(self.env.keys()))
+
+    def assert_env_is(self, env):
+        self.test.assertEqual(env, self.env)
+        return self
+
     def assert_env(self, key, value):
         self.test.assertTrue(key in self.env and self.env[key] == value)
         return self
@@ -221,5 +246,20 @@ class ChildProcess:
         self.test.assertFalse(key in self.env)
         return self
 
+    def assert_caps(self, cap_set):
+        self.test.assertEqual(cap_set, self.capabilities);
+        return self
 
-
+    @staticmethod
+    def get_default_env():
+        return {
+            "HOME",
+            "LANG",
+            "LANGUAGE",
+            "LOGNAME",
+            "PATH",
+            "PWD",
+            "SHELL",
+            "TERM",
+            "USER"
+        }

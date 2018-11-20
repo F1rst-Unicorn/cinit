@@ -106,6 +106,11 @@
 //! started and cinit terminates.
 //!
 
+use std::alloc::System;
+
+#[global_allocator]
+static A: System = System;
+
 extern crate clap;
 #[macro_use]
 extern crate log;
