@@ -5,6 +5,9 @@ RUN rustup target add x86_64-unknown-linux-musl
 # Development dependencies
 RUN apt update && \
         apt install -y --no-install-recommends \
+                musl \
+                musl-tools \
+                musl-dev \
                 python3-yaml && \
         rm -rf /var/lib/apt/lists/*
 

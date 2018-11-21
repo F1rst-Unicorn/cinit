@@ -126,6 +126,7 @@ extern crate nix;
 extern crate serde_yaml;
 extern crate capabilities;
 extern crate petgraph;
+extern crate tera;
 
 pub mod cli_parser;
 pub mod config;
