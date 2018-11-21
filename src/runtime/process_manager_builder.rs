@@ -9,6 +9,8 @@ use runtime::dependency_graph::DependencyManager;
 
 use nix::sys::signalfd;
 
+const EXIT_CODE: i32 = 2;
+
 impl ProcessManager {
     pub fn from(config: Config) -> ProcessManager {
         let processes = config.programs.iter()
@@ -36,7 +38,7 @@ impl ProcessManager {
         for (i, desc) in descriptions.into_iter().enumerate() {
             if result.contains_key(&desc.name) {
                 error!("Duplicate program found for name {}", &desc.name);
-                exit(2);
+                exit(EXIT_CODE);
             } else {
                 result.insert(desc.name.to_owned(), i);
             }

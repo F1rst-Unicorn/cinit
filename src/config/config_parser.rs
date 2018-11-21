@@ -8,6 +8,8 @@ use serde_yaml;
 
 use config::config::Config;
 
+const EXIT_CODE: i32 = 1;
+
 pub fn parse_config(path: &str) -> Config {
     let raw_config = read_config(path);
     debug!(
@@ -34,7 +36,7 @@ fn parse_raw_config(raw_config: Vec<String>) -> Config {
             error!("{:#?}", error.unwrap_err());
         }
         trace!("Error in configuration file");
-        exit(1);
+        exit(EXIT_CODE);
     } else {
         parse_result
             .map(|s| s.unwrap())
@@ -51,7 +53,7 @@ pub fn read_config(path: &str) -> Vec<String> {
             path,
             metadata_result.unwrap_err()
         );
-        exit(1);
+        exit(EXIT_CODE);
     }
 
     let mut result: Vec<String>;
@@ -65,7 +67,7 @@ pub fn read_config(path: &str) -> Vec<String> {
                 path,
                 content.unwrap_err()
             );
-            exit(1);
+            exit(EXIT_CODE);
         }
 
         result = Vec::new();
@@ -73,7 +75,7 @@ pub fn read_config(path: &str) -> Vec<String> {
         for entry in content.unwrap() {
             if entry.is_err() {
                 error!("Failed to read {}: {}", path, entry.unwrap_err());
-                exit(1);
+                exit(EXIT_CODE);
             }
             let entry_path = entry.unwrap().path();
             let entry_path_string = entry_path.to_str().unwrap();
@@ -85,7 +87,7 @@ pub fn read_config(path: &str) -> Vec<String> {
         match read_file(path) {
             Err(error) => {
                 error!("Failed to read file {}: {}", path, error);
-                exit(1);
+                exit(EXIT_CODE);
             }
             Ok(content) => {
                 result = vec![content];

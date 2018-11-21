@@ -13,6 +13,8 @@ use nix::sys::wait;
 use nix::unistd;
 use nix::unistd::Pid;
 
+const EXIT_CODE: i32 = 3;
+
 #[derive(Debug)]
 pub struct ProcessManager {
     pub processes: Vec<Process>,
@@ -45,7 +47,7 @@ impl ProcessManager {
         match self.setup() {
             Err(content) => {
                 error!("Failed to register with epoll: {}", content);
-                exit(3);
+                exit(EXIT_CODE);
             }
             _ => {
                 debug!("setup successful");

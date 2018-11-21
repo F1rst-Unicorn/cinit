@@ -21,6 +21,8 @@ use capabilities::Capabilities;
 use capabilities::Capability;
 use capabilities::Flag;
 
+const EXIT_CODE: i32 = 4;
+
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
     /// The process cannot be started because of dependencies not having
@@ -87,21 +89,22 @@ impl Process {
                 match self.setup_child(stdout.1, stderr.1) {
                     Ok(_) => {
                         assert!(false, "exec() was successful but did not replace program");
+                        // Intentionally other exit code as this is the child
                         exit(1);
                     }
                     Err(nix::Error::Sys(errno)) => {
                         println!("Could not exec child {}: {}", self.name, errno.desc());
-                        exit(4);
+                        exit(EXIT_CODE);
                     }
                     _ => {
                         println!("Could not exec child {}", self.name);
-                        exit(4);
+                        exit(EXIT_CODE);
                     }
                 }
             }
             _ => {
                 error!("Forking failed");
-                exit(4)
+                exit(EXIT_CODE)
             }
         }
     }
