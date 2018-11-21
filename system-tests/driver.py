@@ -104,7 +104,7 @@ class Sequential(Assert):
         return len(self.matchers) == 0
 
 
-class Alternative(Assert):
+class AnyOf(Assert):
 
     def __init__(self, *args):
         self.matchers = list(args)
@@ -252,7 +252,7 @@ class ChildProcess:
         return self
 
     def assert_capabilities(self, caps):
-        self.test.assertEqual(self.capabilities, set(caps))
+        self.test.assertEqual(set(caps), self.capabilities)
         return self
 
     def assert_default_env(self):
@@ -272,10 +272,6 @@ class ChildProcess:
 
     def assert_not_env(self, key):
         self.test.assertFalse(key in self.env)
-        return self
-
-    def assert_caps(self, cap_set):
-        self.test.assertEqual(cap_set, self.capabilities);
         return self
 
     @staticmethod

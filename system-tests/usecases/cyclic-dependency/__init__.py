@@ -6,7 +6,7 @@ class Test(CinitTest):
     def test(self):
         self.run_cinit(self.get_test_dir(__file__))
 
-        self.assert_on_trace().that(Alternative(
+        self.assert_on_trace().that(AnyOf(
             CycleDetected("first"),
             CycleDetected("second")))
 
