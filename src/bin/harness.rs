@@ -86,7 +86,8 @@ fn main() {
 }
 
 fn dump(output: &str) {
-    let mut file = File::create(output).expect("Failed to open output file");
+    let mut file = File::create(output)
+        .expect(&format!("Failed to open output file '{}'", output));
 
     file.write_fmt(format_args!("programs:\n"))
         .expect("Failed to open output file");
