@@ -43,5 +43,5 @@ pub fn initialise(verbosity_level: u64) {
         .build(Root::builder().appender("stdout").build(level))
         .expect("Could not configure logging");
 
-    let handle = log4rs::init_config(config).expect("Could not apply log config");
+    log4rs::init_config(config).expect("Could not apply log config");
 }
