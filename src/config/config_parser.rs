@@ -116,9 +116,13 @@ mod tests {
 
     #[test]
     fn parse_single_program() {
-        let mut expected_env = HashMap::new();
-        expected_env.insert("key".to_owned(), Some("value".to_owned()));
-        expected_env.insert("empty_key".to_owned(), None);
+        let mut expected_env = Vec::new();
+        let mut entry = HashMap::new();
+        entry.insert("key".to_owned(), Some("value".to_owned()));
+        expected_env.push(entry);
+        let mut entry = HashMap::new();
+        entry.insert("empty_key".to_owned(), None);
+        expected_env.push(entry);
 
         let output = parse_raw_config(vec![FULL_CONFIG.to_owned()]);
 
@@ -142,8 +146,6 @@ mod tests {
 
     #[test]
     fn parse_omitting_all_optional_values() {
-        let expected_env = HashMap::new();
-
         let output = parse_raw_config(vec![MINIMAL_CONFIG.to_owned()]);
 
         assert_eq!(1, output.programs.len());
@@ -161,7 +163,7 @@ mod tests {
         assert_eq!(Vec::new() as Vec<String>, program.after);
         assert_eq!(false, program.emulate_pty);
         assert_eq!(Vec::new() as Vec<String>, program.capabilities);
-        assert_eq!(expected_env, program.env);
+        assert_eq!(Vec::new() as Vec<HashMap<String, Option<String>>>, program.env);
     }
 
     const MINIMAL_CONFIG: &str = "\
@@ -188,8 +190,8 @@ programs:
     capabilities:
       - some
     env:
-      key: value
-      empty_key:
+      - key: value
+      - empty_key:
 ";
 
 }

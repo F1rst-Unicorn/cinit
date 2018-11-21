@@ -267,7 +267,8 @@ class ChildProcess:
         return self
 
     def assert_env(self, key, value):
-        self.test.assertTrue(key in self.env and self.env[key] == value)
+        self.test.assertTrue(key in self.env)
+        self.test.assertEqual(value, self.env[key])
         return self
 
     def assert_not_env(self, key):

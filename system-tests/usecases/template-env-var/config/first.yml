@@ -4,3 +4,6 @@ programs:
     args:
       - -o
       - system-tests/child-dump/first.yml
+    env:
+      - FOO: bar
+      - BAR: "{{ TERM }}-{{ FOO }}"

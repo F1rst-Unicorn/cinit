@@ -48,7 +48,7 @@ pub struct ProcessConfig {
     pub capabilities: Vec<String>,
 
     #[serde(default)]
-    pub env: HashMap<String, Option<String>>,
+    pub env: Vec<HashMap<String, Option<String>>>,
 }
 
 #[derive(Debug, Deserialize)]

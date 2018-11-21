@@ -55,12 +55,17 @@ fn map_unix_name(id: &Option<u32>, name: &Option<String>, process: &String) -> u
     }
 }
 
-fn convert_env(env: &HashMap<String, Option<String>>) -> Vec<CString> {
+fn convert_env(env: &Vec<HashMap<String, Option<String>>>) -> Vec<CString> {
+    let mut result = get_default_env();
+    result = copy_from_config(env, result);
+    flatten_to_strings(&mut result)
+}
+
+fn get_default_env() -> HashMap<String, String> {
     let mut result: HashMap<String, String> = HashMap::new();
     let default_env = [
         "HOME", "LANG", "LANGUAGE", "LOGNAME", "PATH", "PWD", "SHELL", "TERM", "USER",
     ];
-
     for key in default_env.iter() {
         match std::env::var(key) {
             Err(_) => {
@@ -71,28 +76,51 @@ fn convert_env(env: &HashMap<String, Option<String>>) -> Vec<CString> {
             }
         }
     }
+    result
+}
 
-    for (key, value) in env {
-        match value {
-            None => match std::env::var(key) {
-                Err(_) => {
-                    result.insert(key.to_string(), String::from(""));
+fn copy_from_config(env: &Vec<HashMap<String, Option<String>>>,
+                    mut result: HashMap<String, String>)
+                    -> HashMap<String, String> {
+
+    for entry in env {
+        for (key, value) in entry {
+            match value {
+                None => match std::env::var(key) {
+                    Err(_) => {
+                        result.insert(key.to_string(), String::from(""));
+                    }
+                    Ok(real_value) => {
+                        result.insert(key.to_string(), real_value);
+                    }
+                },
+                Some(raw_value) => {
+                    let rendered_value = render_template(&result, raw_value)
+                        .unwrap_or(raw_value.to_string());
+                    result.insert(key.to_string(), rendered_value);
                 }
-                Ok(real_value) => {
-                    result.insert(key.to_string(), real_value);
-                }
-            },
-            Some(real_value) => {
-                result.insert(key.to_string(), real_value.to_string());
             }
         }
     }
+    result
+}
 
+fn flatten_to_strings(result: &mut HashMap<String, String>) -> Vec<CString> {
     let mut ret: Vec<CString> = Vec::new();
-
     for (key, value) in result.iter() {
         let entry = key.to_owned() + "=" + value;
         ret.push(CString::new(entry).unwrap());
     }
     ret
+}
+
+fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result<String, ()>{
+    let mut tera: tera::Tera = Default::default();
+    let mut internal_context = tera::Context::new();
+    let name = "name";
+    tera.add_raw_template(name, raw_value).map_err(|_| ())?;
+    for (key, value) in context {
+        internal_context.insert(key, value);
+    }
+    tera.render(name, &context).map_err(|_| ())
 }

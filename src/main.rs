@@ -41,15 +41,17 @@
 //!
 //!     # Pass environment variables
 //!     env:
-//!       PWD: /home/user
-//!       # If no value is given, it is forwarded from cinit
-//!       PASSWORD:
+//!       - PWD: /home/user
+//!         # If no value is given, it is forwarded from cinit
+//!       - PASSWORD:
+//!       - NAME: my_program
+//!         # This will be rendered to "my_program_user"
+//!       - PROGRAM_USER: {{ NAME }}_user
 //! ```
 //!
 //! If a file is passed via command line it is the only file used. Passing a
 //! directory makes cinit traverse it recursively and taking all found files as
 //! configuration. If no path is given /etc/cinit.yml is used.
-//!
 //!
 //! ## Usage
 //!
@@ -88,8 +90,12 @@
 //! * `TERM`
 //! * `USER`
 //!
-//! Additional parameters may be specified. If no value is given, cinit will forward
-//! the value from its own environment.
+//! Additional parameters may be specified. If no value is given, cinit will
+//! forward the value from its own environment.
+//!
+//! The values of the variables support simple templating. Use `{{ VAR }}` to
+//! refer to another variable in the environment. Note that `VAR` has to be
+//! defined before it can be referenced!
 //!
 //! ## Capabilities
 //!
