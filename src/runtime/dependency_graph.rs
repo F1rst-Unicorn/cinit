@@ -1,14 +1,18 @@
 use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::process::exit;
+
+use petgraph::graph::Graph;
 
 use config::config::Config;
 
+const EXIT_CODE: i32 = 5;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
 #[derive(Debug)]
 pub struct ProcessNode {
-    pub before: Vec<usize>,
+    pub after_self: Vec<usize>,
 
     pub predecessor_count: usize,
 }
@@ -24,10 +28,13 @@ impl DependencyManager {
 
     pub fn with_nodes(config: &Config, name_dict: &HashMap<String, usize>) -> Self {
         let nodes = DependencyManager::build_dependencies(config, name_dict);
-        DependencyManager {
+        let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),
             nodes,
-        }
+        };
+
+        result.check_for_cycles(config);
+        result
     }
 
     pub fn has_runnables(&self) -> bool {
@@ -40,7 +47,7 @@ impl DependencyManager {
 
     pub fn notify_process_finished(&mut self, process: usize) -> Vec<usize> {
         let mut result = Vec::new();
-        for successor_index in self.nodes[process].before.clone() {
+        for successor_index in self.nodes[process].after_self.clone() {
             let mut successor = &mut self.nodes[successor_index];
             successor.predecessor_count -= 1;
             if successor.predecessor_count == 0 {
@@ -67,7 +74,7 @@ impl DependencyManager {
 
         for _ in 0..config.programs.len() {
             result.push(ProcessNode {
-                before: Vec::new(),
+                after_self: Vec::new(),
                 predecessor_count: 0,
             });
         }
@@ -86,7 +93,7 @@ impl DependencyManager {
                         .get(predecessor_name)
                         .expect("Invalid index in name_dict")
                         .clone();
-                    current.before.push(predecessor_index);
+                    current.after_self.push(predecessor_index);
                 }
 
                 current.predecessor_count += process_config.after.len();
@@ -111,10 +118,35 @@ impl DependencyManager {
                 let mut dependency = result
                     .get_mut(dependency_index)
                     .expect("Invalid index in name_dict");
-                dependency.before.push(current_index);
+                dependency.after_self.push(current_index);
+            }
+        }
+        result
+    }
+
+    fn check_for_cycles(&self, config: &Config) {
+        let mut graph = Graph::<_, _>::new();
+        let mut node_dict = HashMap::new();
+
+        for (i, _) in (&self.nodes).iter().enumerate() {
+            let node = graph.add_node(i);
+            node_dict.insert(i, node);
+        }
+
+        for (i, node) in (&self.nodes).iter().enumerate() {
+            for successor in &node.after_self {
+                graph.add_edge(node_dict.get(&i).unwrap().clone(),
+                               node_dict.get(successor).unwrap().clone(),
+                               0);
             }
         }
 
-        result
+        if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
+            let node_id = cycle.node_id();
+            let id = graph.node_weight(node_id).unwrap().clone();
+            error!("Found cycle involving process '{}'", config.programs[id].name);
+            trace!("Found cycle involving process '{}'", config.programs[id].name);
+            exit(EXIT_CODE);
+        }
     }
 }

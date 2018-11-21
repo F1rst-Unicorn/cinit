@@ -6,10 +6,7 @@ class Test(CinitTest):
     def test(self):
         self.run_cinit(self.get_test_dir(__file__))
 
-        self.assert_on_trace()                                              \
-                .that(Sequential(
-                        ChildSpawned("first"),
-                        ChildExited("first")))                              \
-                .that(CycleDetected())
-
-
+        self.assert_on_trace().that(Alternative(
+                CycleDetected("second"),
+                CycleDetected("third"),
+                CycleDetected("fourth")))

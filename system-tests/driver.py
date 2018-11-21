@@ -104,6 +104,25 @@ class Sequential(Assert):
         return len(self.matchers) == 0
 
 
+class Alternative(Assert):
+
+    def __init__(self, *args):
+        self.matchers = list(args)
+
+    def __str__(self):
+        result = "Alternative(\n"
+        for matcher in self.matchers:
+            result += "    " + str(matcher) + "\n"
+
+        return result
+
+    def matches(self, logline):
+        for matcher in self.matchers:
+            if matcher.matches(logline):
+                return True
+        return False
+
+
 class Parallel(Assert):
 
     def __init__(self, *args):
@@ -145,9 +164,9 @@ class RegexMatcher(Assert):
 
 
 class CycleDetected(RegexMatcher):
-    def __init__(self):
+    def __init__(self, name):
         super(CycleDetected, self).__init__(
-                "No runnable processes found, check for cycles")
+                "Found cycle involving process '{}'".format(name))
 
     def __str__(self):
         return self.regex
