@@ -1,5 +1,5 @@
-use std::collections::VecDeque;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::process::exit;
 
 use petgraph::graph::Graph;
@@ -25,7 +25,6 @@ pub struct DependencyManager {
 }
 
 impl DependencyManager {
-
     pub fn with_nodes(config: &Config, name_dict: &HashMap<String, usize>) -> Self {
         let nodes = DependencyManager::build_dependencies(config, name_dict);
         let result = DependencyManager {
@@ -38,7 +37,7 @@ impl DependencyManager {
     }
 
     pub fn has_runnables(&self) -> bool {
-        ! self.runnable.is_empty()
+        !self.runnable.is_empty()
     }
 
     pub fn pop_runnable(&mut self) -> Option<usize> {
@@ -135,17 +134,25 @@ impl DependencyManager {
 
         for (i, node) in (&self.nodes).iter().enumerate() {
             for successor in &node.after_self {
-                graph.add_edge(node_dict.get(&i).unwrap().clone(),
-                               node_dict.get(successor).unwrap().clone(),
-                               0);
+                graph.add_edge(
+                    node_dict.get(&i).unwrap().clone(),
+                    node_dict.get(successor).unwrap().clone(),
+                    0,
+                );
             }
         }
 
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
             let id = graph.node_weight(node_id).unwrap().clone();
-            error!("Found cycle involving process '{}'", config.programs[id].name);
-            trace!("Found cycle involving process '{}'", config.programs[id].name);
+            error!(
+                "Found cycle involving process '{}'",
+                config.programs[id].name
+            );
+            trace!(
+                "Found cycle involving process '{}'",
+                config.programs[id].name
+            );
             exit(EXIT_CODE);
         }
     }

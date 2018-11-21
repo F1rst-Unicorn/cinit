@@ -3,9 +3,9 @@ use std::ffi::CString;
 
 use config;
 
+use nix::unistd::Gid;
 use nix::unistd::Pid;
 use nix::unistd::Uid;
-use nix::unistd::Gid;
 
 use super::process::{Process, ProcessState};
 
@@ -79,10 +79,10 @@ fn get_default_env() -> HashMap<String, String> {
     result
 }
 
-fn copy_from_config(env: &Vec<HashMap<String, Option<String>>>,
-                    mut result: HashMap<String, String>)
-                    -> HashMap<String, String> {
-
+fn copy_from_config(
+    env: &Vec<HashMap<String, Option<String>>>,
+    mut result: HashMap<String, String>,
+) -> HashMap<String, String> {
     for entry in env {
         for (key, value) in entry {
             match value {
@@ -95,8 +95,8 @@ fn copy_from_config(env: &Vec<HashMap<String, Option<String>>>,
                     }
                 },
                 Some(raw_value) => {
-                    let rendered_value = render_template(&result, raw_value)
-                        .unwrap_or(raw_value.to_string());
+                    let rendered_value =
+                        render_template(&result, raw_value).unwrap_or(raw_value.to_string());
                     result.insert(key.to_string(), rendered_value);
                 }
             }
@@ -114,7 +114,7 @@ fn flatten_to_strings(result: &mut HashMap<String, String>) -> Vec<CString> {
     ret
 }
 
-fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result<String, ()>{
+fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result<String, ()> {
     let mut tera: tera::Tera = Default::default();
     let mut internal_context = tera::Context::new();
     let name = "name";

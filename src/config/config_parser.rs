@@ -23,14 +23,12 @@ pub fn parse_config(path: &str) -> Config {
 }
 
 fn parse_raw_config(raw_config: Vec<String>) -> Config {
-    let parse_result = raw_config
-        .iter()
-        .map(|s| serde_yaml::from_str(s));
+    let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
     let parse_errors: Vec<serde_yaml::Result<Config>> =
         parse_result.clone().filter(|s| s.is_err()).collect();
 
-    if ! parse_errors.is_empty() {
+    if !parse_errors.is_empty() {
         error!("Could not parse config: ");
         for error in parse_errors {
             error!("{:#?}", error.unwrap_err());
@@ -163,7 +161,10 @@ mod tests {
         assert_eq!(Vec::new() as Vec<String>, program.after);
         assert_eq!(false, program.emulate_pty);
         assert_eq!(Vec::new() as Vec<String>, program.capabilities);
-        assert_eq!(Vec::new() as Vec<HashMap<String, Option<String>>>, program.env);
+        assert_eq!(
+            Vec::new() as Vec<HashMap<String, Option<String>>>,
+            program.env
+        );
     }
 
     const MINIMAL_CONFIG: &str = "\

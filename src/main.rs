@@ -129,15 +129,15 @@ extern crate serde_derive;
 extern crate libc;
 #[macro_use]
 extern crate nix;
-extern crate serde_yaml;
 extern crate capabilities;
 extern crate petgraph;
+extern crate serde_yaml;
 extern crate tera;
 
 pub mod cli_parser;
 pub mod config;
-pub mod runtime;
 pub mod logging;
+pub mod runtime;
 
 use config::config_parser;
 use runtime::process_manager::ProcessManager;

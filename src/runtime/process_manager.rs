@@ -3,9 +3,9 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
-use runtime::process::{Process, ProcessState};
-use runtime::dependency_graph;
 use logging;
+use runtime::dependency_graph;
+use runtime::process::{Process, ProcessState};
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -56,7 +56,9 @@ impl ProcessManager {
         }
 
         debug!("Entering poll loop");
-        while self.keep_running && (self.pid_dict.len() != 0 || self.dependency_manager.has_runnables()) {
+        while self.keep_running
+            && (self.pid_dict.len() != 0 || self.dependency_manager.has_runnables())
+        {
             self.kick_off_children();
             self.dispatch_epoll();
             self.look_for_finished_children();
@@ -68,9 +70,11 @@ impl ProcessManager {
             self.look_for_finished_children();
         }
 
-        if self.processes
+        if self
+            .processes
             .iter()
-            .any(|p| p.state == ProcessState::Blocked) {
+            .any(|p| p.state == ProcessState::Blocked)
+        {
             error!("No runnable processes found, check for cycles");
             trace!("No runnable processes found, check for cycles");
         }
@@ -264,8 +268,8 @@ impl ProcessManager {
         if length.is_ok() {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
-            let child_name = &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")]
-                .name;
+            let child_name =
+                &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")].name;
 
             for line in output {
                 if !line.is_empty() {

@@ -11,8 +11,8 @@ use config;
 use nix;
 use nix::fcntl;
 use nix::pty;
-use nix::sys::termios;
 use nix::sys::stat;
+use nix::sys::termios;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
@@ -151,7 +151,12 @@ impl Process {
     fn set_user_and_caps(&mut self) -> Result<(), nix::Error> {
         let mut temporary_caps = Capabilities::new().map_err(map_to_errno)?;
         let mut actual_caps = Capabilities::new().map_err(map_to_errno)?;
-        let flags = [Capability::CAP_SETUID, Capability::CAP_SETGID, Capability::CAP_SETPCAP, Capability::CAP_SETFCAP];
+        let flags = [
+            Capability::CAP_SETUID,
+            Capability::CAP_SETGID,
+            Capability::CAP_SETPCAP,
+            Capability::CAP_SETFCAP,
+        ];
         temporary_caps.update(&flags, Flag::Permitted, true);
         temporary_caps.update(&flags, Flag::Effective, true);
         temporary_caps.update(&flags, Flag::Inheritable, true);
@@ -179,17 +184,23 @@ impl Process {
         libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 0)?;
         temporary_caps.apply().map_err(map_to_errno)?;
 
-        libc_helpers::prctl_four(libc::PR_CAP_AMBIENT,
-                                 libc::PR_CAP_AMBIENT_CLEAR_ALL as libc::c_ulong,
-                                 0, 0, 0)?;
+        libc_helpers::prctl_four(
+            libc::PR_CAP_AMBIENT,
+            libc::PR_CAP_AMBIENT_CLEAR_ALL as libc::c_ulong,
+            0,
+            0,
+            0,
+        )?;
         for raw_cap in &self.capabilities {
             let new_cap = Capability::from_str(raw_cap);
             match new_cap {
-                Ok(cap) => {
-                    libc_helpers::prctl_four(libc::PR_CAP_AMBIENT,
-                                             libc::PR_CAP_AMBIENT_RAISE as libc::c_ulong,
-                                             cap as libc::c_ulong, 0, 0)?
-                }
+                Ok(cap) => libc_helpers::prctl_four(
+                    libc::PR_CAP_AMBIENT,
+                    libc::PR_CAP_AMBIENT_RAISE as libc::c_ulong,
+                    cap as libc::c_ulong,
+                    0,
+                    0,
+                )?,
                 _ => {
                     println!("Failed to set {}", raw_cap);
                 }

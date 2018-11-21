@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::process::exit;
 
 use config::config::Config;
-use runtime::process::{Process};
 use runtime::dependency_graph::DependencyManager;
+use runtime::process::Process;
 
 use nix::sys::signalfd;
 
@@ -13,9 +13,7 @@ const EXIT_CODE: i32 = 2;
 
 impl ProcessManager {
     pub fn from(config: Config) -> ProcessManager {
-        let processes = config.programs.iter()
-            .map(Process::from)
-            .collect();
+        let processes = config.programs.iter().map(Process::from).collect();
 
         let name_dict = ProcessManager::build_name_dict(&processes);
 
