@@ -2,7 +2,11 @@
 
 cd /usr/src
 
-git clone https://git.kernel.org/pub/scm/libs/libcap/libcap.git libcap
+git clone                                                                   \
+        --branch libcap-2.25                                                \
+        --depth 1                                                           \
+        https://git.kernel.org/pub/scm/libs/libcap/libcap.git               \
+        libcap
 
 cd libcap
 
