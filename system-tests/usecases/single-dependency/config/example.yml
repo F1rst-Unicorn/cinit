@@ -1,0 +1,28 @@
+programs:
+  - name: ping
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/ping.yml
+      - --
+      - -c 4
+      - google.ch
+    type: oneshot
+    capabilities:
+      - CAP_NET_RAW
+    before:
+      - failping
+
+  - name: failping
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    uid: 1000
+    gid: 100
+    args:
+      - -o
+      - system-tests/child-dump/failping.yml
+      - --
+      - -c 4
+      - google.ch
+    type: oneshot
+    after:
+      - ping
