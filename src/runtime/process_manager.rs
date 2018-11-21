@@ -5,6 +5,7 @@ use std::process::exit;
 
 use runtime::process::{Process, ProcessState};
 use runtime::dependency_graph;
+use logging;
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -176,7 +177,7 @@ impl ProcessManager {
             if fd == self.signal_fd.as_raw_fd() {
                 self.handle_signal();
             } else {
-                self.handle_child_output(fd);
+                self.print_child_output(fd);
             }
         } else if event.events().contains(epoll::EpollFlags::EPOLLHUP) {
             self.deregister_fd(event.data() as RawFd);
@@ -256,7 +257,7 @@ impl ProcessManager {
         self.fd_dict.remove(&(fd as RawFd));
     }
 
-    fn handle_child_output(&mut self, fd: RawFd) {
+    fn print_child_output(&mut self, fd: RawFd) {
         let mut buffer = [0 as u8; 4096];
         let length = unistd::read(fd, &mut buffer);
 
@@ -268,7 +269,7 @@ impl ProcessManager {
 
             for line in output {
                 if !line.is_empty() {
-                    info!("Child {}: {}", child_name, line);
+                    logging::stdout::log(child_name, line);
                 }
             }
         }

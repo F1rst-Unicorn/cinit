@@ -12,7 +12,7 @@ DOCKER_TAG="$DOCKER_NAME:build"
 DOCKER_PROJECT_ROOT=/usr/src/cinit
 
 mkdir -p "$PROJECT_ROOT/target/registry/"
-chown -R "$USER_ID:$GROUP_ID" "$PROJECT_ROOT/target/registry/"
+chown -R "$USER_ID:$GROUP_ID" "$PROJECT_ROOT/target/"
 
 docker pull rust:stretch
 

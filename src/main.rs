@@ -117,7 +117,7 @@ static A: System = System;
 extern crate clap;
 #[macro_use]
 extern crate log;
-extern crate simple_logger;
+extern crate log4rs;
 #[macro_use]
 extern crate serde_derive;
 extern crate libc;
@@ -130,14 +130,14 @@ extern crate petgraph;
 pub mod cli_parser;
 pub mod config;
 pub mod runtime;
+pub mod logging;
 
 use config::config_parser;
-use log::Level;
 use runtime::process_manager::ProcessManager;
 
 fn main() {
     let arguments = cli_parser::parse_arguments();
-    initialise_log(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
+    logging::initialise(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
 
@@ -154,18 +154,4 @@ fn main() {
 
     info!("Spawning processes");
     manager.start();
-}
-
-fn initialise_log(verbose: u64) {
-    match verbose {
-        2 => {
-            simple_logger::init_with_level(Level::Trace).unwrap();
-        }
-        1 => {
-            simple_logger::init_with_level(Level::Debug).unwrap();
-        }
-        _ => {
-            simple_logger::init_with_level(Level::Info).unwrap();
-        }
-    }
 }

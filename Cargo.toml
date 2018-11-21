@@ -13,7 +13,6 @@ lto = true
 [dependencies]
 clap = "~2.27.0"
 log = "0.4"
-simple_logger = "1.0.1"
 serde = "1.0.80"
 serde_derive = "1.0"
 serde_yaml = "0.8.7"
@@ -21,3 +20,8 @@ nix = "0.11.0"
 libc = "0.2.43"
 capabilities = "0.3.0"
 petgraph = "0.4.13"
+
+[dependencies.log4rs]
+version = "0.8.1"
+default-features = false
+features = ["file", "pattern_encoder", "console_appender"]
