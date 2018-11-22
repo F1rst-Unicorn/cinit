@@ -259,7 +259,7 @@ impl ProcessManager {
             fd as RawFd,
             &mut epoll::EpollEvent::new(
                 epoll::EpollFlags::EPOLLIN,
-                self.signal_fd.as_raw_fd() as u64,
+                fd as u64,
             ),
         );
         if epoll_result.is_err() {
