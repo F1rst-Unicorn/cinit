@@ -23,8 +23,6 @@ programs:
     args:
       - -o
       - system-tests/child-dump/third.yml
-      - -r
-      - 42
     after:
       - first
     uid: 1000
