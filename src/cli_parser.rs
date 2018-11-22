@@ -10,6 +10,7 @@ pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::with_name("config")
+                .short("c")
                 .long(FLAG_CONFIG)
                 .value_name("PATH")
                 .help("The config file or directory to run with")
