@@ -44,6 +44,7 @@ impl Drop for ProcessManager {
 }
 
 impl ProcessManager {
+
     pub fn start(&mut self) {
         match self.setup() {
             Err(content) => {
@@ -59,7 +60,7 @@ impl ProcessManager {
         while self.keep_running
             && (self.pid_dict.len() != 0 || self.dependency_manager.has_runnables())
         {
-            self.kick_off_children();
+            self.spawn_children();
             self.dispatch_epoll();
             self.look_for_finished_children();
         }
@@ -194,15 +195,17 @@ impl ProcessManager {
         match self.signal_fd.read_signal() {
             Ok(Some(signal)) => {
                 match signal::Signal::from_c_int(signal.ssi_signo as i32).unwrap() {
-                    signal::SIGINT | signal::SIGTERM | signal::SIGQUIT => {
-                        info!("Received termination signal, killing children");
+                    signal @ signal::SIGINT | signal @ signal::SIGQUIT => {
                         self.keep_running = false;
-                        for child in &self.processes {
-                            if child.state == ProcessState::Running {
-                                signal::kill(child.pid, signal::SIGTERM)
-                                    .expect("Could not transmit signal to child");
-                            }
-                        }
+                        info!("Received termination signal");
+                        self.signal_children(signal);
+                    }
+                    signal::SIGTERM => {
+                        self.keep_running = false;
+                        info!("Received termination signal");
+                        // Children behave strangely if sent SIGTERM and not
+                        // connected to a PTY. Work around this
+                        self.signal_children(signal::SIGINT);
                     }
                     signal::SIGCHLD => {
                         debug!(
@@ -221,6 +224,16 @@ impl ProcessManager {
             Err(other) => {
                 debug!("Received unknown signal: {:?}", other);
             }
+        }
+    }
+
+    fn signal_children(&mut self, signal: signal::Signal) -> () {
+        info!("Killing children");
+        for child in (&self.processes)
+            .iter()
+            .filter(|s| s.state == ProcessState::Running) {
+
+            signal::kill(child.pid, signal).expect("Could not transmit signal to child");
         }
     }
 
@@ -279,7 +292,7 @@ impl ProcessManager {
         }
     }
 
-    fn kick_off_children(&mut self) {
+    fn spawn_children(&mut self) {
         while let Some(child_index) = self.dependency_manager.pop_runnable() {
             let child_result = self.processes[child_index].start();
 
