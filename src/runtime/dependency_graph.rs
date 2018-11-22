@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use petgraph::graph::Graph;
 
-use config::config::Config;
+use config::config::ProcessConfig;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
@@ -24,6 +24,12 @@ impl ProcessNode {
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    Cycle(usize),
+    Duplicate(usize),
+}
+
 
 #[derive(Debug)]
 pub struct DependencyManager {
@@ -38,7 +44,8 @@ impl DependencyManager {
     ///
     /// If the config contains cyclic dependency the Err(index)
     /// contains the index of some program involved in the cycle
-    pub fn with_nodes(config: &Config, name_dict: &HashMap<String, usize>) -> Result<Self, usize> {
+    pub fn with_nodes(config: &Vec<ProcessConfig>) -> Result<Self, Error> {
+        let name_dict = DependencyManager::build_name_dict(config)?;
         let nodes = DependencyManager::build_dependencies(config, name_dict);
         let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),
@@ -73,22 +80,22 @@ impl DependencyManager {
 
     fn find_initial_runnables(nodes: &Vec<ProcessNode>) -> VecDeque<usize> {
         let mut result = VecDeque::new();
-        for (i, process) in nodes.iter().enumerate() {
-            if process.predecessor_count == 0 {
-                result.push_back(i);
-            }
-        }
+        nodes.iter()
+            .enumerate()
+            .filter(|(_, process)| process.predecessor_count == 0)
+            .map(|(i, _)| result.push_back(i))
+            .for_each(drop);
         result
     }
 
-    fn build_dependencies(config: &Config, name_dict: &HashMap<String, usize>) -> Vec<ProcessNode> {
-        let mut result = Vec::with_capacity(config.programs.len());
+    fn build_dependencies(config: &Vec<ProcessConfig>, name_dict: HashMap<String, usize>) -> Vec<ProcessNode> {
+        let mut result = Vec::with_capacity(config.len());
 
-        for _ in 0..config.programs.len() {
+        for _ in 0..config.len() {
             result.push(ProcessNode::new());
         }
 
-        for process_config in &config.programs {
+        for process_config in config {
             let current_index = name_dict
                 .get(&process_config.name)
                 .expect("Invalid index in name_dict")
@@ -133,7 +140,7 @@ impl DependencyManager {
         result
     }
 
-    fn check_for_cycles(&self) -> Result<(), usize> {
+    fn check_for_cycles(&self) -> Result<(), Error> {
         let mut graph = Graph::<_, _>::new();
         let mut node_dict = HashMap::new();
 
@@ -154,10 +161,24 @@ impl DependencyManager {
 
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
-            Err(graph.node_weight(node_id).unwrap().clone())
+            Err(Error::Cycle(graph.node_weight(node_id).unwrap().clone()))
 
         } else {
             Ok(())
         }
+    }
+
+    fn build_name_dict(descriptions: &Vec<ProcessConfig>) -> Result<HashMap<String, usize>, Error> {
+        let mut result = HashMap::new();
+
+        for (i, desc) in descriptions.into_iter().enumerate() {
+            if result.contains_key(&desc.name) {
+                return Err(Error::Duplicate(i));
+            } else {
+                result.insert(desc.name.to_owned(), i);
+            }
+        }
+
+        Ok(result)
     }
 }
