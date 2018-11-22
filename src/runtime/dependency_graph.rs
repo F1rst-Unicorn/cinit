@@ -7,7 +7,7 @@ use config::config::ProcessConfig;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ProcessNode {
     pub after_self: Vec<usize>,
 
@@ -24,18 +24,18 @@ impl ProcessNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     Cycle(usize),
     Duplicate(usize),
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DependencyManager {
     nodes: Vec<ProcessNode>,
 
-    pub runnable: VecDeque<usize>,
+    runnable: VecDeque<usize>,
 }
 
 impl DependencyManager {
@@ -95,27 +95,34 @@ impl DependencyManager {
             result.push(ProcessNode::new());
         }
 
-        for process_config in config {
-            let current_index = name_dict
-                .get(&process_config.name)
-                .expect("Invalid index in name_dict")
-                .clone();
+        for (current_index, current_config) in (&config).iter().enumerate() {
             {
                 let mut current = result
                     .get_mut(current_index)
                     .expect("Invalid index in name_dict");
-                for predecessor_name in &process_config.before {
-                    let predecessor_index = name_dict
-                        .get(predecessor_name)
+                for successor_name in &current_config.before {
+                    let successor_index = name_dict
+                        .get(successor_name)
                         .expect("Invalid index in name_dict")
                         .clone();
-                    current.after_self.push(predecessor_index);
+                    current.after_self.push(successor_index);
                 }
 
-                current.predecessor_count += process_config.after.len();
+                current.predecessor_count += current_config.after.len();
             }
 
-            for predecessor_name in &process_config.before {
+            for successor_name in &current_config.before {
+                let successor_index = name_dict
+                    .get(successor_name)
+                    .expect("Invalid index in name_dict")
+                    .clone();
+                let mut successor = result
+                    .get_mut(successor_index)
+                    .expect("Invalid index in name_dict");
+                successor.predecessor_count += 1;
+            }
+
+            for predecessor_name in &current_config.after {
                 let predecessor_index = name_dict
                     .get(predecessor_name)
                     .expect("Invalid index in name_dict")
@@ -123,18 +130,7 @@ impl DependencyManager {
                 let mut predecessor = result
                     .get_mut(predecessor_index)
                     .expect("Invalid index in name_dict");
-                predecessor.predecessor_count += 1;
-            }
-
-            for predecessor in &process_config.after {
-                let dependency_index = name_dict
-                    .get(predecessor)
-                    .expect("Invalid index in name_dict")
-                    .clone();
-                let mut dependency = result
-                    .get_mut(dependency_index)
-                    .expect("Invalid index in name_dict");
-                dependency.after_self.push(current_index);
+                predecessor.after_self.push(current_index);
             }
         }
         result
@@ -180,5 +176,118 @@ impl DependencyManager {
         }
 
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use config::config::{ProcessConfig, ProcessType};
+    use super::*;
+
+    #[test]
+    pub fn single_runnable_process() {
+        let config = vec![
+            ProcessConfig::new("first", vec![], vec![]),
+        ];
+
+        let mut uut = DependencyManager::with_nodes(&config)
+            .expect("Failed to create dependency manager");
+
+        assert!(uut.has_runnables());
+        assert_eq!(Some(0), uut.pop_runnable());
+        assert!(!uut.has_runnables());
+        assert_eq!(None, uut.pop_runnable());
+    }
+
+    #[test]
+    pub fn cyclic_dependency() {
+        let config = vec![
+            ProcessConfig::new("first", vec!["second"], vec![]),
+            ProcessConfig::new("second", vec!["first"], vec![]),
+        ];
+
+        let uut = DependencyManager::with_nodes(&config);
+
+        assert!(uut.is_err());
+        assert!(Err(Error::Cycle(0)) == uut ||
+                Err(Error::Cycle(1)) == uut);
+    }
+
+    #[test]
+    pub fn duplicate_name() {
+        let config = vec![
+            ProcessConfig::new("first", vec![], vec![]),
+            ProcessConfig::new("first", vec![], vec![]),
+        ];
+
+        let uut = DependencyManager::with_nodes(&config);
+
+        assert!(uut.is_err());
+        assert!(Err(Error::Duplicate(0)) == uut ||
+                Err(Error::Duplicate(1)) == uut);
+    }
+
+    #[test]
+    pub fn dependants_are_marked_runnable() {
+        let config = vec![
+            ProcessConfig::new("first", vec!["second"], vec![]),
+            ProcessConfig::new("second", vec![], vec![]),
+        ];
+        let mut uut = DependencyManager::with_nodes(&config)
+            .expect("Failed to create dependency manager");
+        uut.pop_runnable().expect("Assumption broken");
+        let runnables = uut.notify_process_finished(0);
+
+        assert_eq!(1, runnables.len());
+        assert!(runnables.contains(&1));
+        assert!(uut.has_runnables());
+        assert_eq!(Some(1), uut.pop_runnable());
+        assert!(!uut.has_runnables());
+        assert_eq!(None, uut.pop_runnable());
+    }
+
+    #[test]
+    pub fn have_two_dependencies() {
+        let config = vec![
+            ProcessConfig::new("first", vec![], vec![]),
+            ProcessConfig::new("second", vec!["third"], vec![]),
+            ProcessConfig::new("third", vec![], vec!["first"]),
+        ];
+        let mut uut = DependencyManager::with_nodes(&config)
+            .expect("Failed to create dependency manager");
+        uut.pop_runnable().expect("Assumption broken");
+        uut.pop_runnable().expect("Assumption broken");
+        assert!(!uut.has_runnables());
+        let mut runnable = uut.notify_process_finished(0);
+        assert!(runnable.is_empty());
+        assert!(!uut.has_runnables());
+        runnable = uut.notify_process_finished(1);
+
+        assert_eq!(1, runnable.len());
+        assert!(runnable.contains(&2));
+        assert!(uut.has_runnables());
+        assert_eq!(Some(2), uut.pop_runnable());
+        assert!(!uut.has_runnables());
+        assert_eq!(None, uut.pop_runnable());
+    }
+
+    impl ProcessConfig {
+        pub fn new(name: &str, before: Vec<&str>, after: Vec<&str>) -> ProcessConfig {
+            ProcessConfig {
+                name: name.to_string(),
+                path: "".to_string(),
+                args: vec![],
+                process_type: ProcessType::Oneshot,
+                uid: None,
+                gid: None,
+                user: None,
+                group: None,
+                before: before.iter().map(<&str>::to_string).collect(),
+                after: after.iter().map(<&str>::to_string).collect(),
+                emulate_pty: false,
+                capabilities: vec![],
+                env: vec![]
+            }
+        }
     }
 }
