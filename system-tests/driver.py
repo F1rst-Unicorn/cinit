@@ -163,6 +163,12 @@ class RegexMatcher(Assert):
             return False
 
 
+class DuplicateProgramName(RegexMatcher):
+    def __init__(self, name):
+        super(DuplicateProgramName, self).__init__(
+            "Duplicate program found for name {}".format(name))
+
+
 class CycleDetected(RegexMatcher):
     def __init__(self, name):
         super(CycleDetected, self).__init__(

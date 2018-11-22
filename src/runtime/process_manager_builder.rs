@@ -33,6 +33,8 @@ impl ProcessManager {
                 Error::Duplicate(id) => {
                     error!("Duplicate program found for name {}",
                            config.programs[id].name);
+                    trace!("Duplicate program found for name {}",
+                           config.programs[id].name);
                     exit(EXIT_CODE);
                 }
             }

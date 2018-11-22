@@ -1,0 +1,6 @@
+programs:
+  - name: first
+    path: /dummy
+
+  - name: first
+    path: /dummy
