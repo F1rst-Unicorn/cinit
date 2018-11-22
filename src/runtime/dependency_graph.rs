@@ -1,12 +1,9 @@
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::process::exit;
 
 use petgraph::graph::Graph;
 
 use config::config::Config;
-
-const EXIT_CODE: i32 = 5;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
@@ -17,6 +14,17 @@ pub struct ProcessNode {
     pub predecessor_count: usize,
 }
 
+impl ProcessNode {
+
+    pub fn new() -> ProcessNode {
+        ProcessNode {
+            after_self: Vec::new(),
+            predecessor_count: 0
+        }
+    }
+}
+
+
 #[derive(Debug)]
 pub struct DependencyManager {
     nodes: Vec<ProcessNode>,
@@ -25,15 +33,20 @@ pub struct DependencyManager {
 }
 
 impl DependencyManager {
-    pub fn with_nodes(config: &Config, name_dict: &HashMap<String, usize>) -> Self {
+
+    /// Return a newly constructed dependency manager
+    ///
+    /// If the config contains cyclic dependency the Err(index)
+    /// contains the index of some program involved in the cycle
+    pub fn with_nodes(config: &Config, name_dict: &HashMap<String, usize>) -> Result<Self, usize> {
         let nodes = DependencyManager::build_dependencies(config, name_dict);
         let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),
             nodes,
         };
 
-        result.check_for_cycles(config);
-        result
+        result.check_for_cycles()?;
+        Ok(result)
     }
 
     pub fn has_runnables(&self) -> bool {
@@ -72,10 +85,7 @@ impl DependencyManager {
         let mut result = Vec::with_capacity(config.programs.len());
 
         for _ in 0..config.programs.len() {
-            result.push(ProcessNode {
-                after_self: Vec::new(),
-                predecessor_count: 0,
-            });
+            result.push(ProcessNode::new());
         }
 
         for process_config in &config.programs {
@@ -123,7 +133,7 @@ impl DependencyManager {
         result
     }
 
-    fn check_for_cycles(&self, config: &Config) {
+    fn check_for_cycles(&self) -> Result<(), usize> {
         let mut graph = Graph::<_, _>::new();
         let mut node_dict = HashMap::new();
 
@@ -144,16 +154,10 @@ impl DependencyManager {
 
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
-            let id = graph.node_weight(node_id).unwrap().clone();
-            error!(
-                "Found cycle involving process '{}'",
-                config.programs[id].name
-            );
-            trace!(
-                "Found cycle involving process '{}'",
-                config.programs[id].name
-            );
-            exit(EXIT_CODE);
+            Err(graph.node_weight(node_id).unwrap().clone())
+
+        } else {
+            Ok(())
         }
     }
 }

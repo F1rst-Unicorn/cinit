@@ -19,12 +19,24 @@ impl ProcessManager {
 
         let dependency_manager = DependencyManager::with_nodes(&config, &name_dict);
 
+        if let Err(id) = dependency_manager {
+            error!(
+                "Found cycle involving process '{}'",
+                config.programs[id].name
+            );
+            trace!(
+                "Found cycle involving process '{}'",
+                config.programs[id].name
+            );
+            exit(EXIT_CODE);
+        }
+
         ProcessManager {
             processes,
             fd_dict: HashMap::new(),
             pid_dict: HashMap::new(),
             keep_running: true,
-            dependency_manager,
+            dependency_manager: dependency_manager.unwrap(),
             epoll_file: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).unwrap(),
         }
