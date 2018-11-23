@@ -223,6 +223,15 @@ class ChildCrashed(RegexMatcher):
         return self.regex
 
 
+class NoChildProcess:
+    def __init__(self, name, test):
+        try:
+            open(PROJECT_ROOT + "/system-tests/child-dump/" + name + ".yml")
+            test.fail("Child process '{}' did execute".format(name))
+        except OSError:
+            pass
+
+
 class ChildProcess:
 
     def __init__(self, name, test, dump=False):

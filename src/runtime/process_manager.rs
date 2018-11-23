@@ -109,18 +109,26 @@ impl ProcessManager {
 
     fn handle_finished_child(&mut self, pid: &Pid, rc: i32) {
         let child_index = *self.pid_dict.get(&pid).expect("PID not found");
+        let child_crashed: bool;
         {
             let child = &mut self.processes[child_index];
             child.state = if rc == 0 {
                 info!("Child {} exited successfully", child.name);
                 trace!("Child {} exited successfully", child.name);
+                child_crashed = false;
                 ProcessState::Done
             } else {
-                warn!("Child {} crashed with {}", child.name, rc);
+                error!("Child {} crashed with {}", child.name, rc);
                 trace!("Child {} crashed with {}", child.name, rc);
+                child_crashed = true;
                 ProcessState::Crashed
             }
         }
+
+        if child_crashed {
+            self.initiate_shutdown(signal::SIGINT);
+        }
+
         self.pid_dict.remove(pid);
         let ready_children = self.dependency_manager.notify_process_finished(child_index);
 
@@ -196,16 +204,12 @@ impl ProcessManager {
             Ok(Some(signal)) => {
                 match signal::Signal::from_c_int(signal.ssi_signo as i32).unwrap() {
                     signal @ signal::SIGINT | signal @ signal::SIGQUIT => {
-                        self.keep_running = false;
-                        info!("Received termination signal");
-                        self.signal_children(signal);
+                        self.initiate_shutdown(signal);
                     }
                     signal::SIGTERM => {
-                        self.keep_running = false;
-                        info!("Received termination signal");
                         // Children behave strangely if sent SIGTERM and not
                         // connected to a PTY. Work around this
-                        self.signal_children(signal::SIGINT);
+                        self.initiate_shutdown(signal::SIGINT);
                     }
                     signal::SIGCHLD => {
                         debug!(
@@ -227,7 +231,13 @@ impl ProcessManager {
         }
     }
 
-    fn signal_children(&mut self, signal: signal::Signal) -> () {
+    fn initiate_shutdown(&mut self, signal: signal::Signal) {
+        info!("Received termination signal");
+        self.keep_running = false;
+        self.signal_children(signal);
+    }
+
+    fn signal_children(&mut self, signal: signal::Signal)  {
         info!("Killing children");
         for child in (&self.processes)
             .iter()
