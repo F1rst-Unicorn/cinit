@@ -22,6 +22,9 @@ pub struct ProcessConfig {
     #[serde(default)]
     pub args: Vec<String>,
 
+    #[serde(default)]
+    pub workdir: Option<String>,
+
     #[serde(rename = "type")]
     #[serde(default = "default_process_type")]
     pub process_type: ProcessType,

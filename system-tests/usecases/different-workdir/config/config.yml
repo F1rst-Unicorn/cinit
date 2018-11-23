@@ -1,0 +1,7 @@
+programs:
+  - name: first
+    path: /usr/src/cinit/target/x86_64-unknown-linux-musl/debug/harness
+    workdir: /tmp
+    args:
+      - -o
+      - /usr/src/cinit/system-tests/child-dump/first.yml

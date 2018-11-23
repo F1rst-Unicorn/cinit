@@ -130,6 +130,7 @@ mod tests {
         assert_eq!("test", program.name);
         assert_eq!("/some/path", program.path);
         assert_eq!(Vec::new() as Vec<String>, program.args);
+        assert_eq!(Some("/hello/path".to_string()), program.workdir);
         assert_eq!(ProcessType::Oneshot, program.process_type);
         assert_eq!(Some(3), program.uid);
         assert_eq!(Some(1), program.gid);
@@ -152,6 +153,7 @@ mod tests {
         assert_eq!("test", program.name);
         assert_eq!("/path", program.path);
         assert_eq!(Vec::new() as Vec<String>, program.args);
+        assert_eq!(None, program.workdir);
         assert_eq!(ProcessType::Oneshot, program.process_type);
         assert_eq!(None, program.uid);
         assert_eq!(None, program.gid);
@@ -178,6 +180,7 @@ programs:
   - name: test
     path: /some/path
     args: []
+    workdir: /hello/path
     type: oneshot
     uid: 3
     gid: 1

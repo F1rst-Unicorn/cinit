@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::path::PathBuf;
 
 use config;
 
@@ -15,6 +16,10 @@ impl Process {
             name: config.name.to_owned(),
             path: config.path.to_owned(),
             args: Vec::new(),
+            workdir: PathBuf::from(match &config.workdir {
+                None => ".",
+                Some(path) => path,
+            }),
             process_type: config.process_type,
             uid: Uid::from_raw(map_unix_name(&config.uid, &config.user, &config.name)),
             gid: Gid::from_raw(map_unix_name(&config.gid, &config.group, &config.name)),

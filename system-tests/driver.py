@@ -248,10 +248,15 @@ class ChildProcess:
             self.pty = program['pty']
             self.capabilities = set(program['capabilities'])
             self.env = program['env']
+            self.workdir = program['workdir']
 
     def assert_arg(self, arg):
         self.test.assertTrue(arg in self.args,
                              arg + " not found in " + str(self.args))
+        return self
+
+    def assert_workdir(self, arg):
+        self.test.assertEqual(arg, self.workdir)
         return self
 
     def assert_uid(self, uid):

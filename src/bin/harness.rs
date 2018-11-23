@@ -99,6 +99,11 @@ fn dump(output: &str) {
             .expect("Failed to dump");
     }
 
+    file.write_fmt(format_args!("    workdir: '{}'\n", std::env::current_dir()
+        .expect("Could not get workdir")
+        .to_str().expect("Could not transform workdir str")))
+        .expect("Failed to dump");
+
     file.write_fmt(format_args!("    uid: {}\n", unistd::getuid()))
         .expect("Failed to dump");
 

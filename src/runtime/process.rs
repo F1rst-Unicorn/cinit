@@ -3,6 +3,7 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 use std::str::FromStr;
+use std::path::PathBuf;
 
 use super::libc_helpers;
 use super::libc_helpers::map_to_errno;
@@ -49,6 +50,8 @@ pub struct Process {
     pub path: String,
 
     pub args: Vec<CString>,
+
+    pub workdir: PathBuf,
 
     pub process_type: config::config::ProcessType,
 
@@ -137,6 +140,12 @@ impl Process {
 
         unistd::close(stdout)?;
         unistd::close(stderr)?;
+
+        std::env::set_current_dir(&self.workdir)
+            .map_err(|e| match e.raw_os_error() {
+                None => nix::Error::UnsupportedOperation,
+                Some(code) => nix::Error::Sys(nix::errno::Errno::from_i32(code))
+            })?;
 
         self.set_user_and_caps()?;
 

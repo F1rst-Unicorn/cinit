@@ -277,6 +277,7 @@ mod tests {
                 name: name.to_string(),
                 path: "".to_string(),
                 args: vec![],
+                workdir: None,
                 process_type: ProcessType::Oneshot,
                 uid: None,
                 gid: None,
