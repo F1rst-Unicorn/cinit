@@ -46,6 +46,30 @@ pub fn prctl_four(
     }
 }
 
+pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
+    unsafe {
+        let null: *const libc::passwd = null();
+        let raw_id: *const libc::passwd = libc::getpwnam(name.as_ptr() as *const i8);
+        if raw_id == null {
+            Err(nix::Error::last())
+        } else {
+            Ok((*raw_id).pw_uid)
+        }
+    }
+}
+
+pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
+    unsafe {
+        let null: *const libc::group = null();
+        let raw_id: *const libc::group = libc::getgrnam(name.as_ptr() as *const i8);
+        if raw_id == null {
+            Err(nix::Error::last())
+        } else {
+            Ok((*raw_id).gr_gid)
+        }
+    }
+}
+
 pub fn map_to_errno(error: Error) -> nix::Error {
     match error.raw_os_error() {
         Some(errno) => nix::Error::Sys(nix::errno::Errno::from_i32(errno)),

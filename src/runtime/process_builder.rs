@@ -3,6 +3,7 @@ use std::ffi::CString;
 use std::path::PathBuf;
 
 use config;
+use runtime::libc_helpers;
 
 use nix::unistd::Gid;
 use nix::unistd::Pid;
@@ -21,8 +22,8 @@ impl Process {
                 Some(path) => path,
             }),
             process_type: config.process_type,
-            uid: Uid::from_raw(map_unix_name(&config.uid, &config.user, &config.name)),
-            gid: Gid::from_raw(map_unix_name(&config.gid, &config.group, &config.name)),
+            uid: Uid::from_raw(map_uid(&config.uid, &config.user, &config.name)),
+            gid: Gid::from_raw(map_gid(&config.gid, &config.group, &config.name)),
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: convert_env(&config.env),
@@ -44,18 +45,39 @@ impl Process {
     }
 }
 
+fn map_uid(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
+    map_unix_name(id, name, process, &libc_helpers::user_to_uid)
+}
+
+fn map_gid(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
+    map_unix_name(id, name, process, &libc_helpers::group_to_gid)
+}
+
 /// Can be used to get either user id or group id
-fn map_unix_name(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
+fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, process: &str, mapper: &T)
+    -> u32
+    where T: Fn(&str) -> nix::Result<u32> {
+
     if id.is_some() && name.is_some() {
         warn!("Both id and name set for {}, taking only id", process);
         id.unwrap()
     } else if id.is_some() && name.is_none() {
         id.unwrap()
     } else if id.is_none() && name.is_some() {
-        // Depends on https://github.com/nix-rust/nix/pull/864
-        panic!("name not supported as of now!");
+        let mapped = mapper(name.as_ref().unwrap());
+        match mapped {
+            Ok(id) => id,
+            Err(error) => {
+                warn!("Name {} is not valid in program {}: {}",
+                      name.as_ref().unwrap(),
+                      process,
+                      error);
+                warn!("Using root(0)");
+                0
+            }
+        }
     } else {
-        warn!("Neither user nor id given for {}, using root (0)", process);
+        warn!("Neither name nor id given for {}, using root (0)", process);
         0
     }
 }
