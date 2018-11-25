@@ -17,6 +17,9 @@
 //!       - hello
 //!       - world
 //!
+//!     # Set the current working directoy
+//!     workdir: /some/path
+//!
 //!     # See Program Types
 //!     type: oneshot
 //!
@@ -68,12 +71,12 @@
 //!     -v, --verbose    Output information while running
 //!
 //! OPTIONS:
-//!         --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
+//!     -c, --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
 //! ```
 //!
 //! ## Program types
 //!
-//! Supported are `oneshot` and `service`. There is no difference as of now.
+//! Supported is only `oneshot` as of now.
 //!
 //! ## Environment
 //!
