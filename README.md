@@ -5,7 +5,7 @@ Init program for UNIX processes. Inspired by
 
 ## Usage
 
-Run `cargo doc --no-deps && cargo doc --open` to view extensive documentation
+Run `cargo doc --no-deps --open -p cinit` to view extensive documentation
 for clients.
 
 ## Building
