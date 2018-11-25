@@ -1,0 +1,8 @@
+programs:
+  - name: sh
+    path: sh
+    args:
+      - -c
+      - echo
+    type: oneshot
+

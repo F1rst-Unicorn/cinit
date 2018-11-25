@@ -149,7 +149,7 @@ impl Process {
 
         self.set_user_and_caps()?;
 
-        unistd::execve(
+        unistd::execvpe(
             &CString::new(self.path.to_owned()).unwrap(),
             self.args.as_slice(),
             self.env.as_slice(),
