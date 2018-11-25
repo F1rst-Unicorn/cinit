@@ -15,11 +15,10 @@ pub struct ProcessNode {
 }
 
 impl ProcessNode {
-
     pub fn new() -> ProcessNode {
         ProcessNode {
             after_self: Vec::new(),
-            predecessor_count: 0
+            predecessor_count: 0,
         }
     }
 }
@@ -30,7 +29,6 @@ pub enum Error {
     Duplicate(usize),
 }
 
-
 #[derive(Debug, PartialEq)]
 pub struct DependencyManager {
     nodes: Vec<ProcessNode>,
@@ -39,7 +37,6 @@ pub struct DependencyManager {
 }
 
 impl DependencyManager {
-
     /// Return a newly constructed dependency manager
     ///
     /// If the config contains cyclic dependency the Err(index)
@@ -80,7 +77,8 @@ impl DependencyManager {
 
     fn find_initial_runnables(nodes: &Vec<ProcessNode>) -> VecDeque<usize> {
         let mut result = VecDeque::new();
-        nodes.iter()
+        nodes
+            .iter()
             .enumerate()
             .filter(|(_, process)| process.predecessor_count == 0)
             .map(|(i, _)| result.push_back(i))
@@ -88,7 +86,10 @@ impl DependencyManager {
         result
     }
 
-    fn build_dependencies(config: &Vec<ProcessConfig>, name_dict: HashMap<String, usize>) -> Vec<ProcessNode> {
+    fn build_dependencies(
+        config: &Vec<ProcessConfig>,
+        name_dict: HashMap<String, usize>,
+    ) -> Vec<ProcessNode> {
         let mut result = Vec::with_capacity(config.len());
 
         for _ in 0..config.len() {
@@ -158,7 +159,6 @@ impl DependencyManager {
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
             Err(Error::Cycle(graph.node_weight(node_id).unwrap().clone()))
-
         } else {
             Ok(())
         }
@@ -181,14 +181,12 @@ impl DependencyManager {
 
 #[cfg(test)]
 mod tests {
-    use config::config::{ProcessConfig, ProcessType};
     use super::*;
+    use config::config::{ProcessConfig, ProcessType};
 
     #[test]
     pub fn single_runnable_process() {
-        let config = vec![
-            ProcessConfig::new("first", vec![], vec![]),
-        ];
+        let config = vec![ProcessConfig::new("first", vec![], vec![])];
 
         let mut uut = DependencyManager::with_nodes(&config)
             .expect("Failed to create dependency manager");
@@ -209,8 +207,7 @@ mod tests {
         let uut = DependencyManager::with_nodes(&config);
 
         assert!(uut.is_err());
-        assert!(Err(Error::Cycle(0)) == uut ||
-                Err(Error::Cycle(1)) == uut);
+        assert!(Err(Error::Cycle(0)) == uut || Err(Error::Cycle(1)) == uut);
     }
 
     #[test]
@@ -223,8 +220,7 @@ mod tests {
         let uut = DependencyManager::with_nodes(&config);
 
         assert!(uut.is_err());
-        assert!(Err(Error::Duplicate(0)) == uut ||
-                Err(Error::Duplicate(1)) == uut);
+        assert!(Err(Error::Duplicate(0)) == uut || Err(Error::Duplicate(1)) == uut);
     }
 
     #[test]
@@ -287,7 +283,7 @@ mod tests {
                 after: after.iter().map(<&str>::to_string).collect(),
                 emulate_pty: false,
                 capabilities: vec![],
-                env: vec![]
+                env: vec![],
             }
         }
     }

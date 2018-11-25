@@ -44,7 +44,6 @@ impl Drop for ProcessManager {
 }
 
 impl ProcessManager {
-
     pub fn start(&mut self) {
         match self.setup() {
             Err(content) => {
@@ -228,12 +227,12 @@ impl ProcessManager {
         self.signal_children(signal);
     }
 
-    fn signal_children(&mut self, signal: signal::Signal)  {
+    fn signal_children(&mut self, signal: signal::Signal) {
         info!("Killing children");
         for child in (&self.processes)
             .iter()
-            .filter(|s| s.state == ProcessState::Running) {
-
+            .filter(|s| s.state == ProcessState::Running)
+        {
             signal::kill(child.pid, signal).expect("Could not transmit signal to child");
         }
     }
@@ -258,10 +257,7 @@ impl ProcessManager {
             self.epoll_file,
             epoll::EpollOp::EpollCtlDel,
             fd as RawFd,
-            &mut epoll::EpollEvent::new(
-                epoll::EpollFlags::EPOLLIN,
-                fd as u64,
-            ),
+            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
         );
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");

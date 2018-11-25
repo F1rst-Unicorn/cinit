@@ -54,10 +54,10 @@ fn map_gid(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
 }
 
 /// Can be used to get either user id or group id
-fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, process: &str, mapper: &T)
-    -> u32
-    where T: Fn(&str) -> nix::Result<u32> {
-
+fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, process: &str, mapper: &T) -> u32
+where
+    T: Fn(&str) -> nix::Result<u32>,
+{
     if id.is_some() && name.is_some() {
         warn!("Both id and name set for {}, taking only id", process);
         id.unwrap()
@@ -68,10 +68,12 @@ fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, process: &str, mapp
         match mapped {
             Ok(id) => id,
             Err(error) => {
-                warn!("Name {} is not valid in program {}: {}",
-                      name.as_ref().unwrap(),
-                      process,
-                      error);
+                warn!(
+                    "Name {} is not valid in program {}: {}",
+                    name.as_ref().unwrap(),
+                    process,
+                    error
+                );
                 warn!("Using root(0)");
                 0
             }
