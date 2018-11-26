@@ -1,11 +1,11 @@
 use super::process_manager::ProcessManager;
 
-use std::collections::HashMap;
 use std::process::exit;
 
 use config::config::Config;
 use runtime::dependency_graph::{DependencyManager, Error};
 use runtime::process::Process;
+use runtime::process_map::ProcessMap;
 
 use nix::sys::signalfd;
 
@@ -45,9 +45,7 @@ impl ProcessManager {
         }
 
         ProcessManager {
-            processes,
-            fd_dict: HashMap::new(),
-            pid_dict: HashMap::new(),
+            process_map: ProcessMap::from(processes),
             keep_running: true,
             dependency_manager: dependency_manager.unwrap(),
             epoll_file: -1,

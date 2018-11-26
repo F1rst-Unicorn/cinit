@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
 use logging;
 use runtime::dependency_graph;
-use runtime::process::{Process, ProcessState};
+use runtime::process::ProcessState;
+use runtime::process_map::ProcessMap;
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -18,11 +18,7 @@ const EXIT_CODE: i32 = 3;
 
 #[derive(Debug)]
 pub struct ProcessManager {
-    pub processes: Vec<Process>,
-
-    pub fd_dict: HashMap<RawFd, usize>,
-
-    pub pid_dict: HashMap<Pid, usize>,
+    pub process_map: ProcessMap,
 
     pub keep_running: bool,
 
@@ -58,7 +54,7 @@ impl ProcessManager {
 
         debug!("Entering poll loop");
         while self.keep_running
-            && (self.pid_dict.len() != 0 || self.dependency_manager.has_runnables())
+            && (self.process_map.has_running_processes() || self.dependency_manager.has_runnables())
         {
             self.spawn_children();
             self.dispatch_epoll();
@@ -66,7 +62,7 @@ impl ProcessManager {
         }
 
         info!("Shutting down");
-        while self.fd_dict.len() != 0 || self.pid_dict.len() != 0 {
+        while self.process_map.has_running_processes() {
             self.dispatch_epoll();
             self.look_for_finished_children();
         }
@@ -99,10 +95,10 @@ impl ProcessManager {
     }
 
     fn handle_finished_child(&mut self, pid: &Pid, rc: i32) {
-        let child_index = *self.pid_dict.get(&pid).expect("PID not found");
+        let child_index = self.process_map.process_id_for_pid(pid);
         let child_crashed: bool;
         {
-            let child = &mut self.processes[child_index];
+            let child = &mut self.process_map.process_for_pid(pid);
             child.state = if rc == 0 {
                 info!("Child {} exited successfully", child.name);
                 trace!("Child {} exited successfully", child.name);
@@ -120,11 +116,11 @@ impl ProcessManager {
             self.initiate_shutdown(signal::SIGINT);
         }
 
-        self.pid_dict.remove(pid);
+        self.process_map.deregister_pid(pid);
         let ready_children = self.dependency_manager.notify_process_finished(child_index);
 
         for i in ready_children {
-            self.processes[i].state = ProcessState::Ready;
+            self.process_map[i].state = ProcessState::Ready;
         }
     }
 
@@ -230,7 +226,7 @@ impl ProcessManager {
 
     fn signal_children(&mut self, signal: signal::Signal) {
         info!("Killing children");
-        for child in (&self.processes)
+        for child in self.process_map.processes()
             .iter()
             .filter(|s| s.state == ProcessState::Running)
         {
@@ -249,7 +245,7 @@ impl ProcessManager {
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
-        self.fd_dict.insert(fd, child);
+        self.process_map.register_fd(child, fd);
     }
 
     fn deregister_fd(&mut self, fd: RawFd) {
@@ -269,7 +265,7 @@ impl ProcessManager {
             warn!("Could not close fd {}", fd);
         }
 
-        self.fd_dict.remove(&(fd as RawFd));
+        self.process_map.deregister_fd(&fd);
     }
 
     fn print_child_output(&mut self, fd: RawFd) {
@@ -279,8 +275,7 @@ impl ProcessManager {
         if length.is_ok() {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
-            let child_name =
-                &self.processes[*self.fd_dict.get(&fd).expect("Invalid fd found")].name;
+            let child_name = &self.process_map.process_for_fd(&fd).name;
 
             for line in output {
                 if !line.is_empty() {
@@ -292,7 +287,7 @@ impl ProcessManager {
 
     fn spawn_children(&mut self) {
         while let Some(child_index) = self.dependency_manager.pop_runnable() {
-            let child_result = self.processes[child_index].start();
+            let child_result = self.process_map[child_index].start();
 
             if child_result.is_err() {
                 error!("Failed to spawn child: {}", child_result.unwrap_err());
@@ -300,7 +295,7 @@ impl ProcessManager {
             }
             let child = child_result.unwrap();
 
-            self.pid_dict.insert(child.0, child_index);
+            self.process_map.register_pid(child_index, child.0);
             self.register_fd(child.1, child_index);
             self.register_fd(child.2, child_index);
         }
