@@ -49,7 +49,8 @@ pub fn prctl_four(
 pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
     unsafe {
         let null: *const libc::passwd = null();
-        let raw_id: *const libc::passwd = libc::getpwnam(name.as_ptr() as *const i8);
+        let cstring = CString::new(name).expect("Could not parse uid for libc");
+        let raw_id: *const libc::passwd = libc::getpwnam(cstring.as_ptr() as *const i8);
         if raw_id == null {
             Err(nix::Error::last())
         } else {
@@ -61,7 +62,8 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
 pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
     unsafe {
         let null: *const libc::group = null();
-        let raw_id: *const libc::group = libc::getgrnam(name.as_ptr() as *const i8);
+        let cstring = CString::new(name).expect("Could not parse gid for libc");
+        let raw_id: *const libc::group = libc::getgrnam(cstring.as_ptr() as *const i8);
         if raw_id == null {
             Err(nix::Error::last())
         } else {

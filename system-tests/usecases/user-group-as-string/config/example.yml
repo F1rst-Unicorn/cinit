@@ -5,6 +5,6 @@ programs:
       - -o
       - system-tests/child-dump/first.yml
     type: oneshot
-    user: builder
-    group: users
+    user: testuser
+    group: testgroup
 

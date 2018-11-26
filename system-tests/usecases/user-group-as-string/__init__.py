@@ -15,5 +15,6 @@ class Test(CinitTest):
         )
 
         ChildProcess("first", self)\
-            .assert_uid(1000)\
-            .assert_gid(100)
+            .assert_uid(1409)\
+            .assert_gid(1409)
+
