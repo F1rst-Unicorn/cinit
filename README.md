@@ -18,7 +18,7 @@ daemon run `scripts/local/build`.
 As a user with access to a docker daemon run
 
 ```bash
-export CARGO_FLAGS="--release"
+export BUILD_FLAGS="--release"
 scripts/local/build
 ```
 
