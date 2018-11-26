@@ -35,10 +35,11 @@ pub struct ProcessManager {
 
 impl Drop for ProcessManager {
     fn drop(&mut self) {
-        let result = unistd::close(self.signal_fd.as_raw_fd());
+        let raw_signal_fd = self.signal_fd.as_raw_fd().clone();
+        self.deregister_fd(raw_signal_fd);
 
-        if result.is_err() {
-            error!("Could not close signal fd");
+        if let Err(some) = unistd::close(self.epoll_file) {
+            warn!("Could not close epoll fd: {}", some);
         }
     }
 }
