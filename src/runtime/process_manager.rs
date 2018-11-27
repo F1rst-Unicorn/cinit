@@ -234,7 +234,7 @@ impl ProcessManager {
         }
     }
 
-    fn register_fd(&mut self, fd: RawFd, child: usize) {
+    fn register_fd(&mut self, fd: RawFd) {
         debug!("Registering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
             self.epoll_file,
@@ -245,7 +245,6 @@ impl ProcessManager {
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
-        self.process_map.register_fd(child, fd);
     }
 
     fn deregister_fd(&mut self, fd: RawFd) {
@@ -275,11 +274,16 @@ impl ProcessManager {
         if length.is_ok() {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
+            let is_stdout = self.process_map.is_stdout(fd);
             let child_name = &self.process_map.process_for_fd(&fd).name;
 
             for line in output {
                 if !line.is_empty() {
-                    logging::stdout::log(child_name, line);
+                    if is_stdout {
+                        logging::stdout::log(child_name, line);
+                    } else {
+                        logging::stderr::log(child_name, line);
+                    }
                 }
             }
         }
@@ -296,8 +300,10 @@ impl ProcessManager {
             let child = child_result.unwrap();
 
             self.process_map.register_pid(child_index, child.0);
-            self.register_fd(child.1, child_index);
-            self.register_fd(child.2, child_index);
+            self.process_map.register_stdout(child_index, child.1);
+            self.process_map.register_stderr(child_index, child.2);
+            self.register_fd(child.1);
+            self.register_fd(child.2);
         }
     }
 }
