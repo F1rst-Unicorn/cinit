@@ -1,6 +1,6 @@
 programs:
   - name: first
-    path: /usr/src/cinit/target/x86_64-unknown-linux-musl/debug/harness
+    path: /usr/src/cinit/target/path/harness
     workdir: /tmp
     args:
       - -o

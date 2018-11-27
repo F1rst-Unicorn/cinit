@@ -1,6 +1,6 @@
 programs:
   - name: first
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - system-tests/child-dump/first.yml
@@ -9,7 +9,7 @@ programs:
     pty: true
 
   - name: second
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - system-tests/child-dump/second.yml
@@ -21,7 +21,7 @@ programs:
     pty: true
 
   - name: third
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - system-tests/child-dump/third.yml
@@ -33,7 +33,7 @@ programs:
     pty: true
 
   - name: fourth
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - system-tests/child-dump/fourth.yml

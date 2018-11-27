@@ -1,6 +1,6 @@
 programs:
   - name: first
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - "system

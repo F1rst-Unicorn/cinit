@@ -17,5 +17,12 @@ NC='\033[0m'
 echo
 echo -e "    ${GREEN}Running system tests${NC}"
 
+rm -rf target/path
+if echo $BUILD_FLAGS | grep 'release' >/dev/null ; then
+    ln -s "x86_64-unknown-linux-musl/release/" target/path
+else
+    ln -s "x86_64-unknown-linux-musl/debug/" target/path
+fi
+
 system-tests/test
 

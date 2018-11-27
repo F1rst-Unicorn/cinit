@@ -1,6 +1,6 @@
 programs:
   - name: ping
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     args:
       - -o
       - system-tests/child-dump/ping.yml
@@ -14,7 +14,7 @@ programs:
       - failping
 
   - name: failping
-    path: target/x86_64-unknown-linux-musl/debug/harness
+    path: target/path/harness
     uid: 1000
     gid: 100
     args:

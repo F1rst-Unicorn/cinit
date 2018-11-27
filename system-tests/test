@@ -2,7 +2,7 @@
 
 export PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/.."
 
-export UUT="$PROJECT_ROOT/target/x86_64-unknown-linux-musl/debug/cinit"
+export UUT="$PROJECT_ROOT/target/path/cinit"
 
 if [[ "$1" == "-v" ]] ; then
     export VERBOSE=1
