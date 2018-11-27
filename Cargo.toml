@@ -11,7 +11,7 @@ build = "build.rs"
 lto = true
 
 [dependencies]
-clap = "~2.27.0"
+clap = "2.27.0"
 log = "0.4"
 serde = "1.0.80"
 serde_derive = "1.0"
