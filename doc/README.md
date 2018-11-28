@@ -74,7 +74,7 @@ Supported is only `oneshot` as of now.
 ### Environment
 
 By default the following environment variables will be forwarded from the
-cinit process to the programs:
+cinit process to the programs and are always present:
 
 * `HOME`
 * `LANG`
@@ -87,7 +87,8 @@ cinit process to the programs:
 * `USER`
 
 Additional parameters may be specified. If no value is given, cinit will
-forward the value from its own environment.
+forward the value from its own environment. If the value is not present in
+cinit's environment, no value will be passed (instead of an empty one).
 
 The values of the variables support simple templating. Use `{{ VAR }}` to
 refer to another variable in the environment. Note that `VAR` has to be

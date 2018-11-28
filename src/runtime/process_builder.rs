@@ -116,9 +116,7 @@ fn copy_from_config(
         for (key, value) in entry {
             match value {
                 None => match std::env::var(key) {
-                    Err(_) => {
-                        result.insert(key.to_string(), String::from(""));
-                    }
+                    Err(_) => {}
                     Ok(real_value) => {
                         result.insert(key.to_string(), real_value);
                     }

@@ -1,0 +1,9 @@
+programs:
+  - name: program
+    path: target/path/harness
+    args:
+      - -o
+      - system-tests/child-dump/program.yml
+    env:
+      - MISSING_VALUE:
+
