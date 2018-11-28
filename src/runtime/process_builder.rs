@@ -13,6 +13,8 @@ use super::process::{Process, ProcessState};
 
 impl Process {
     pub fn from(config: &config::config::ProcessConfig) -> Process {
+        let env = convert_env(&config.env);
+
         let mut result = Process {
             name: config.name.to_owned(),
             path: config.path.to_owned(),
@@ -26,7 +28,7 @@ impl Process {
             gid: Gid::from_raw(map_gid(&config.gid, &config.group, &config.name)),
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
-            env: convert_env(&config.env),
+            env: flatten_to_strings(&env),
             state: ProcessState::Blocked,
             pid: Pid::from_raw(0),
         };
@@ -37,6 +39,7 @@ impl Process {
             &mut config
                 .args
                 .iter()
+                .map(|x| render_template(&env, x).unwrap_or(x.clone()))
                 .map(|x| CString::new(x.clone()).unwrap())
                 .collect(),
         );
@@ -84,10 +87,9 @@ where
     }
 }
 
-fn convert_env(env: &Vec<HashMap<String, Option<String>>>) -> Vec<CString> {
-    let mut result = get_default_env();
-    result = copy_from_config(env, result);
-    flatten_to_strings(&mut result)
+fn convert_env(env: &Vec<HashMap<String, Option<String>>>) -> HashMap<String, String> {
+    let result = get_default_env();
+    copy_from_config(env, result)
 }
 
 fn get_default_env() -> HashMap<String, String> {
@@ -134,7 +136,7 @@ fn copy_from_config(
     result
 }
 
-fn flatten_to_strings(result: &mut HashMap<String, String>) -> Vec<CString> {
+fn flatten_to_strings(result: &HashMap<String, String>) -> Vec<CString> {
     let mut ret: Vec<CString> = Vec::new();
     for (key, value) in result.iter() {
         let entry = key.to_owned() + "=" + value;
