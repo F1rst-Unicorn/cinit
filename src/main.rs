@@ -119,6 +119,23 @@
 //!     -c, --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
 //! ```
 //!
+//! ## Logging
+//!
+//! cinit combines the log output of children with its own. The log format is as
+//! follows:
+//!
+//! `<TIMESTAMP> <LEVEL> [<NAME>] <MESSAGE>`
+//!
+//! * TIMESTAMP: This follows the pattern `YYYY-MM-DD'T'HH:MM:SS.mmm`. Example:
+//!   `1970-11-23T13:25:44.567`.
+//!
+//! * LEVEL: One of `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`.
+//!
+//! * NAME: This is either the string "cinit" or the name of a child as defined
+//!   in the `name` attribute in the YAML config.
+//!
+//! * MESSAGE: The actual event being reported.
+//!
 
 use std::alloc::System;
 
