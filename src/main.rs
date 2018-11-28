@@ -58,6 +58,10 @@
 //! directory makes cinit traverse it recursively and taking all found files as
 //! configuration. If no path is given /etc/cinit.yml is used.
 //!
+//! Many more examples can be found in the repository's `system-tests/usecases`.
+//! Beware however that some of these examples test error situations. This is
+//! usually indicated by the subdirectory names.
+//!
 //! ### Arguments
 //!
 //! Pass arguments to the program to run. You SHOULD only pass one whitespace-
