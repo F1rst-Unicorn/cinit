@@ -1,3 +1,5 @@
+//! # cinit
+//!
 //! Init program for UNIX processes. Original development was done
 //! [here](https://github.com/vs-eth/scinit)
 //!
@@ -56,29 +58,11 @@
 //! directory makes cinit traverse it recursively and taking all found files as
 //! configuration. If no path is given /etc/cinit.yml is used.
 //!
-//! ## Usage
-//!
-//! ```text
-//! cinit 0.1.0
-//! init daemon for other programs, suitable for containers
-//!
-//! USAGE:
-//!     cinit [FLAGS] [OPTIONS]
-//!
-//! FLAGS:
-//!     -h, --help       Prints help information
-//!     -V, --version    Prints version information
-//!     -v, --verbose    Output information while running
-//!
-//! OPTIONS:
-//!     -c, --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
-//! ```
-//!
-//! ## Program types
+//! ### Program types
 //!
 //! Supported is only `oneshot` as of now.
 //!
-//! ## Environment
+//! ### Environment
 //!
 //! By default the following environment variables will be forwarded from the
 //! cinit process to the programs:
@@ -100,14 +84,14 @@
 //! refer to another variable in the environment. Note that `VAR` has to be
 //! defined before it can be referenced!
 //!
-//! ## Capabilities
+//! ### Capabilities
 //!
 //! Processes can be restricted in what they are allowed to do. This can also
 //! mean that non-root process get elevated capabilities. See
 //! [here](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 //! for a list of all capabilities.
 //!
-//! ## Dependencies
+//! ### Dependencies
 //!
 //! Programs are allowed to depend on each other via the `before` and `after`
 //! fields. Dendendant processes will only be started once all their
@@ -116,6 +100,24 @@
 //!
 //! If the dependencies form a cycle, this is reported before any process is
 //! started and cinit terminates.
+//!
+//! ## Usage
+//!
+//! ```text
+//! cinit 0.1.0
+//! init daemon for other programs, suitable for containers
+//!
+//! USAGE:
+//!     cinit [FLAGS] [OPTIONS]
+//!
+//! FLAGS:
+//!     -h, --help       Prints help information
+//!     -V, --version    Prints version information
+//!     -v, --verbose    Output information while running
+//!
+//! OPTIONS:
+//!     -c, --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
+//! ```
 //!
 
 use std::alloc::System;
