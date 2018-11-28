@@ -14,10 +14,10 @@
 //!     # The path of the binary to run
 //!     path: /usr/bin/echo
 //!
-//!     # A list of arguments to pass to the program
+//!     # Arguments to pass (see below)
 //!     args:
-//!       - hello
-//!       - world
+//!       - -e
+//!       - "hello world\\n"
 //!
 //!     # Set the current working directoy
 //!     workdir: /some/path
@@ -25,7 +25,7 @@
 //!     # See Program Types
 //!     type: oneshot
 //!
-//!     # If none is given, root is used
+//!     # If none or invalid is given, root is used
 //!     uid: 0
 //!     gid: 0
 //!     user: root
@@ -57,6 +57,11 @@
 //! If a file is passed via command line it is the only file used. Passing a
 //! directory makes cinit traverse it recursively and taking all found files as
 //! configuration. If no path is given /etc/cinit.yml is used.
+//!
+//! ### Arguments
+//!
+//! Pass arguments to the program to run. You SHOULD only pass one whitespace-
+//! separated word per list item.
 //!
 //! ### Program types
 //!
@@ -126,15 +131,15 @@
 //!
 //! `<TIMESTAMP> <LEVEL> [<NAME>] <MESSAGE>`
 //!
-//! * TIMESTAMP: This follows the pattern `YYYY-MM-DD'T'HH:MM:SS.mmm`. Example:
-//!   `1970-11-23T13:25:44.567`.
+//! * `TIMESTAMP`: This follows the pattern `YYYY-MM-DD'T'HH:MM:SS.mmm`.
+//!   Example: `1970-11-23T13:25:44.567`.
 //!
-//! * LEVEL: One of `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`.
+//! * `LEVEL`: One of `ERROR`, `WARN`, `INFO`, `DEBUG`, `TRACE`.
 //!
-//! * NAME: This is either the string "cinit" or the name of a child as defined
+//! * `NAME`: This is either the string `cinit` or the name of a child as defined
 //!   in the `name` attribute in the YAML config.
 //!
-//! * MESSAGE: The actual event being reported.
+//! * `MESSAGE`: The actual event being reported.
 //!
 
 use std::alloc::System;
