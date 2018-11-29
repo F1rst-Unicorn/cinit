@@ -18,6 +18,8 @@ programs:
     args:
       - -e
       - "hello world\\n"
+      # This will be "my_program_arg", see below
+      - "{{ NAME }}_arg"
 
     # Set the current working directoy
     workdir: /some/path
@@ -66,6 +68,9 @@ usually indicated by the subdirectory names.
 
 Pass arguments to the program to run. You SHOULD only pass one whitespace-
 separated word per list item.
+
+As with environment variables these strings support templating where you have
+access to all environment variables.
 
 ### Program types
 

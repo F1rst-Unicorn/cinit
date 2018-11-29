@@ -1,0 +1,11 @@
+programs:
+  - name: program
+    path: target/x86_64-unknown-linux-musl/debug/harness
+    args:
+      - -o
+      - system-tests/child-dump/program.yml
+      - "{{ ENV_VAR }} plus appendix"
+      - "{{ ENV_VAR } plus appendix"
+    env:
+      - ENV_VAR: "hello world"
+
