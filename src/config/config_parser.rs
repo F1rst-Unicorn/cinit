@@ -169,12 +169,32 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_cronjob() {
+        let output = parse_raw_config(vec![CRONJOB_CONFIG.to_owned()]);
+
+        assert_eq!(1, output.programs.len());
+
+        let program = &output.programs[0];
+        assert_eq!("test", program.name);
+        assert_eq!("/path", program.path);
+        assert_eq!(ProcessType::CronJob{timer: "1 2 3 4 5".to_string()}, program.process_type);
+    }
+
     const MINIMAL_CONFIG: &str = "\
 programs:
   - name: test
     path: /path
 ";
 
+    const CRONJOB_CONFIG: &str = "\
+programs:
+  - name: test
+    path: /path
+    type:
+      cronjob:
+        timer: 1 2 3 4 5
+";
     const FULL_CONFIG: &str = "\
 programs:
   - name: test

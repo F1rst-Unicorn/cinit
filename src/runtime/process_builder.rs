@@ -23,7 +23,7 @@ impl Process {
                 None => ".",
                 Some(path) => path,
             }),
-            process_type: config.process_type,
+            process_type: config.process_type.clone(),
             uid: Uid::from_raw(map_uid(&config.uid, &config.user, &config.name)),
             gid: Gid::from_raw(map_gid(&config.gid, &config.group, &config.name)),
             emulate_pty: config.emulate_pty,

@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum ProcessType {
     #[serde(rename = "oneshot")]
     Oneshot,
 
     #[serde(rename = "service")]
     Service,
+
+    #[serde(rename = "cronjob")]
+    CronJob {timer: String},
 }
 
 fn default_process_type() -> ProcessType {

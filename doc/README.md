@@ -25,7 +25,9 @@ programs:
     workdir: /some/path
 
     # See Program Types
-    type: oneshot
+    type:
+      cronjob:
+        timer: 1 2 3 4 5
 
     # If none or invalid is given, root is used
     uid: 0
@@ -74,7 +76,21 @@ access to all environment variables.
 
 ### Program types
 
-Supported is only `oneshot` as of now.
+A program to be executed once is of type `oneshot`. The corresponding
+representation in YAML is just `type: oneshot`. This is the default if none
+is given.
+
+A program which is called periodically is of type `cronjob`. The YAML
+representation of this is nested:
+
+```yaml
+type:
+  cronjob:
+    timer: 1 2 3 4 5
+```
+
+See [`man cron`](https://manpages.debian.org/stretch/cron/crontab.5.en.html) for
+a description of the time format. A cronjob must not have dependencies.
 
 ### Environment
 
