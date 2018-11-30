@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
 
-use super::libc_helpers;
-use super::libc_helpers::map_to_errno;
+use util::libc_helpers;
+use util::libc_helpers::map_to_errno;
 use config;
 
 use nix;

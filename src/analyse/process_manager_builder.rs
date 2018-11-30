@@ -1,11 +1,10 @@
-use super::process_manager::ProcessManager;
-
 use std::process::exit;
 
 use config::config::Config;
 use runtime::dependency_graph::{DependencyManager, Error};
 use runtime::process::Process;
 use runtime::process_map::ProcessMap;
+use runtime::process_manager::ProcessManager;
 
 use nix::sys::signalfd;
 

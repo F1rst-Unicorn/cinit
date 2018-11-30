@@ -3,13 +3,12 @@ use std::ffi::CString;
 use std::path::PathBuf;
 
 use config;
-use runtime::libc_helpers;
+use util::libc_helpers;
+use runtime::process::{Process, ProcessState};
 
 use nix::unistd::Gid;
 use nix::unistd::Pid;
 use nix::unistd::Uid;
-
-use super::process::{Process, ProcessState};
 
 impl Process {
     pub fn from(config: &config::config::ProcessConfig) -> Process {
