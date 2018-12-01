@@ -5,9 +5,6 @@ pub enum ProcessType {
     #[serde(rename = "oneshot")]
     Oneshot,
 
-    #[serde(rename = "service")]
-    Service,
-
     #[serde(rename = "cronjob")]
     CronJob {timer: String},
 }

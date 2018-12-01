@@ -103,10 +103,16 @@ impl ProcessManager {
         {
             let child = &mut self.process_map.process_for_pid(pid);
             child.state = if rc == 0 {
-                info!("Child {} exited successfully", child.name);
-                trace!("Child {} exited successfully", child.name);
                 child_crashed = false;
-                ProcessState::Done
+                if self.cron.is_cronjob(child_index) {
+                    info!("Child {} has finished and is going to sleep", child.name);
+                    trace!("Child {} has finished and is going to sleep", child.name);
+                    ProcessState::Sleeping
+                } else {
+                    info!("Child {} exited successfully", child.name);
+                    trace!("Child {} exited successfully", child.name);
+                    ProcessState::Done
+                }
             } else {
                 error!("Child {} crashed with {}", child.name, rc);
                 trace!("Child {} crashed with {}", child.name, rc);
@@ -290,19 +296,38 @@ impl ProcessManager {
 
     fn spawn_children(&mut self) {
         while let Some(child_index) = self.dependency_manager.pop_runnable() {
-            let child_result = self.process_map[child_index].start();
-
-            if child_result.is_err() {
-                error!("Failed to spawn child: {}", child_result.unwrap_err());
-                return;
-            }
-            let child = child_result.unwrap();
-
-            self.process_map.register_pid(child_index, child.0);
-            self.process_map.register_stdout(child_index, child.1);
-            self.process_map.register_stderr(child_index, child.2);
-            self.register_fd(child.1);
-            self.register_fd(child.2);
+            self.spawn_child(child_index);
         }
+
+        while let Some(child_index) = self.cron.pop_runnable(time::now()) {
+            self.spawn_child(child_index);
+        }
+    }
+
+    fn spawn_child(&mut self, child_index: usize) {
+        let child_result;
+        {
+            let child = &mut self.process_map[child_index];
+            if child.state != ProcessState::Blocked &&
+                child.state != ProcessState::Sleeping {
+                warn!(
+                    "Refusing to start child '{}' which is currently {}",
+                    child.name,
+                    child.state
+                );
+            }
+
+            child_result = child.start();
+        }
+        if child_result.is_err() {
+            error!("Failed to spawn child: {}", child_result.unwrap_err());
+            return;
+        }
+        let child = child_result.unwrap();
+        self.process_map.register_pid(child_index, child.0);
+        self.process_map.register_stdout(child_index, child.1);
+        self.process_map.register_stderr(child_index, child.2);
+        self.register_fd(child.1);
+        self.register_fd(child.2);
     }
 }

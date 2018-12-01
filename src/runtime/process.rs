@@ -4,6 +4,8 @@ use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
+use std::fmt::{Display, Formatter, Error as FmtError};
+
 
 use util::libc_helpers;
 use util::libc_helpers::map_to_errno;
@@ -40,6 +42,19 @@ pub enum ProcessState {
 
     /// The process has finished unsucessfully
     Crashed,
+}
+
+impl Display for ProcessState {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+        let message = match self {
+            ProcessState::Blocked => "blocked",
+            ProcessState::Sleeping => "sleeping",
+            ProcessState::Running => "running",
+            ProcessState::Done => "done",
+            ProcessState::Crashed => "crashed",
+        };
+        write!(f, "{}", message)
+    }
 }
 
 #[derive(Debug)]

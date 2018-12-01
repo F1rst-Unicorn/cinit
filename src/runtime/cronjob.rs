@@ -66,7 +66,11 @@ impl Cron {
         Ok(result)
     }
 
-    pub fn get_eligible_jobs(&mut self, now: Tm) -> Vec<usize> {
-        Vec::new()
+    pub fn pop_runnable(&mut self, now: Tm) -> Option<usize> {
+        None
+    }
+
+    pub fn is_cronjob(&self, id: usize) -> bool {
+        self.timers.contains_key(&id)
     }
 }
