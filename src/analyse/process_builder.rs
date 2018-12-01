@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::path::PathBuf;
+use std::fmt::Display;
+use std::fmt::Formatter;
+use std::fmt::Error as FmtError;
 
-use config;
+use config::config::{ProcessConfig, ProcessType};
 use util::libc_helpers;
 use runtime::process::{Process, ProcessState};
 
@@ -10,9 +13,30 @@ use nix::unistd::Gid;
 use nix::unistd::Pid;
 use nix::unistd::Uid;
 
+#[derive(Debug)]
+pub enum Error {
+    CronjobDependency,
+}
+
+impl Display for Error {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
+        let message = match self {
+            Error::CronjobDependency => "Cronjobs may not have dependencies"
+        };
+
+        write!(f, "{}", message)
+    }
+}
+
 impl Process {
-    pub fn from(config: &config::config::ProcessConfig) -> Process {
+    pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
         let env = convert_env(&config.env);
+
+        if let ProcessType::CronJob{..} = &config.process_type {
+            if !config.before.is_empty() || !config.after.is_empty() {
+                return Err(Error::CronjobDependency);
+            }
+        }
 
         let mut result = Process {
             name: config.name.to_owned(),
@@ -22,13 +46,15 @@ impl Process {
                 None => ".",
                 Some(path) => path,
             }),
-            process_type: config.process_type.clone(),
             uid: Uid::from_raw(map_uid(&config.uid, &config.user, &config.name)),
             gid: Gid::from_raw(map_gid(&config.gid, &config.group, &config.name)),
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: flatten_to_strings(&env),
-            state: ProcessState::Blocked,
+            state: match config.process_type {
+                ProcessType::Oneshot => ProcessState::Blocked,
+                ProcessType::CronJob {..} => ProcessState::Sleeping,
+            },
             pid: Pid::from_raw(0),
         };
 
@@ -43,7 +69,7 @@ impl Process {
                 .collect(),
         );
 
-        result
+        Ok(result)
     }
 }
 

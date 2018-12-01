@@ -41,7 +41,7 @@ impl DependencyManager {
     ///
     /// If the config contains cyclic dependency the Err(index)
     /// contains the index of some program involved in the cycle
-    pub fn with_nodes(config: &Vec<ProcessConfig>) -> Result<Self, Error> {
+    pub fn with_nodes(config: &Vec<(usize, ProcessConfig)>) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config)?;
         let nodes = DependencyManager::build_dependencies(config, name_dict);
         let result = DependencyManager {
@@ -84,7 +84,7 @@ impl DependencyManager {
     }
 
     fn build_dependencies(
-        config: &Vec<ProcessConfig>,
+        config: &Vec<(usize, ProcessConfig)>,
         name_dict: HashMap<String, usize>,
     ) -> Vec<ProcessNode> {
         let mut result = Vec::with_capacity(config.len());
@@ -93,10 +93,10 @@ impl DependencyManager {
             result.push(ProcessNode::new());
         }
 
-        for (current_index, current_config) in (&config).iter().enumerate() {
+        for (current_index, current_config) in (&config).iter() {
             {
                 let mut current = result
-                    .get_mut(current_index)
+                    .get_mut(*current_index)
                     .expect("Invalid index in name_dict");
                 for successor_name in &current_config.before {
                     let successor_index = name_dict
@@ -128,7 +128,7 @@ impl DependencyManager {
                 let mut predecessor = result
                     .get_mut(predecessor_index)
                     .expect("Invalid index in name_dict");
-                predecessor.after_self.push(current_index);
+                predecessor.after_self.push(*current_index);
             }
         }
         result
@@ -161,14 +161,14 @@ impl DependencyManager {
         }
     }
 
-    fn build_name_dict(descriptions: &Vec<ProcessConfig>) -> Result<HashMap<String, usize>, Error> {
+    fn build_name_dict(descriptions: &Vec<(usize, ProcessConfig)>) -> Result<HashMap<String, usize>, Error> {
         let mut result = HashMap::new();
 
-        for (i, desc) in descriptions.into_iter().enumerate() {
+        for (i, desc) in descriptions.into_iter() {
             if result.contains_key(&desc.name) {
-                return Err(Error::Duplicate(i));
+                return Err(Error::Duplicate(*i));
             } else {
-                result.insert(desc.name.to_owned(), i);
+                result.insert(desc.name.to_owned(), *i);
             }
         }
 
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     pub fn single_runnable_process() {
-        let config = vec![ProcessConfig::new("first", vec![], vec![])];
+        let config = vec![(0, ProcessConfig::new("first", vec![], vec![]))];
 
         let mut uut = DependencyManager::with_nodes(&config)
             .expect("Failed to create dependency manager");
@@ -197,8 +197,8 @@ mod tests {
     #[test]
     pub fn cyclic_dependency() {
         let config = vec![
-            ProcessConfig::new("first", vec!["second"], vec![]),
-            ProcessConfig::new("second", vec!["first"], vec![]),
+            (0, ProcessConfig::new("first", vec!["second"], vec![])),
+            (1, ProcessConfig::new("second", vec!["first"], vec![])),
         ];
 
         let uut = DependencyManager::with_nodes(&config);
@@ -210,8 +210,8 @@ mod tests {
     #[test]
     pub fn duplicate_name() {
         let config = vec![
-            ProcessConfig::new("first", vec![], vec![]),
-            ProcessConfig::new("first", vec![], vec![]),
+            (0, ProcessConfig::new("first", vec![], vec![])),
+            (1, ProcessConfig::new("first", vec![], vec![])),
         ];
 
         let uut = DependencyManager::with_nodes(&config);
@@ -223,8 +223,8 @@ mod tests {
     #[test]
     pub fn dependants_are_marked_runnable() {
         let config = vec![
-            ProcessConfig::new("first", vec!["second"], vec![]),
-            ProcessConfig::new("second", vec![], vec![]),
+            (0, ProcessConfig::new("first", vec!["second"], vec![])),
+            (1, ProcessConfig::new("second", vec![], vec![])),
         ];
         let mut uut = DependencyManager::with_nodes(&config)
             .expect("Failed to create dependency manager");
@@ -240,9 +240,9 @@ mod tests {
     #[test]
     pub fn have_two_dependencies() {
         let config = vec![
-            ProcessConfig::new("first", vec![], vec![]),
-            ProcessConfig::new("second", vec!["third"], vec![]),
-            ProcessConfig::new("third", vec![], vec!["first"]),
+            (0, ProcessConfig::new("first", vec![], vec![])),
+            (1, ProcessConfig::new("second", vec!["third"], vec![])),
+            (2, ProcessConfig::new("third", vec![], vec!["first"])),
         ];
         let mut uut = DependencyManager::with_nodes(&config)
             .expect("Failed to create dependency manager");

@@ -4,6 +4,7 @@ use std::process::exit;
 
 use logging;
 use runtime::dependency_graph;
+use runtime::cronjob;
 use runtime::process::ProcessState;
 use runtime::process_map::ProcessMap;
 
@@ -23,6 +24,8 @@ pub struct ProcessManager {
     pub keep_running: bool,
 
     pub dependency_manager: dependency_graph::DependencyManager,
+
+    pub cron: cronjob::Cron,
 
     pub epoll_file: RawFd,
 

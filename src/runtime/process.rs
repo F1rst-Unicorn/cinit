@@ -7,7 +7,6 @@ use std::str::FromStr;
 
 use util::libc_helpers;
 use util::libc_helpers::map_to_errno;
-use config;
 
 use nix;
 use nix::fcntl;
@@ -52,8 +51,6 @@ pub struct Process {
     pub args: Vec<CString>,
 
     pub workdir: PathBuf,
-
-    pub process_type: config::config::ProcessType,
 
     pub uid: unistd::Uid,
 

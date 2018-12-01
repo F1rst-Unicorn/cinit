@@ -16,7 +16,7 @@ fn default_process_type() -> ProcessType {
     ProcessType::Oneshot
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ProcessConfig {
     pub name: String,
 

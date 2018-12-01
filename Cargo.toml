@@ -21,6 +21,7 @@ libc = "0.2.43"
 capabilities = "0.3.0"
 petgraph = "0.4.13"
 tera = "0.11.20"
+time = "0.1.40"
 
 [dependencies.log4rs]
 version = "0.8.1"
