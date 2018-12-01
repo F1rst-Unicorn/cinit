@@ -61,18 +61,15 @@ impl DependencyManager {
         self.runnable.pop_back()
     }
 
-    pub fn notify_process_finished(&mut self, process: usize) -> Vec<usize> {
-        let mut result = Vec::new();
+    pub fn notify_process_finished(&mut self, process: usize) {
         for successor_index in self.nodes[process].after_self.clone() {
             let mut successor = &mut self.nodes[successor_index];
             successor.predecessor_count -= 1;
             if successor.predecessor_count == 0 {
                 // no need to remove `process` from successor's dependencies
                 self.runnable.push_back(successor_index);
-                result.push(successor_index);
             }
         }
-        result
     }
 
     fn find_initial_runnables(nodes: &Vec<ProcessNode>) -> VecDeque<usize> {
@@ -232,10 +229,8 @@ mod tests {
         let mut uut = DependencyManager::with_nodes(&config)
             .expect("Failed to create dependency manager");
         uut.pop_runnable().expect("Assumption broken");
-        let runnables = uut.notify_process_finished(0);
+        uut.notify_process_finished(0);
 
-        assert_eq!(1, runnables.len());
-        assert!(runnables.contains(&1));
         assert!(uut.has_runnables());
         assert_eq!(Some(1), uut.pop_runnable());
         assert!(!uut.has_runnables());
@@ -254,13 +249,10 @@ mod tests {
         uut.pop_runnable().expect("Assumption broken");
         uut.pop_runnable().expect("Assumption broken");
         assert!(!uut.has_runnables());
-        let mut runnable = uut.notify_process_finished(0);
-        assert!(runnable.is_empty());
+        uut.notify_process_finished(0);
         assert!(!uut.has_runnables());
-        runnable = uut.notify_process_finished(1);
+        uut.notify_process_finished(1);
 
-        assert_eq!(1, runnable.len());
-        assert!(runnable.contains(&2));
         assert!(uut.has_runnables());
         assert_eq!(Some(2), uut.pop_runnable());
         assert!(!uut.has_runnables());

@@ -30,8 +30,8 @@ pub enum ProcessState {
     /// finished yet.
     Blocked,
 
-    /// The process has no more dependencies and can be started
-    Ready,
+    /// The process is a cronjob and waits for its timer to be triggered
+    Sleeping,
 
     /// The process is running
     Running,

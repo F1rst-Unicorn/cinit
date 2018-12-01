@@ -117,11 +117,7 @@ impl ProcessManager {
         }
 
         self.process_map.deregister_pid(pid);
-        let ready_children = self.dependency_manager.notify_process_finished(child_index);
-
-        for i in ready_children {
-            self.process_map[i].state = ProcessState::Ready;
-        }
+        self.dependency_manager.notify_process_finished(child_index);
     }
 
     fn dispatch_epoll(&mut self) {
