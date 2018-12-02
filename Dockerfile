@@ -26,4 +26,6 @@ RUN useradd -M -N --uid 1409 --gid testgroup testuser || true
 RUN echo 'ENV_PATH PATH=/usr/local/cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games' \
         >> /etc/login.defs
 
+RUN ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+
 CMD ["exit"]

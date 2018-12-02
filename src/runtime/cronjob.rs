@@ -40,7 +40,76 @@ impl TimerDescription {
     }
 
     pub fn get_next_execution(&self, from_timepoint: Tm) -> Tm {
-        from_timepoint
+        let mut result = from_timepoint.clone();
+        let mut carry = 0;
+
+        result.tm_min = match self.minute
+            .range((from_timepoint.tm_min + 1)..)
+            .next() {
+            Some(&min) => { min },
+            None => {
+                carry = 1;
+                *self.minute.iter().next().unwrap()
+            }
+        };
+
+        result.tm_hour = match self.hour
+            .range((from_timepoint.tm_hour + carry)..)
+            .next() {
+            Some(&h) => {
+                carry = 0;
+                h
+            },
+            None => {
+                carry = 1;
+                *self.hour.iter().next().unwrap()
+            }
+        };
+
+        let next_weekday = match self.weekday
+            .range((from_timepoint.tm_wday + carry)..)
+            .next() {
+            Some(&day) => { day },
+            None => { *self.weekday.iter().next().unwrap() }
+        };
+
+        let next_day = match self.day
+            .range((from_timepoint.tm_mday + carry)..)
+            .next() {
+            Some(&day) => {
+                carry = 0;
+                day
+            },
+            None => {
+                carry = 1;
+                *self.day.iter().next().unwrap()
+            }
+        };
+
+        let next_month = match self.month
+            .range((from_timepoint.tm_mon + carry)..)
+            .next() {
+            Some(&month) => { month },
+            None => { *self.month.iter().next().unwrap() }
+        };
+
+        let week_duration = Duration::days(
+            if next_weekday <= result.tm_wday {
+                7 - (result.tm_wday - next_weekday)
+            } else {
+                next_weekday - result.tm_wday
+            } as i64
+        );
+
+        let mut date_duration = Duration::zero();
+        let mut tmp = result + date_duration;
+        while tmp.tm_mday != next_day ||
+            tmp.tm_mon != next_month {
+            date_duration = date_duration + Duration::days(1);
+            tmp = result + date_duration;
+        }
+
+        (result + std::cmp::min(week_duration, date_duration)).to_local()
     }
 
 }
@@ -151,6 +220,7 @@ impl Cron {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::*;
 
     #[test]
     fn parse_star() {
@@ -396,6 +466,66 @@ mod tests {
         assert!(result.is_err());
         let message = result.unwrap_err();
         assert_eq!("Too many timer specs", message);
+    }
+
+    #[test]
+    fn advance_by_one_minute() {
+        let uut = TimerDescription::parse("* * * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::minutes(1)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_two_minutes() {
+        let uut = TimerDescription::parse("32 * * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::minutes(2)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_wrap_around_minutes() {
+        let uut = TimerDescription::parse("29 * * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::minutes(59)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_one_hour() {
+        let uut = TimerDescription::parse("30 * * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::hours(1)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_two_hours() {
+        let uut = TimerDescription::parse("30 14 * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::hours(2)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_wrap_around_hours() {
+        let uut = TimerDescription::parse("30 11 * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::hours(23)).to_local(), result);
+    }
+
+
+    // Return 1970-06-15T12:30:00 CET Monday
+    fn mock_time() -> Tm {
+        time::at(Timespec::new(14297400, 0))
     }
 
 }
