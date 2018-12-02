@@ -23,7 +23,20 @@ pub struct TimerDescription {
 impl TimerDescription {
 
     pub fn parse(raw_desc: &str) -> Result<TimerDescription, String> {
-        Err("Not implemented".to_string())
+        let mut iter = raw_desc.split_whitespace();
+        let result = Ok(TimerDescription {
+            minute: parse_element(iter.next(), 0, 59)?,
+            hour: parse_element(iter.next(), 0, 23)?,
+            day: parse_element(iter.next(), 1, 31)?,
+            month: parse_element(iter.next(), 1, 12)?,
+            weekday: parse_element(iter.next(), 0, 6)?,
+        });
+
+        if let None = iter.next() {
+            result
+        } else {
+            Err("Too many timer specs".to_string())
+        }
     }
 
     pub fn get_next_execution(&self, from_timepoint: Tm) -> Tm {
@@ -329,6 +342,60 @@ mod tests {
         assert!(result.is_err());
         let message = result.unwrap_err();
         assert_eq!("Invalid number", message);
+    }
+
+    #[test]
+    fn parse_entire_cron_expression() {
+        let result = TimerDescription::parse("1 2 3 4 5");
+
+        assert!(result.is_ok());
+        let timer = result.unwrap();
+        assert_eq!(1, timer.minute.len());
+        assert!(timer.minute.contains(&1));
+        assert_eq!(1, timer.hour.len());
+        assert!(timer.hour.contains(&2));
+        assert_eq!(1, timer.day.len());
+        assert!(timer.day.contains(&3));
+        assert_eq!(1, timer.month.len());
+        assert!(timer.month.contains(&4));
+        assert_eq!(1, timer.weekday.len());
+        assert!(timer.weekday.contains(&5));
+    }
+
+    #[test]
+    fn parse_entire_cron_expression_with_whitespace() {
+        let result = TimerDescription::parse("1 \n2 \t3   4   5");
+
+        assert!(result.is_ok());
+        let timer = result.unwrap();
+        assert_eq!(1, timer.minute.len());
+        assert!(timer.minute.contains(&1));
+        assert_eq!(1, timer.hour.len());
+        assert!(timer.hour.contains(&2));
+        assert_eq!(1, timer.day.len());
+        assert!(timer.day.contains(&3));
+        assert_eq!(1, timer.month.len());
+        assert!(timer.month.contains(&4));
+        assert_eq!(1, timer.weekday.len());
+        assert!(timer.weekday.contains(&5));
+    }
+
+    #[test]
+    fn parse_too_short_expr() {
+        let result = TimerDescription::parse("1 2 3 4");
+
+        assert!(result.is_err());
+        let message = result.unwrap_err();
+        assert_eq!("Incomplete timer spec", message);
+    }
+
+    #[test]
+    fn parse_too_long_expr() {
+        let result = TimerDescription::parse("1 2 3 4 5 6");
+
+        assert!(result.is_err());
+        let message = result.unwrap_err();
+        assert_eq!("Too many timer specs", message);
     }
 
 }
