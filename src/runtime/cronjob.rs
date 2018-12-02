@@ -209,7 +209,24 @@ impl Cron {
     }
 
     pub fn pop_runnable(&mut self, now: Tm) -> Option<usize> {
-        None
+        let next_job = self.timer.iter().next()
+            .map(|t| (t.0.clone(), t.1.clone()));
+
+        if let Some((next_exec_time, process_id)) = next_job {
+            if next_exec_time <= now {
+                self.timer.remove(&next_exec_time);
+                self.timer.insert(
+                    self.timers.get(&process_id).unwrap().get_next_execution(now),
+                    process_id
+                );
+                Some(process_id)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+
     }
 
     pub fn is_cronjob(&self, id: usize) -> bool {
