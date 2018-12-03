@@ -92,6 +92,17 @@ type:
 See [`man cron`](https://manpages.debian.org/stretch/cron/crontab.5.en.html) for
 a description of the time format. A cronjob must not have dependencies.
 
+:::warning
+The implementation of cron timer specifications deviates from the man page
+linked above by not differentiating between `*` and the full range of valid
+values given, e.g. `1-31` for the day. This is relevant for interactions
+between date specifications and weekday specification.
+:::
+
+:::info
+Special string specifications as `@monthly` are not supported.
+:::
+
 ### Environment
 
 By default the following environment variables will be forwarded from the
