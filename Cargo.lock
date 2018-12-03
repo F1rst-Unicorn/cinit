@@ -101,7 +101,7 @@ dependencies = [
 
 [[package]]
 name = "cinit"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "capabilities 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.27.1 (registry+https://github.com/rust-lang/crates.io-index)",
