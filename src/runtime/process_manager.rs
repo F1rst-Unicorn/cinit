@@ -318,6 +318,11 @@ impl ProcessManager {
                     "Refusing to start child '{}' which is currently {}",
                     child.name, child.state
                 );
+                trace!(
+                    "Refusing to start child '{}' which is currently {}",
+                    child.name, child.state
+                );
+                return;
             }
 
             child_result = child.start();

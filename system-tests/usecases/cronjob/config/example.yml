@@ -1,0 +1,30 @@
+programs:
+  - name: echo
+    path: echo
+    args:
+      - Hello World
+    type:
+      cronjob:
+        timer: "* * * * *"
+
+  - name: waiter
+    path: target/path/harness
+    workdir: "."
+    args:
+      - -o
+      - system-tests/child-dump/waiter.yml
+      - -s
+      - 125
+    type: oneshot
+
+  - name: non-reentrant
+    path: target/path/harness
+    workdir: "."
+    args:
+      - -o
+      - system-tests/child-dump/non-reentrant.yml
+      - -s
+      - 62
+    type:
+      cronjob:
+        timer: "* * * * *"

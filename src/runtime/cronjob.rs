@@ -226,9 +226,14 @@ impl Cron {
 
             let time_desc =
                 TimerDescription::parse(&raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
+            let next_execution = time_desc.get_next_execution(time::now());
+            debug!("Scheduled execution of '{}' at {}",
+                program_config.name,
+                time::strftime("%FT%T", &next_execution).unwrap()
+            );
             result
                 .timer
-                .insert(time_desc.get_next_execution(time::now()), *id);
+                .insert(next_execution, *id);
             result.timers.insert(*id, time_desc);
         }
 
@@ -241,11 +246,15 @@ impl Cron {
         if let Some((next_exec_time, process_id)) = next_job {
             if next_exec_time <= now {
                 self.timer.remove(&next_exec_time);
+                let next_execution = self.timers
+                    .get(&process_id)
+                    .unwrap()
+                    .get_next_execution(now);
+                debug!("Scheduled next execution at {}",
+                       time::strftime("%FT%T", &next_execution).unwrap()
+                );
                 self.timer.insert(
-                    self.timers
-                        .get(&process_id)
-                        .unwrap()
-                        .get_next_execution(now),
+                    next_execution,
                     process_id,
                 );
                 Some(process_id)

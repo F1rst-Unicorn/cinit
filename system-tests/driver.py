@@ -196,6 +196,25 @@ class ChildExited(RegexMatcher):
         return self.regex
 
 
+class ChildSleeping(RegexMatcher):
+    def __init__(self, name):
+        super(ChildSleeping, self).__init__(
+                "Child " + name + " has finished and is going to sleep")
+
+    def __str__(self):
+        return self.regex
+
+
+class ChildSkipped(RegexMatcher):
+    def __init__(self, name):
+        super(ChildSkipped, self).__init__(
+                "Refusing to start child '" + name + "' which is currently "
+                                                     "running")
+
+    def __str__(self):
+        return self.regex
+
+
 class Exited(RegexMatcher):
     def __init__(self):
         super(Exited, self).__init__(
