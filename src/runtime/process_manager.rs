@@ -99,12 +99,13 @@ impl ProcessManager {
 
     fn handle_finished_child(&mut self, pid: &Pid, rc: i32) {
         let child_index = self.process_map.process_id_for_pid(pid);
+        let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
         {
             let child = &mut self.process_map.process_for_pid(pid);
             child.state = if rc == 0 {
                 child_crashed = false;
-                if self.cron.is_cronjob(child_index) {
+                if is_cronjob {
                     info!("Child {} has finished and is going to sleep", child.name);
                     trace!("Child {} has finished and is going to sleep", child.name);
                     ProcessState::Sleeping
@@ -126,7 +127,9 @@ impl ProcessManager {
         }
 
         self.process_map.deregister_pid(pid);
-        self.dependency_manager.notify_process_finished(child_index);
+        if ! is_cronjob {
+            self.dependency_manager.notify_process_finished(child_index);
+        }
     }
 
     fn dispatch_epoll(&mut self) {

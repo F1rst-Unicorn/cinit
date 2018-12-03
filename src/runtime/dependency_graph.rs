@@ -31,7 +31,7 @@ pub enum Error {
 
 #[derive(Debug, PartialEq)]
 pub struct DependencyManager {
-    nodes: Vec<ProcessNode>,
+    nodes: HashMap<usize, ProcessNode>,
 
     runnable: VecDeque<usize>,
 }
@@ -62,8 +62,8 @@ impl DependencyManager {
     }
 
     pub fn notify_process_finished(&mut self, process: usize) {
-        for successor_index in self.nodes[process].after_self.clone() {
-            let mut successor = &mut self.nodes[successor_index];
+        for successor_index in self.nodes[&process].after_self.clone() {
+            let mut successor = self.nodes.get_mut(&successor_index).expect("Invalid index");
             successor.predecessor_count -= 1;
             if successor.predecessor_count == 0 {
                 // no need to remove `process` from successor's dependencies
@@ -72,13 +72,12 @@ impl DependencyManager {
         }
     }
 
-    fn find_initial_runnables(nodes: &Vec<ProcessNode>) -> VecDeque<usize> {
+    fn find_initial_runnables(nodes: &HashMap<usize, ProcessNode>) -> VecDeque<usize> {
         let mut result = VecDeque::new();
         nodes
             .iter()
-            .enumerate()
             .filter(|(_, process)| process.predecessor_count == 0)
-            .map(|(i, _)| result.push_back(i))
+            .map(|(i, _)| result.push_back(*i))
             .for_each(drop);
         result
     }
@@ -86,17 +85,17 @@ impl DependencyManager {
     fn build_dependencies(
         config: &Vec<(usize, ProcessConfig)>,
         name_dict: HashMap<String, usize>,
-    ) -> Vec<ProcessNode> {
-        let mut result = Vec::with_capacity(config.len());
+    ) -> HashMap<usize, ProcessNode> {
+        let mut result = HashMap::with_capacity(config.len());
 
-        for _ in 0..config.len() {
-            result.push(ProcessNode::new());
+        for (k, _) in config.iter() {
+            result.insert(*k, ProcessNode::new());
         }
 
         for (current_index, current_config) in (&config).iter() {
             {
                 let mut current = result
-                    .get_mut(*current_index)
+                    .get_mut(current_index)
                     .expect("Invalid index in name_dict");
                 for successor_name in &current_config.before {
                     let successor_index = name_dict
@@ -115,7 +114,7 @@ impl DependencyManager {
                     .expect("Invalid index in name_dict")
                     .clone();
                 let mut successor = result
-                    .get_mut(successor_index)
+                    .get_mut(&successor_index)
                     .expect("Invalid index in name_dict");
                 successor.predecessor_count += 1;
             }
@@ -126,7 +125,7 @@ impl DependencyManager {
                     .expect("Invalid index in name_dict")
                     .clone();
                 let mut predecessor = result
-                    .get_mut(predecessor_index)
+                    .get_mut(&predecessor_index)
                     .expect("Invalid index in name_dict");
                 predecessor.after_self.push(*current_index);
             }
@@ -143,7 +142,7 @@ impl DependencyManager {
             node_dict.insert(i, node);
         }
 
-        for (i, node) in (&self.nodes).iter().enumerate() {
+        for (i, node) in (&self.nodes).iter() {
             for successor in &node.after_self {
                 graph.add_edge(
                     node_dict.get(&i).unwrap().clone(),
