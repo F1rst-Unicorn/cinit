@@ -274,8 +274,8 @@ impl Process {
         let stdout_name = libc_helpers::ttyname(stdout.slave)?;
         let stderr_name = libc_helpers::ttyname(stderr.slave)?;
 
-        unistd::chown(stdout_name.to_bytes(), Some(self.uid), Some(self.gid))?;
-        unistd::chown(stderr_name.to_bytes(), Some(self.uid), Some(self.gid))?;
+        unistd::chown(stdout_name.as_bytes(), Some(self.uid), Some(self.gid))?;
+        unistd::chown(stderr_name.as_bytes(), Some(self.uid), Some(self.gid))?;
 
         let mut mode = stat::Mode::empty();
         mode.insert(stat::Mode::S_IRUSR);
