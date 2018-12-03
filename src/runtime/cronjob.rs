@@ -28,7 +28,11 @@ impl TimerDescription {
             minute: parse_element(iter.next(), 0, 59)?,
             hour: parse_element(iter.next(), 0, 23)?,
             day: parse_element(iter.next(), 1, 31)?,
-            month: parse_element(iter.next(), 1, 12)?,
+
+            // account for zero-basing in struct Tm
+            month: parse_element(iter.next(), 1, 12)?.iter()
+                .map(|i| i - 1)
+                .collect(),
             weekday: parse_element(iter.next(), 0, 6)?,
         });
 
@@ -89,27 +93,48 @@ impl TimerDescription {
         let next_month = match self.month
             .range((from_timepoint.tm_mon + carry)..)
             .next() {
-            Some(&month) => { month },
-            None => { *self.month.iter().next().unwrap() }
+            Some(&month) => {
+                carry = 0;
+                month
+            },
+            None => {
+                carry = 1;
+                *self.month.iter().next().unwrap()
+            }
         };
 
+        let weekday_relevant = self.weekday.len() != 7;
+        let date_relevant = self.day.len() != 31 || self.month.len() != 12;
+
         let week_duration = Duration::days(
-            if next_weekday <= result.tm_wday {
+            if next_weekday < result.tm_wday {
                 7 - (result.tm_wday - next_weekday)
             } else {
                 next_weekday - result.tm_wday
             } as i64
         );
 
-        let mut date_duration = Duration::zero();
-        let mut tmp = result + date_duration;
-        while tmp.tm_mday != next_day ||
-            tmp.tm_mon != next_month {
-            date_duration = date_duration + Duration::days(1);
-            tmp = result + date_duration;
+        let mut date_duration = Duration::days(carry as i64 * 365 as i64);
+        if date_relevant {  // only compute this if really needed
+            let mut tmp = result + date_duration;
+            while tmp.tm_mday != next_day ||
+                tmp.tm_mon != next_month {
+                date_duration = date_duration + Duration::days(1);
+                tmp = result + date_duration;
+            }
         }
 
-        (result + std::cmp::min(week_duration, date_duration)).to_local()
+        if weekday_relevant && date_relevant {
+            (result + std::cmp::min(week_duration, date_duration)).to_local()
+        } else if ! weekday_relevant && date_relevant {
+            (result + date_duration).to_local()
+        } else {
+
+            // For only weekday_relevant this is obviously the result
+            // If none of the flags are set, any day works which is expressed
+            // already by the week_duration
+            (result + week_duration).to_local()
+        }
     }
 
 }
@@ -444,7 +469,7 @@ mod tests {
         assert_eq!(1, timer.day.len());
         assert!(timer.day.contains(&3));
         assert_eq!(1, timer.month.len());
-        assert!(timer.month.contains(&4));
+        assert!(timer.month.contains(&3));
         assert_eq!(1, timer.weekday.len());
         assert!(timer.weekday.contains(&5));
     }
@@ -462,7 +487,7 @@ mod tests {
         assert_eq!(1, timer.day.len());
         assert!(timer.day.contains(&3));
         assert_eq!(1, timer.month.len());
-        assert!(timer.month.contains(&4));
+        assert!(timer.month.contains(&3));
         assert_eq!(1, timer.weekday.len());
         assert!(timer.weekday.contains(&5));
     }
@@ -537,6 +562,105 @@ mod tests {
         let result = uut.unwrap().get_next_execution(mock_time());
 
         assert_eq!((mock_time() + Duration::hours(23)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_one_day() {
+        let uut = TimerDescription::parse("30 12 * * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_two_days() {
+        let uut = TimerDescription::parse("30 12 17 * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(2)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_wrap_around_days() {
+        let uut = TimerDescription::parse("30 12 14 * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(29)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_one_month() {
+        let uut = TimerDescription::parse("30 12 15 * *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(30)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_two_months() {
+        let uut = TimerDescription::parse("30 12 15 8 *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(30 + 31)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_wrap_around_months() {
+        let uut = TimerDescription::parse("30 12 15 6 *");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(365)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_one_weekday() {
+        let uut = TimerDescription::parse("30 12 * * 2");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_by_two_weekdays() {
+        let uut = TimerDescription::parse("30 12 * * 3");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(2)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_wrap_around_weekdays() {
+        let uut = TimerDescription::parse("30 12 * * 0");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(6)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_with_weekday_taking_precedence() {
+        let uut = TimerDescription::parse("30 12 17 6 2");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+    }
+
+    #[test]
+    fn advance_with_date_taking_precedence() {
+        let uut = TimerDescription::parse("30 12 16 6 3");
+
+        let result = uut.unwrap().get_next_execution(mock_time());
+
+        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
     }
 
 
