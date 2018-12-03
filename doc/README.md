@@ -76,9 +76,13 @@ access to all environment variables.
 
 ### Program types
 
+#### Oneshot
+
 A program to be executed once is of type `oneshot`. The corresponding
 representation in YAML is just `type: oneshot`. This is the default if none
 is given.
+
+#### Cronjob
 
 A program which is called periodically is of type `cronjob`. The YAML
 representation of this is nested:
@@ -92,16 +96,17 @@ type:
 See [`man cron`](https://manpages.debian.org/stretch/cron/crontab.5.en.html) for
 a description of the time format. A cronjob must not have dependencies.
 
-:::warning
+Cronjobs are not reentrant. This means if the timer specification wants the job
+to be executed at a certain time while simultaneously the job is still running
+from a previous run, it won't be executed twice. Instead it will be rescheduled
+to the next time according to the timer specification.
+
 The implementation of cron timer specifications deviates from the man page
 linked above by not differentiating between `*` and the full range of valid
 values given, e.g. `1-31` for the day. This is relevant for interactions
 between date specifications and weekday specification.
-:::
 
-:::info
 Special string specifications as `@monthly` are not supported.
-:::
 
 ### Environment
 
@@ -178,3 +183,8 @@ follows:
 
 * `MESSAGE`: The actual event being reported.
 
+Specifying `-v` twice gives messages up to the `TRACE` level. Tracing messages
+are considered part of the public API. Specifying `-v` once gives messages up to
+the `DEBUG` level. This is the expected level for bug reports. Production
+installations should not specify the `-v` flag which gives messages up to the
+`INFO` level.
