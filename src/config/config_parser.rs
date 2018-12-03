@@ -178,7 +178,12 @@ mod tests {
         let program = &output.programs[0];
         assert_eq!("test", program.name);
         assert_eq!("/path", program.path);
-        assert_eq!(ProcessType::CronJob{timer: "1 2 3 4 5".to_string()}, program.process_type);
+        assert_eq!(
+            ProcessType::CronJob {
+                timer: "1 2 3 4 5".to_string()
+            },
+            program.process_type
+        );
     }
 
     const MINIMAL_CONFIG: &str = "\

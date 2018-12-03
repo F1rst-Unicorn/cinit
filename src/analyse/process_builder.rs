@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::path::PathBuf;
 use std::fmt::Display;
-use std::fmt::Formatter;
 use std::fmt::Error as FmtError;
+use std::fmt::Formatter;
+use std::path::PathBuf;
 
 use config::config::{ProcessConfig, ProcessType};
-use util::libc_helpers;
 use runtime::process::{Process, ProcessState};
+use util::libc_helpers;
 
 use nix::unistd::Gid;
 use nix::unistd::Pid;
@@ -21,7 +21,7 @@ pub enum Error {
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         let message = match self {
-            Error::CronjobDependency => "Cronjobs may not have dependencies"
+            Error::CronjobDependency => "Cronjobs may not have dependencies",
         };
 
         write!(f, "{}", message)
@@ -32,7 +32,7 @@ impl Process {
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
         let env = convert_env(&config.env);
 
-        if let ProcessType::CronJob{..} = &config.process_type {
+        if let ProcessType::CronJob { .. } = &config.process_type {
             if !config.before.is_empty() || !config.after.is_empty() {
                 return Err(Error::CronjobDependency);
             }
@@ -53,7 +53,7 @@ impl Process {
             env: flatten_to_strings(&env),
             state: match config.process_type {
                 ProcessType::Oneshot => ProcessState::Blocked,
-                ProcessType::CronJob {..} => ProcessState::Sleeping,
+                ProcessType::CronJob { .. } => ProcessState::Sleeping,
             },
             pid: Pid::from_raw(0),
         };

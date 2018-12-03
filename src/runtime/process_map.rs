@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use std::os::unix::io::RawFd;
 use std::ops::Index;
 use std::ops::IndexMut;
+use std::os::unix::io::RawFd;
 
 use runtime::process::Process;
 
@@ -39,9 +39,7 @@ impl ProcessMap {
     }
 
     pub fn has_running_processes(&self) -> bool {
-        ! self.stdout_dict.is_empty()
-            || ! self.stderr_dict.is_empty()
-            || ! self.pid_dict.is_empty()
+        !self.stdout_dict.is_empty() || !self.stderr_dict.is_empty() || !self.pid_dict.is_empty()
     }
 
     pub fn is_stdout(&self, fd: RawFd) -> bool {
@@ -103,14 +101,13 @@ impl ProcessMap {
 impl Index<usize> for ProcessMap {
     type Output = Process;
 
-    fn index(&self, index: usize) ->&Process {
+    fn index(&self, index: usize) -> &Process {
         &self.processes[index]
     }
 }
 
 impl IndexMut<usize> for ProcessMap {
-
-    fn index_mut(&mut self, index: usize) ->&mut Process {
+    fn index_mut(&mut self, index: usize) -> &mut Process {
         &mut self.processes[index]
     }
 }

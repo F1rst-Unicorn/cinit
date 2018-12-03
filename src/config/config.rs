@@ -6,7 +6,7 @@ pub enum ProcessType {
     Oneshot,
 
     #[serde(rename = "cronjob")]
-    CronJob {timer: String},
+    CronJob { timer: String },
 }
 
 fn default_process_type() -> ProcessType {

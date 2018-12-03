@@ -1,11 +1,10 @@
 use std::ffi::CString;
+use std::fmt::{Display, Error as FmtError, Formatter};
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
-use std::fmt::{Display, Formatter, Error as FmtError};
-
 
 use util::libc_helpers;
 use util::libc_helpers::map_to_errno;

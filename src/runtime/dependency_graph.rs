@@ -161,7 +161,9 @@ impl DependencyManager {
         }
     }
 
-    fn build_name_dict(descriptions: &Vec<(usize, ProcessConfig)>) -> Result<HashMap<String, usize>, Error> {
+    fn build_name_dict(
+        descriptions: &Vec<(usize, ProcessConfig)>,
+    ) -> Result<HashMap<String, usize>, Error> {
         let mut result = HashMap::new();
 
         for (i, desc) in descriptions.into_iter() {
@@ -185,8 +187,8 @@ mod tests {
     pub fn single_runnable_process() {
         let config = vec![(0, ProcessConfig::new("first", vec![], vec![]))];
 
-        let mut uut = DependencyManager::with_nodes(&config)
-            .expect("Failed to create dependency manager");
+        let mut uut =
+            DependencyManager::with_nodes(&config).expect("Failed to create dependency manager");
 
         assert!(uut.has_runnables());
         assert_eq!(Some(0), uut.pop_runnable());
@@ -226,8 +228,8 @@ mod tests {
             (0, ProcessConfig::new("first", vec!["second"], vec![])),
             (1, ProcessConfig::new("second", vec![], vec![])),
         ];
-        let mut uut = DependencyManager::with_nodes(&config)
-            .expect("Failed to create dependency manager");
+        let mut uut =
+            DependencyManager::with_nodes(&config).expect("Failed to create dependency manager");
         uut.pop_runnable().expect("Assumption broken");
         uut.notify_process_finished(0);
 
@@ -244,8 +246,8 @@ mod tests {
             (1, ProcessConfig::new("second", vec!["third"], vec![])),
             (2, ProcessConfig::new("third", vec![], vec!["first"])),
         ];
-        let mut uut = DependencyManager::with_nodes(&config)
-            .expect("Failed to create dependency manager");
+        let mut uut =
+            DependencyManager::with_nodes(&config).expect("Failed to create dependency manager");
         uut.pop_runnable().expect("Assumption broken");
         uut.pop_runnable().expect("Assumption broken");
         assert!(!uut.has_runnables());

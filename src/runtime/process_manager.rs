@@ -3,8 +3,8 @@ use std::os::unix::io::RawFd;
 use std::process::exit;
 
 use logging;
-use runtime::dependency_graph;
 use runtime::cronjob;
+use runtime::dependency_graph;
 use runtime::process::ProcessState;
 use runtime::process_map::ProcessMap;
 
@@ -231,7 +231,9 @@ impl ProcessManager {
 
     fn signal_children(&mut self, signal: signal::Signal) {
         info!("Killing children");
-        for child in self.process_map.processes()
+        for child in self
+            .process_map
+            .processes()
             .iter()
             .filter(|s| s.state == ProcessState::Running)
         {
@@ -308,12 +310,10 @@ impl ProcessManager {
         let child_result;
         {
             let child = &mut self.process_map[child_index];
-            if child.state != ProcessState::Blocked &&
-                child.state != ProcessState::Sleeping {
+            if child.state != ProcessState::Blocked && child.state != ProcessState::Sleeping {
                 warn!(
                     "Refusing to start child '{}' which is currently {}",
-                    child.name,
-                    child.state
+                    child.name, child.state
                 );
             }
 

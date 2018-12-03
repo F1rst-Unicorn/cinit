@@ -1,11 +1,11 @@
 use config::config::{ProcessConfig, ProcessType};
 
-use std::collections::BTreeSet;
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::collections::HashMap;
 
-use time::Tm;
 use time::Duration;
+use time::Tm;
 
 #[derive(Debug)]
 pub struct TimerDescription {
@@ -21,7 +21,6 @@ pub struct TimerDescription {
 }
 
 impl TimerDescription {
-
     pub fn parse(raw_desc: &str) -> Result<TimerDescription, String> {
         let mut iter = raw_desc.split_whitespace();
         let result = Ok(TimerDescription {
@@ -30,7 +29,8 @@ impl TimerDescription {
             day: parse_element(iter.next(), 1, 31)?,
 
             // account for zero-basing in struct Tm
-            month: parse_element(iter.next(), 1, 12)?.iter()
+            month: parse_element(iter.next(), 1, 12)?
+                .iter()
                 .map(|i| i - 1)
                 .collect(),
             weekday: parse_element(iter.next(), 0, 6)?,
@@ -47,56 +47,50 @@ impl TimerDescription {
         let mut result = from_timepoint.clone();
         let mut carry = 0;
 
-        result.tm_min = match self.minute
-            .range((from_timepoint.tm_min + 1)..)
-            .next() {
-            Some(&min) => { min },
+        result.tm_min = match self.minute.range((from_timepoint.tm_min + 1)..).next() {
+            Some(&min) => min,
             None => {
                 carry = 1;
                 *self.minute.iter().next().unwrap()
             }
         };
 
-        result.tm_hour = match self.hour
-            .range((from_timepoint.tm_hour + carry)..)
-            .next() {
+        result.tm_hour = match self.hour.range((from_timepoint.tm_hour + carry)..).next() {
             Some(&h) => {
                 carry = 0;
                 h
-            },
+            }
             None => {
                 carry = 1;
                 *self.hour.iter().next().unwrap()
             }
         };
 
-        let next_weekday = match self.weekday
+        let next_weekday = match self
+            .weekday
             .range((from_timepoint.tm_wday + carry)..)
-            .next() {
-            Some(&day) => { day },
-            None => { *self.weekday.iter().next().unwrap() }
+            .next()
+        {
+            Some(&day) => day,
+            None => *self.weekday.iter().next().unwrap(),
         };
 
-        let next_day = match self.day
-            .range((from_timepoint.tm_mday + carry)..)
-            .next() {
+        let next_day = match self.day.range((from_timepoint.tm_mday + carry)..).next() {
             Some(&day) => {
                 carry = 0;
                 day
-            },
+            }
             None => {
                 carry = 1;
                 *self.day.iter().next().unwrap()
             }
         };
 
-        let next_month = match self.month
-            .range((from_timepoint.tm_mon + carry)..)
-            .next() {
+        let next_month = match self.month.range((from_timepoint.tm_mon + carry)..).next() {
             Some(&month) => {
                 carry = 0;
                 month
-            },
+            }
             None => {
                 carry = 1;
                 *self.month.iter().next().unwrap()
@@ -106,19 +100,17 @@ impl TimerDescription {
         let weekday_relevant = self.weekday.len() != 7;
         let date_relevant = self.day.len() != 31 || self.month.len() != 12;
 
-        let week_duration = Duration::days(
-            if next_weekday < result.tm_wday {
-                7 - (result.tm_wday - next_weekday)
-            } else {
-                next_weekday - result.tm_wday
-            } as i64
-        );
+        let week_duration = Duration::days(if next_weekday < result.tm_wday {
+            7 - (result.tm_wday - next_weekday)
+        } else {
+            next_weekday - result.tm_wday
+        } as i64);
 
         let mut date_duration = Duration::days(carry as i64 * 365 as i64);
-        if date_relevant {  // only compute this if really needed
+        if date_relevant {
+            // only compute this if really needed
             let mut tmp = result + date_duration;
-            while tmp.tm_mday != next_day ||
-                tmp.tm_mon != next_month {
+            while tmp.tm_mday != next_day || tmp.tm_mon != next_month {
                 date_duration = date_duration + Duration::days(1);
                 tmp = result + date_duration;
             }
@@ -126,17 +118,15 @@ impl TimerDescription {
 
         if weekday_relevant && date_relevant {
             (result + std::cmp::min(week_duration, date_duration)).to_local()
-        } else if ! weekday_relevant && date_relevant {
+        } else if !weekday_relevant && date_relevant {
             (result + date_duration).to_local()
         } else {
-
             // For only weekday_relevant this is obviously the result
             // If none of the flags are set, any day works which is expressed
             // already by the week_duration
             (result + week_duration).to_local()
         }
     }
-
 }
 
 fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32>, String> {
@@ -145,54 +135,52 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
     }
 
     match input {
-        None => { Err("Incomplete timer spec".to_string()) },
+        None => Err("Incomplete timer spec".to_string()),
 
         Some(timespec) => {
             let mut result = BTreeSet::new();
             if timespec == "" {
                 return Err("Incomplete timer spec".to_string());
-
             } else if timespec == "*" {
                 for i in min..=max {
                     result.insert(i);
                 }
-
             } else {
                 let mut intervals = timespec.split(",");
 
                 while let Some(interval) = intervals.next() {
                     let mut values = interval.split("-");
-                    let begin = values.next()
+                    let begin = values
+                        .next()
                         .ok_or("Invalid timespec")?
                         .parse::<i32>()
                         .map_err(|_| "Invalid number")?;
 
-                    if begin < min || max < begin  {
+                    if begin < min || max < begin {
                         return Err("Invalid range in timer spec".to_string());
                     }
 
                     if let Some(end_str) = values.next() {
-
                         let mut step_split = end_str.split("/");
 
-                        let end = step_split.next()
+                        let end = step_split
+                            .next()
                             .ok_or("Invalid timespec")?
                             .parse::<i32>()
                             .map_err(|_| "Invalid number")?;
 
                         if end < min || max < end {
-                            return Err("Invalid range in timer spec" .to_string());
+                            return Err("Invalid range in timer spec".to_string());
                         }
 
                         let step = if let Some(step) = step_split.next() {
-                            step.parse::<i32>()
-                                .map_err(|_| "Invalid number")?
+                            step.parse::<i32>().map_err(|_| "Invalid number")?
                         } else {
                             1
                         };
 
                         if end < begin {
-                            return Err("Interval end < begin".to_string())
+                            return Err("Interval end < begin".to_string());
                         }
 
                         for i in begin..=end {
@@ -224,7 +212,6 @@ pub struct Cron {
 }
 
 impl Cron {
-
     pub fn with_jobs(config: &Vec<(usize, ProcessConfig)>) -> Result<Cron, Error> {
         let mut result = Cron {
             timers: HashMap::new(),
@@ -232,15 +219,16 @@ impl Cron {
         };
 
         for (id, program_config) in config {
-
             let raw_desc = match &program_config.process_type {
                 ProcessType::CronJob { timer: desc } => desc,
                 _ => panic!("Got invalid process type"),
             };
 
-            let time_desc = TimerDescription::parse(&raw_desc)
-                .map_err(|s| Error::TimeParseError(s, *id))?;
-            result.timer.insert(time_desc.get_next_execution(time::now()), *id);
+            let time_desc =
+                TimerDescription::parse(&raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
+            result
+                .timer
+                .insert(time_desc.get_next_execution(time::now()), *id);
             result.timers.insert(*id, time_desc);
         }
 
@@ -248,15 +236,17 @@ impl Cron {
     }
 
     pub fn pop_runnable(&mut self, now: Tm) -> Option<usize> {
-        let next_job = self.timer.iter().next()
-            .map(|t| (t.0.clone(), t.1.clone()));
+        let next_job = self.timer.iter().next().map(|t| (t.0.clone(), t.1.clone()));
 
         if let Some((next_exec_time, process_id)) = next_job {
             if next_exec_time <= now {
                 self.timer.remove(&next_exec_time);
                 self.timer.insert(
-                    self.timers.get(&process_id).unwrap().get_next_execution(now),
-                    process_id
+                    self.timers
+                        .get(&process_id)
+                        .unwrap()
+                        .get_next_execution(now),
+                    process_id,
                 );
                 Some(process_id)
             } else {
@@ -265,7 +255,6 @@ impl Cron {
         } else {
             None
         }
-
     }
 
     pub fn is_cronjob(&self, id: usize) -> bool {
@@ -699,7 +688,6 @@ mod tests {
 
         assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
     }
-
 
     // Return 1970-06-15T12:30:00 CET Monday
     fn mock_time() -> Tm {

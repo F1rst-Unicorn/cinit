@@ -18,10 +18,10 @@ extern crate serde_yaml;
 extern crate tera;
 extern crate time;
 
+pub mod analyse;
 pub mod cli_parser;
 pub mod config;
 pub mod logging;
-pub mod analyse;
 pub mod runtime;
 pub mod util;
 
