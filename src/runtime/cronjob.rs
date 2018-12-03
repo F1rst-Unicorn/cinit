@@ -172,19 +172,33 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                     }
 
                     if let Some(end_str) = values.next() {
-                        let end = end_str.parse::<i32>()
+
+                        let mut step_split = end_str.split("/");
+
+                        let end = step_split.next()
+                            .ok_or("Invalid timespec")?
+                            .parse::<i32>()
                             .map_err(|_| "Invalid number")?;
 
                         if end < min || max < end {
                             return Err("Invalid range in timer spec" .to_string());
                         }
 
+                        let step = if let Some(step) = step_split.next() {
+                            step.parse::<i32>()
+                                .map_err(|_| "Invalid number")?
+                        } else {
+                            1
+                        };
+
                         if end < begin {
                             return Err("Interval end < begin".to_string())
                         }
 
                         for i in begin..=end {
-                            result.insert(i);
+                            if i % step == begin % step {
+                                result.insert(i);
+                            }
                         }
                     } else {
                         result.insert(begin);
@@ -297,6 +311,20 @@ mod tests {
         assert!(map.contains(&4));
         assert!(map.contains(&5));
         assert!(map.contains(&6));
+    }
+
+    #[test]
+    fn parse_interval_with_stepping() {
+        let result = parse_element(Some("1-15/3"), 0, 99);
+
+        assert!(result.is_ok());
+        let map = result.unwrap();
+        assert_eq!(5, map.len());
+        assert!(map.contains(&1));
+        assert!(map.contains(&4));
+        assert!(map.contains(&7));
+        assert!(map.contains(&10));
+        assert!(map.contains(&13));
     }
 
     #[test]
@@ -441,6 +469,15 @@ mod tests {
     #[test]
     fn parse_invalid_digit_in_interval() {
         let result = parse_element(Some("5-a"), 0, 99);
+
+        assert!(result.is_err());
+        let message = result.unwrap_err();
+        assert_eq!("Invalid number", message);
+    }
+
+    #[test]
+    fn parse_invalid_interval_with_stepping() {
+        let result = parse_element(Some("1-15/x"), 0, 99);
 
         assert!(result.is_err());
         let message = result.unwrap_err();
