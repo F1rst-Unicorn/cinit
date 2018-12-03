@@ -13,3 +13,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Don't forward missing env variables as empty
   ([#21](https://gitlab.com/veenj/cinit/issues/21)
 
+* Add support for cronjobs
+  ([#19](https://gitlab.com/veenj/cinit/issues/19)
+
