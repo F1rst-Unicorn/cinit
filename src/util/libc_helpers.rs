@@ -11,13 +11,13 @@ use libc;
 
 ioctl_read_bad!(get_terminal_size, libc::TIOCGWINSZ, pty::Winsize);
 
-pub fn ttyname(fd: RawFd) -> Result<CString, nix::Error> {
+pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     unsafe {
         let raw_name = libc::ttyname(fd);
         if raw_name as (*const libc::c_char) == null() {
             Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())))
         } else {
-            Ok(CString::from_raw(raw_name))
+            Ok(CString::from_raw(raw_name).to_str().unwrap().to_string().clone())
         }
     }
 }
