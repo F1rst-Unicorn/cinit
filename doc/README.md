@@ -71,8 +71,8 @@ usually indicated by the subdirectory names.
 Pass arguments to the program to run. You SHOULD only pass one whitespace-
 separated word per list item.
 
-As with environment variables these strings support templating where you have
-access to all environment variables.
+As with environment variables these strings support templating. You have access
+to all environment variables listed in the current program's `env` list.
 
 ### Program types
 
