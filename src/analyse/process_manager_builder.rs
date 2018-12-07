@@ -19,6 +19,7 @@ impl ProcessManager {
 
             if let Err(error) = program {
                 error!("Program {} contains error: {}", program_config.name, error);
+                trace!("Program {} contains error: {}", program_config.name, error);
                 exit(EXIT_CODE);
             } else {
                 processes.push(program.unwrap());

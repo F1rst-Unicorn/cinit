@@ -5,7 +5,16 @@ Init program for UNIX processes. Original development was done
 
 ## Configuration
 
-cinit takes its configuration via yaml files. They can look like this:
+cinit takes its configuration via yaml files. The minimal configuration to start
+a program is:
+
+```yml
+programs:
+  - name: myprogram
+    path: /the/path
+```
+
+The full list of available options is:
 
 ```yml
 programs:
@@ -29,7 +38,7 @@ programs:
       cronjob:
         timer: 1 2 3 4 5
 
-    # If none or invalid is given, root is used
+    # If none is given, root is used
     uid: 0
     gid: 0
     user: root
@@ -107,6 +116,12 @@ values given, e.g. `1-31` for the day. This is relevant for interactions
 between date specifications and weekday specification.
 
 Special string specifications as `@monthly` are not supported.
+
+### User / Group
+
+Specify a UNIX user and group under which to run the program. If none is given,
+root is used. If an invalid user is given, this is reported by cinit before any
+program is run.
 
 ### Environment
 

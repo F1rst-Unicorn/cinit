@@ -233,6 +233,15 @@ class ConfigError(RegexMatcher):
         return self.regex
 
 
+class ProgramConfigError(RegexMatcher):
+    def __init__(self, name):
+        super(ProgramConfigError, self).__init__(
+            "Program " + name + " contains error.*")
+
+    def __str__(self):
+        return self.regex
+
+
 class ChildCrashed(RegexMatcher):
     def __init__(self, name, rc):
         super(ChildCrashed, self).__init__(

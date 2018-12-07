@@ -8,12 +8,8 @@ class Test(CinitTest):
 
         self.assert_on_trace().that(
             Sequential(
-                ChildSpawned("first"),
-                ChildExited("first"),
-                Exited()
+                ProgramConfigError("first")
             )
         )
 
-        ChildProcess("first", self)\
-            .assert_uid(0)\
-            .assert_gid(0)
+        NoChildProcess("first", self)

@@ -13,15 +13,17 @@ use nix::unistd::Gid;
 use nix::unistd::Pid;
 use nix::unistd::Uid;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     CronjobDependency,
+    UserGroupInvalid,
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         let message = match self {
             Error::CronjobDependency => "Cronjobs may not have dependencies",
+            Error::UserGroupInvalid => "User/Group config invalid"
         };
 
         write!(f, "{}", message)
@@ -46,8 +48,8 @@ impl Process {
                 None => ".",
                 Some(path) => path,
             }),
-            uid: Uid::from_raw(map_uid(&config.uid, &config.user, &config.name)),
-            gid: Gid::from_raw(map_gid(&config.gid, &config.group, &config.name)),
+            uid: Uid::from_raw(map_uid(&config.uid, &config.user)?),
+            gid: Gid::from_raw(map_gid(&config.gid, &config.group)?),
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: flatten_to_strings(&env),
@@ -73,42 +75,51 @@ impl Process {
     }
 }
 
-fn map_uid(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
-    map_unix_name(id, name, process, &libc_helpers::user_to_uid)
+fn map_uid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
+    let mapped = map_unix_name(id, name, &libc_helpers::user_to_uid);
+    if let Ok(id) = mapped {
+        if libc_helpers::is_uid_valid(id) {
+            Ok(id)
+        } else {
+            Err(Error::UserGroupInvalid)
+        }
+    } else {
+        mapped
+    }
 }
 
-fn map_gid(id: &Option<u32>, name: &Option<String>, process: &String) -> u32 {
-    map_unix_name(id, name, process, &libc_helpers::group_to_gid)
+fn map_gid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
+    let mapped = map_unix_name(id, name, &libc_helpers::group_to_gid);
+    if let Ok(id) = mapped {
+        if libc_helpers::is_gid_valid(id) {
+            Ok(id)
+        } else {
+            Err(Error::UserGroupInvalid)
+        }
+    } else {
+        mapped
+    }
 }
 
 /// Can be used to get either user id or group id
-fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, process: &str, mapper: &T) -> u32
+fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, mapper: &T) -> Result<u32, Error>
 where
     T: Fn(&str) -> nix::Result<u32>,
 {
     if id.is_some() && name.is_some() {
-        warn!("Both id and name set for {}, taking only id", process);
-        id.unwrap()
+        Err(Error::UserGroupInvalid)
     } else if id.is_some() && name.is_none() {
-        id.unwrap()
+        Ok(id.unwrap())
     } else if id.is_none() && name.is_some() {
         let mapped = mapper(name.as_ref().unwrap());
         match mapped {
-            Ok(id) => id,
-            Err(error) => {
-                warn!(
-                    "Name {} is not valid in program {}: {}",
-                    name.as_ref().unwrap(),
-                    process,
-                    error
-                );
-                warn!("Using root(0)");
-                0
+            Ok(id) => Ok(id),
+            Err(_) => {
+                Err(Error::UserGroupInvalid)
             }
         }
     } else {
-        warn!("Neither name nor id given for {}, using root (0)", process);
-        0
+        Ok(0)
     }
 }
 
@@ -177,4 +188,54 @@ fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result
         internal_context.insert(key, value);
     }
     tera.render(name, &context).map_err(|_| ())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_user_id_gives_error() {
+
+        let result = map_gid(&Some(1001), &None);
+
+        assert!(result.is_err());
+        assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
+    }
+
+    #[test]
+    fn invalid_group_id_gives_error() {
+
+        let result = map_uid(&Some(1001), &None);
+
+        assert!(result.is_err());
+        assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
+    }
+
+    #[test]
+    fn no_user_config_gives_root() {
+
+        let result = map_unix_name(&None, &None, &libc_helpers::group_to_gid);
+
+        assert!(result.is_ok());
+        assert_eq!(0, result.unwrap());
+    }
+
+    #[test]
+    fn both_user_config_gives_error() {
+
+        let result = map_unix_name(&Some(1000), &Some("builder".to_string()), &libc_helpers::user_to_uid);
+
+        assert!(result.is_err());
+        assert_eq!(Error::UserGroupInvalid, result.unwrap_err());
+    }
+
+    #[test]
+    fn unknown_user_gives_error() {
+
+        let result = map_unix_name(&None, &Some("unknownuser".to_string()), &libc_helpers::user_to_uid);
+
+        assert!(result.is_err());
+        assert_eq!(Error::UserGroupInvalid, result.unwrap_err());
+    }
 }

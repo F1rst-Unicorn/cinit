@@ -1,3 +1,7 @@
+//! Unsafe glue code for interaction with libc.
+//!
+//! NONE OF THE FUNCTIONS IS THREAD-SAFE!
+
 use std::ffi::CString;
 use std::os::unix::io::RawFd;
 use std::ptr::null;
@@ -59,6 +63,14 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
     }
 }
 
+pub fn is_uid_valid(uid: libc::uid_t) -> bool {
+    unsafe {
+        let null: *const libc::passwd = null();
+        let raw_id: *const libc::passwd = libc::getpwuid(uid);
+        raw_id != null
+    }
+}
+
 pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
     unsafe {
         let null: *const libc::group = null();
@@ -69,6 +81,14 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
         } else {
             Ok((*raw_id).gr_gid)
         }
+    }
+}
+
+pub fn is_gid_valid(gid: libc::gid_t) -> bool {
+    unsafe {
+        let null: *const libc::group = null();
+        let raw_id: *const libc::group = libc::getgrgid(gid);
+        raw_id != null
     }
 }
 
