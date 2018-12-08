@@ -1,0 +1,8 @@
+programs:
+  - name: first
+    path: target/path/harness
+    args:
+      - -o
+      - system-tests/child-dump/first.yml
+    user: testuser
+    group: testgroup

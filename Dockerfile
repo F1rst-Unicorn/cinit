@@ -21,7 +21,7 @@ RUN groupadd --gid $GROUP_ID builder || true
 RUN groupadd --gid 1409 testgroup || true
 
 RUN useradd -M -N --uid $USER_ID --gid $GROUP_ID builder || true
-RUN useradd -M -N --uid 1409 --gid testgroup testuser || true
+RUN useradd -d /home/testuser -m -N --uid 1409 --gid testgroup testuser
 
 RUN echo 'ENV_PATH PATH=/usr/local/cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games' \
         >> /etc/login.defs

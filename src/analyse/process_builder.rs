@@ -32,13 +32,18 @@ impl Display for Error {
 
 impl Process {
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
-        let env = convert_env(&config.env);
+        let mut env = convert_env(&config.env);
 
         if let ProcessType::CronJob { .. } = &config.process_type {
             if !config.before.is_empty() || !config.after.is_empty() {
                 return Err(Error::CronjobDependency);
             }
         }
+
+        let uid = Uid::from_raw(map_uid(&config.uid, &config.user)?);
+        let gid = Gid::from_raw(map_gid(&config.gid, &config.group)?);
+
+        sanitise_env(&mut env, uid);
 
         let mut result = Process {
             name: config.name.to_owned(),
@@ -48,8 +53,8 @@ impl Process {
                 None => ".",
                 Some(path) => path,
             }),
-            uid: Uid::from_raw(map_uid(&config.uid, &config.user)?),
-            gid: Gid::from_raw(map_gid(&config.gid, &config.group)?),
+            uid,
+            gid,
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: flatten_to_strings(&env),
@@ -73,6 +78,17 @@ impl Process {
 
         Ok(result)
     }
+}
+
+fn sanitise_env(env: &mut HashMap<String, String>, uid: Uid) {
+    let homedir = libc_helpers::uid_to_homedir(uid.as_raw()).unwrap();
+    let username = libc_helpers::uid_to_user(uid.as_raw()).unwrap();
+
+    env.insert("HOME".to_string(), homedir.clone());
+    env.insert("PWD".to_string(), homedir);
+    env.insert("USER".to_string(), username.clone());
+    env.insert("LOGNAME".to_string(), username);
+    env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
 fn map_uid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
@@ -197,7 +213,7 @@ mod tests {
     #[test]
     fn invalid_user_id_gives_error() {
 
-        let result = map_gid(&Some(1001), &None);
+        let result = map_uid(&Some(1001), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
@@ -206,7 +222,7 @@ mod tests {
     #[test]
     fn invalid_group_id_gives_error() {
 
-        let result = map_uid(&Some(1001), &None);
+        let result = map_gid(&Some(1001), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
