@@ -15,8 +15,8 @@ programs:
 
   - name: failping
     path: target/path/harness
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     args:
       - -o
       - system-tests/child-dump/failping.yml

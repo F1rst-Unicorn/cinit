@@ -4,8 +4,8 @@ programs:
     args:
       - -o
       - system-tests/child-dump/first.yml
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true
 
   - name: second
@@ -16,8 +16,8 @@ programs:
     after:
       - first
       - fourth
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true
 
   - name: third
@@ -28,8 +28,8 @@ programs:
     after:
       - first
       - second
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true
 
   - name: fourth
@@ -40,6 +40,6 @@ programs:
     after:
       - first
       - third
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true

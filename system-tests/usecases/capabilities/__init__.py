@@ -23,8 +23,8 @@ class Test(CinitTest):
         ChildProcess("some-caps", self) \
             .assert_arg("-o") \
             .assert_arg("system-tests/child-dump/some-caps.yml") \
-            .assert_uid(1000) \
-            .assert_gid(100) \
+            .assert_uid(1409) \
+            .assert_gid(1409) \
             .assert_default_env() \
             .assert_pty(True) \
             .assert_capabilities({"CAP_NET_RAW",
@@ -33,8 +33,8 @@ class Test(CinitTest):
         ChildProcess("no-caps", self) \
             .assert_arg("-o") \
             .assert_arg("system-tests/child-dump/no-caps.yml") \
-            .assert_uid(1000) \
-            .assert_gid(100) \
+            .assert_uid(1409) \
+            .assert_gid(1409) \
             .assert_default_env() \
             .assert_pty(True) \
             .assert_capabilities({})

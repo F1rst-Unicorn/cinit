@@ -38,16 +38,16 @@ class Test(CinitTest):
             .assert_pty(True)
 
         ChildProcess("second", self)\
-            .assert_uid(1000)\
-            .assert_gid(100)\
+            .assert_uid(1409)\
+            .assert_gid(1409)\
             .assert_pty(False)
 
         ChildProcess("third", self)\
-            .assert_uid(1000)\
-            .assert_gid(100)\
+            .assert_uid(1409)\
+            .assert_gid(1409)\
             .assert_pty(True)
 
         ChildProcess("fourth", self)\
-            .assert_uid(1000)\
-            .assert_gid(100)\
+            .assert_uid(1409)\
+            .assert_gid(1409)\
             .assert_pty(True)

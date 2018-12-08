@@ -4,8 +4,8 @@ programs:
     args:
       - -o
       - system-tests/child-dump/some-caps.yml
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true
     capabilities:
       - CAP_KILL
@@ -16,6 +16,6 @@ programs:
     args:
       - -o
       - system-tests/child-dump/no-caps.yml
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true

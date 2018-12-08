@@ -15,8 +15,8 @@ programs:
       - system-tests/child-dump/second.yml
     after:
       - first
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
 
   - name: third
     path: target/path/harness
@@ -25,8 +25,8 @@ programs:
       - system-tests/child-dump/third.yml
     after:
       - first
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true
 
   - name: fourth
@@ -37,6 +37,6 @@ programs:
     after:
       - second
       - third
-    uid: 1000
-    gid: 100
+    uid: 1409
+    gid: 1409
     pty: true

@@ -28,8 +28,8 @@ class Test(CinitTest):
         ChildProcess("failping", self)\
             .assert_arg("-c 4")\
             .assert_arg("google.ch")\
-            .assert_uid(1000)\
-            .assert_gid(100)\
+            .assert_uid(1409)\
+            .assert_gid(1409)\
             .assert_default_env()\
             .assert_pty(False)\
             .assert_capabilities({})
