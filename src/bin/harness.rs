@@ -1,16 +1,16 @@
 //! Test program revealing information about its runtime
 //!
 
+extern crate capabilities;
 extern crate clap;
 extern crate nix;
-extern crate capabilities;
 
 use std::fs::File;
 use std::io::Write;
+use std::os::unix::io::AsRawFd;
 use std::process::exit;
 use std::thread;
 use std::time;
-use std::os::unix::io::AsRawFd;
 
 use clap::App;
 use clap::AppSettings;
@@ -32,7 +32,8 @@ fn main() {
                 .help("The result code to return")
                 .takes_value(true)
                 .default_value("0"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("sleep")
                 .long("sleep")
                 .short("s")
@@ -40,7 +41,8 @@ fn main() {
                 .help("Sleep before termination")
                 .takes_value(true)
                 .default_value("0"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("output")
                 .long("output")
                 .short("o")
@@ -48,11 +50,13 @@ fn main() {
                 .help("Where to dump to")
                 .takes_value(true)
                 .default_value("test-output/harness.txt"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("rest")
                 .help("Anything else to pass")
                 .multiple(true),
-        ).get_matches();
+        )
+        .get_matches();
 
     dump(arguments.value_of("output").unwrap());
 
@@ -86,8 +90,7 @@ fn main() {
 }
 
 fn dump(output: &str) {
-    let mut file = File::create(output)
-        .expect(&format!("Failed to open output file '{}'", output));
+    let mut file = File::create(output).expect(&format!("Failed to open output file '{}'", output));
 
     file.write_fmt(format_args!("programs:\n"))
         .expect("Failed to open output file");
@@ -99,10 +102,14 @@ fn dump(output: &str) {
             .expect("Failed to dump");
     }
 
-    file.write_fmt(format_args!("    workdir: '{}'\n", std::env::current_dir()
-        .expect("Could not get workdir")
-        .to_str().expect("Could not transform workdir str")))
-        .expect("Failed to dump");
+    file.write_fmt(format_args!(
+        "    workdir: '{}'\n",
+        std::env::current_dir()
+            .expect("Could not get workdir")
+            .to_str()
+            .expect("Could not transform workdir str")
+    ))
+    .expect("Failed to dump");
 
     file.write_fmt(format_args!("    uid: {}\n", unistd::getuid()))
         .expect("Failed to dump");
@@ -110,10 +117,12 @@ fn dump(output: &str) {
     file.write_fmt(format_args!("    gid: {}\n", unistd::getgid()))
         .expect("Failed to dump");
 
-    file.write_fmt(format_args!("    pty: {}\n",
-                                unistd::isatty(std::io::stdout().as_raw_fd()).unwrap_or(false)
-                                && unistd::isatty(std::io::stderr().as_raw_fd()).unwrap_or(false)))
-        .expect("Failed to dump");
+    file.write_fmt(format_args!(
+        "    pty: {}\n",
+        unistd::isatty(std::io::stdout().as_raw_fd()).unwrap_or(false)
+            && unistd::isatty(std::io::stderr().as_raw_fd()).unwrap_or(false)
+    ))
+    .expect("Failed to dump");
 
     file.write_fmt(format_args!("    capabilities:"))
         .expect("Failed to dump");
@@ -125,9 +134,12 @@ fn dump(output: &str) {
             .expect("Failed to dump");
     } else {
         cap_string = cap_string.split_off(2);
-        cap_string = cap_string.split("+").next().expect("Could not parse caps").to_string();
-        file.write_fmt(format_args!("\n"))
-            .expect("Failed to dump");
+        cap_string = cap_string
+            .split("+")
+            .next()
+            .expect("Could not parse caps")
+            .to_string();
+        file.write_fmt(format_args!("\n")).expect("Failed to dump");
         for cap in cap_string.split(",") {
             file.write_fmt(format_args!("      - '{}'\n", cap.to_ascii_uppercase()))
                 .expect("Failed to dump");

@@ -16,7 +16,8 @@ pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
                 .help("The config file or directory to run with")
                 .takes_value(true)
                 .default_value("/etc/cinit.yml"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("verbose")
                 .short("v")
                 .long(FLAG_VERBOSE)

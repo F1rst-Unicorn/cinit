@@ -23,7 +23,7 @@ impl Display for Error {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         let message = match self {
             Error::CronjobDependency => "Cronjobs may not have dependencies",
-            Error::UserGroupInvalid => "User/Group config invalid"
+            Error::UserGroupInvalid => "User/Group config invalid",
         };
 
         write!(f, "{}", message)
@@ -63,7 +63,9 @@ impl Process {
             pid: Pid::from_raw(0),
         };
 
-        result.args.push(CString::new(result.path.clone()).expect("Could not transform path"));
+        result
+            .args
+            .push(CString::new(result.path.clone()).expect("Could not transform path"));
 
         result.args.append(
             &mut config
@@ -128,9 +130,7 @@ where
         let mapped = mapper(name.as_ref().unwrap());
         match mapped {
             Ok(id) => Ok(id),
-            Err(_) => {
-                Err(Error::UserGroupInvalid)
-            }
+            Err(_) => Err(Error::UserGroupInvalid),
         }
     } else {
         Ok(0)
@@ -211,7 +211,6 @@ mod tests {
 
     #[test]
     fn invalid_user_id_gives_error() {
-
         let result = map_uid(&Some(1001), &None);
 
         assert!(result.is_err());
@@ -220,7 +219,6 @@ mod tests {
 
     #[test]
     fn invalid_group_id_gives_error() {
-
         let result = map_gid(&Some(1001), &None);
 
         assert!(result.is_err());
@@ -229,7 +227,6 @@ mod tests {
 
     #[test]
     fn no_user_config_gives_root() {
-
         let result = map_unix_name(&None, &None, &libc_helpers::group_to_gid);
 
         assert!(result.is_ok());
@@ -238,8 +235,11 @@ mod tests {
 
     #[test]
     fn both_user_config_gives_error() {
-
-        let result = map_unix_name(&Some(1000), &Some("builder".to_string()), &libc_helpers::user_to_uid);
+        let result = map_unix_name(
+            &Some(1000),
+            &Some("builder".to_string()),
+            &libc_helpers::user_to_uid,
+        );
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err());
@@ -247,8 +247,11 @@ mod tests {
 
     #[test]
     fn unknown_user_gives_error() {
-
-        let result = map_unix_name(&None, &Some("unknownuser".to_string()), &libc_helpers::user_to_uid);
+        let result = map_unix_name(
+            &None,
+            &Some("unknownuser".to_string()),
+            &libc_helpers::user_to_uid,
+        );
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err());

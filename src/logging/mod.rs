@@ -11,18 +11,21 @@ pub fn initialise(verbosity_level: u64) {
     let stdout = log4rs::append::console::ConsoleAppender::builder()
         .encoder(Box::new(PatternEncoder::new(
             "{d(%Y-%m-%dT%H:%M:%S.%3f)} {level} [cinit] {m}{n}",
-        ))).build();
+        )))
+        .build();
 
     let child_stdout = log4rs::append::console::ConsoleAppender::builder()
         .encoder(Box::new(PatternEncoder::new(
             "{d(%Y-%m-%dT%H:%M:%S.%3f)} {level} {m}{n}",
-        ))).build();
+        )))
+        .build();
 
     let child_stderr = log4rs::append::console::ConsoleAppender::builder()
         .target(log4rs::append::console::Target::Stderr)
         .encoder(Box::new(PatternEncoder::new(
             "{d(%Y-%m-%dT%H:%M:%S.%3f)} {level} {m}{n}",
-        ))).build();
+        )))
+        .build();
 
     let level = match verbosity_level {
         2 => LevelFilter::Trace,
@@ -39,12 +42,14 @@ pub fn initialise(verbosity_level: u64) {
                 .additive(false)
                 .appender("stdout_child")
                 .build("cinit::logging::stdout", LevelFilter::Info),
-        ).logger(
+        )
+        .logger(
             Logger::builder()
                 .additive(false)
                 .appender("stderr_child")
                 .build("cinit::logging::stderr", LevelFilter::Info),
-        ).build(Root::builder().appender("stdout").build(level))
+        )
+        .build(Root::builder().appender("stdout").build(level))
         .expect("Could not configure logging");
 
     log4rs::init_config(config).expect("Could not apply log config");

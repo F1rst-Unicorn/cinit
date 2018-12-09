@@ -35,7 +35,8 @@ impl ProcessManager {
             dependency_manager,
             cron,
             epoll_file: -1,
-            signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).expect("Could not create signalfd"),
+            signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
+                .expect("Could not create signalfd"),
         }
     }
 }
@@ -92,7 +93,8 @@ fn build_cron(config: &Config) -> Cron {
             } else {
                 false
             }
-        }).collect();
+        })
+        .collect();
 
     let cron = Cron::with_jobs(&input);
 

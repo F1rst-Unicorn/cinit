@@ -4,8 +4,8 @@
 
 use std::ffi::{CStr, CString};
 use std::os::unix::io::RawFd;
-use std::ptr::null;
 use std::ptr;
+use std::ptr::null;
 
 use nix::errno;
 use nix::pty;
@@ -60,7 +60,13 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
     let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getpwnam_r(raw_name.as_ptr(), &mut user_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
+        let ret = libc::getpwnam_r(
+            raw_name.as_ptr(),
+            &mut user_description,
+            string_container.as_mut_ptr(),
+            BUFFER_LENGTH,
+            &mut result,
+        );
         match ret {
             0 => {
                 if result == &mut user_description {
@@ -68,7 +74,7 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
                 } else {
                     return Err(nix::Error::last());
                 }
-            },
+            }
             _ => {
                 return Err(nix::Error::last());
             }
@@ -90,12 +96,20 @@ pub fn uid_to_homedir(uid: libc::uid_t) -> Result<String, nix::Error> {
     }
 }
 
-unsafe fn uid_to_passwd_struct(uid: libc::uid_t) -> Result<(libc::passwd, [libc::c_char; BUFFER_LENGTH]), nix::Error> {
+unsafe fn uid_to_passwd_struct(
+    uid: libc::uid_t,
+) -> Result<(libc::passwd, [libc::c_char; BUFFER_LENGTH]), nix::Error> {
     let mut user_description: libc::passwd = std::mem::zeroed();
     let mut string_container = [0 as libc::c_char; BUFFER_LENGTH];
     let mut result = ptr::null_mut();
 
-    let ret = libc::getpwuid_r(uid, &mut user_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
+    let ret = libc::getpwuid_r(
+        uid,
+        &mut user_description,
+        string_container.as_mut_ptr(),
+        BUFFER_LENGTH,
+        &mut result,
+    );
     match ret {
         0 => {
             if result == &mut user_description {
@@ -103,7 +117,7 @@ unsafe fn uid_to_passwd_struct(uid: libc::uid_t) -> Result<(libc::passwd, [libc:
             } else {
                 return Err(nix::Error::last());
             }
-        },
+        }
         _ => {
             return Err(nix::Error::last());
         }
@@ -121,7 +135,13 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
     let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getgrnam_r(raw_name.as_ptr(), &mut group_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
+        let ret = libc::getgrnam_r(
+            raw_name.as_ptr(),
+            &mut group_description,
+            string_container.as_mut_ptr(),
+            BUFFER_LENGTH,
+            &mut result,
+        );
         match ret {
             0 => {
                 if result == &mut group_description {
@@ -129,7 +149,7 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
                 } else {
                     return Err(nix::Error::last());
                 }
-            },
+            }
             _ => {
                 return Err(nix::Error::last());
             }
@@ -143,7 +163,13 @@ pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
     let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getgrgid_r(gid, &mut group_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
+        let ret = libc::getgrgid_r(
+            gid,
+            &mut group_description,
+            string_container.as_mut_ptr(),
+            BUFFER_LENGTH,
+            &mut result,
+        );
         match ret {
             0 => {
                 if result == &mut group_description {
@@ -151,7 +177,7 @@ pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
                 } else {
                     return Err(nix::Error::last());
                 }
-            },
+            }
             _ => {
                 return Err(nix::Error::last());
             }
@@ -174,7 +200,11 @@ pub fn map_to_errno(error: Error) -> nix::Error {
 /// This function makes sure subsequent calls to libc functions don't override
 /// the string, leading to race conditions.
 unsafe fn rescue_from_libc(string: *mut libc::c_char) -> String {
-    CStr::from_ptr(string).to_str().expect("Could not rescue cstring").to_string().clone()
+    CStr::from_ptr(string)
+        .to_str()
+        .expect("Could not rescue cstring")
+        .to_string()
+        .clone()
 }
 
 #[cfg(test)]
@@ -233,7 +263,7 @@ mod tests {
 
     #[test]
     fn invalid_user() {
-        assert!(! is_uid_valid(1410));
+        assert!(!is_uid_valid(1410));
     }
 
     #[test]

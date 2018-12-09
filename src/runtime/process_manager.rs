@@ -127,7 +127,7 @@ impl ProcessManager {
         }
 
         self.process_map.deregister_pid(pid);
-        if ! is_cronjob {
+        if !is_cronjob {
             self.dependency_manager.notify_process_finished(child_index);
         }
     }
@@ -320,7 +320,8 @@ impl ProcessManager {
                 );
                 trace!(
                     "Refusing to start child '{}' which is currently {}",
-                    child.name, child.state
+                    child.name,
+                    child.state
                 );
                 return;
             }
