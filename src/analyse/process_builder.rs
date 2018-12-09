@@ -32,8 +32,6 @@ impl Display for Error {
 
 impl Process {
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
-        let mut env = convert_env(&config.env);
-
         if let ProcessType::CronJob { .. } = &config.process_type {
             if !config.before.is_empty() || !config.after.is_empty() {
                 return Err(Error::CronjobDependency);
@@ -43,7 +41,7 @@ impl Process {
         let uid = Uid::from_raw(map_uid(&config.uid, &config.user)?);
         let gid = Gid::from_raw(map_gid(&config.gid, &config.group)?);
 
-        sanitise_env(&mut env, uid);
+        let env = convert_env(&config.env, uid);
 
         let mut result = Process {
             name: config.name.to_owned(),
@@ -139,8 +137,9 @@ where
     }
 }
 
-fn convert_env(env: &Vec<HashMap<String, Option<String>>>) -> HashMap<String, String> {
-    let result = get_default_env();
+fn convert_env(env: &Vec<HashMap<String, Option<String>>>, uid: Uid) -> HashMap<String, String> {
+    let mut result = get_default_env();
+    sanitise_env(&mut result, uid);
     copy_from_config(env, result)
 }
 

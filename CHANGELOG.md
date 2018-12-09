@@ -9,6 +9,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Heap corruption in user/group lookups
 
+* Sanitise child environment before applying template engine
+
 ## [1.1.0]
 
 ### Changed

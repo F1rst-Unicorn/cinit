@@ -16,6 +16,6 @@ class Test(CinitTest):
 
         ChildProcess("first", self)\
             .assert_env("FOO", "bar")\
-            .assert_env("TERM", "xterm")\
-            .assert_env("BAR", "xterm-bar")
+            .assert_env("USER", "root")\
+            .assert_env("BAR", "root-bar")
 
