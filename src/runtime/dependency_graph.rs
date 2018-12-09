@@ -14,12 +14,18 @@ pub struct ProcessNode {
     pub predecessor_count: usize,
 }
 
-impl ProcessNode {
-    pub fn new() -> ProcessNode {
+impl Default for ProcessNode {
+    fn default() -> Self {
         ProcessNode {
             after_self: Vec::new(),
             predecessor_count: 0,
         }
+    }
+}
+
+impl ProcessNode {
+    pub fn new() -> ProcessNode {
+        Default::default()
     }
 }
 
@@ -41,9 +47,9 @@ impl DependencyManager {
     ///
     /// If the config contains cyclic dependency the Err(index)
     /// contains the index of some program involved in the cycle
-    pub fn with_nodes(config: &Vec<(usize, ProcessConfig)>) -> Result<Self, Error> {
+    pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config)?;
-        let nodes = DependencyManager::build_dependencies(config, name_dict);
+        let nodes = DependencyManager::build_dependencies(config, &name_dict);
         let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),
             nodes,
@@ -83,8 +89,8 @@ impl DependencyManager {
     }
 
     fn build_dependencies(
-        config: &Vec<(usize, ProcessConfig)>,
-        name_dict: HashMap<String, usize>,
+        config: &[(usize, ProcessConfig)],
+        name_dict: &HashMap<String, usize>,
     ) -> HashMap<usize, ProcessNode> {
         let mut result = HashMap::with_capacity(config.len());
 
@@ -100,9 +106,8 @@ impl DependencyManager {
                 for successor_name in &current_config.before {
                     let successor_index = name_dict
                         .get(successor_name)
-                        .expect("Invalid index in name_dict")
-                        .clone();
-                    current.after_self.push(successor_index);
+                        .expect("Invalid index in name_dict");
+                    current.after_self.push(*successor_index);
                 }
 
                 current.predecessor_count += current_config.after.len();
@@ -111,8 +116,7 @@ impl DependencyManager {
             for successor_name in &current_config.before {
                 let successor_index = name_dict
                     .get(successor_name)
-                    .expect("Invalid index in name_dict")
-                    .clone();
+                    .expect("Invalid index in name_dict");
                 let mut successor = result
                     .get_mut(&successor_index)
                     .expect("Invalid index in name_dict");
@@ -122,8 +126,7 @@ impl DependencyManager {
             for predecessor_name in &current_config.after {
                 let predecessor_index = name_dict
                     .get(predecessor_name)
-                    .expect("Invalid index in name_dict")
-                    .clone();
+                    .expect("Invalid index in name_dict");
                 let mut predecessor = result
                     .get_mut(&predecessor_index)
                     .expect("Invalid index in name_dict");
@@ -145,8 +148,8 @@ impl DependencyManager {
         for (i, node) in (&self.nodes).iter() {
             for successor in &node.after_self {
                 graph.add_edge(
-                    node_dict.get(&i).unwrap().clone(),
-                    node_dict.get(successor).unwrap().clone(),
+                    node_dict[&i],
+                    node_dict[successor],
                     0,
                 );
             }
@@ -154,14 +157,14 @@ impl DependencyManager {
 
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
-            Err(Error::Cycle(graph.node_weight(node_id).unwrap().clone()))
+            Err(Error::Cycle(*graph.node_weight(node_id).unwrap()))
         } else {
             Ok(())
         }
     }
 
     fn build_name_dict(
-        descriptions: &Vec<(usize, ProcessConfig)>,
+        descriptions: &[(usize, ProcessConfig)],
     ) -> Result<HashMap<String, usize>, Error> {
         let mut result = HashMap::new();
 

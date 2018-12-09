@@ -12,7 +12,7 @@ use nix::sys::signalfd;
 const EXIT_CODE: i32 = 2;
 
 impl ProcessManager {
-    pub fn from(config: Config) -> ProcessManager {
+    pub fn from(config: &Config) -> ProcessManager {
         let mut processes = Vec::new();
         for program_config in &config.programs {
             let program = Process::from(program_config);

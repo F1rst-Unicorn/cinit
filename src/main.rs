@@ -43,7 +43,7 @@ fn main() {
     let process_tree = config_parser::parse_config(config_path);
 
     info!("Perform analysis on programs");
-    let mut manager = ProcessManager::from(process_tree);
+    let mut manager = ProcessManager::from(&process_tree);
 
     info!("Spawning processes");
     manager.start();

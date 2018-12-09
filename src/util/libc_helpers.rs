@@ -189,7 +189,9 @@ pub fn is_gid_valid(gid: libc::gid_t) -> bool {
 }
 
 pub fn map_to_errno(error: Error) -> nix::Error {
-    match error.raw_os_error() {
+    let raw_error = error.raw_os_error();
+    std::mem::drop(error);
+    match raw_error {
         Some(errno) => nix::Error::Sys(nix::errno::Errno::from_i32(errno)),
         _ => nix::Error::Sys(nix::errno::Errno::UnknownErrno),
     }

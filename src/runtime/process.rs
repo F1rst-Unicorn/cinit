@@ -43,6 +43,8 @@ pub enum ProcessState {
     Crashed,
 }
 
+type Pipe = (RawFd, RawFd);
+
 impl Display for ProcessState {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         let message = match self {
@@ -123,13 +125,12 @@ impl Process {
         }
     }
 
-    fn create_std_fds(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
-        let result;
-        if self.emulate_pty {
-            result = self.create_ptys();
+    fn create_std_fds(&self) -> Result<(Pipe, Pipe), nix::Error> {
+        let result = if self.emulate_pty {
+            self.create_ptys()
         } else {
-            result = self.create_pipes();
-        }
+            self.create_pipes()
+        };
 
         if result.is_ok() {
             let fds = result.unwrap();
@@ -230,7 +231,7 @@ impl Process {
         Ok(())
     }
 
-    fn create_ptys(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+    fn create_ptys(&self) -> Result<(Pipe, Pipe), nix::Error> {
         let stdin = std::io::stdin().as_raw_fd();
         let mut tcget_result = termios::tcgetattr(stdin);
         let ioctl_result: Result<libc::c_int, nix::Error>;
@@ -299,7 +300,7 @@ impl Process {
         Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))
     }
 
-    fn create_pipes(&self) -> Result<((RawFd, RawFd), (RawFd, RawFd)), nix::Error> {
+    fn create_pipes(&self) -> Result<(Pipe, Pipe), nix::Error> {
         let stdout = unistd::pipe().unwrap();
         let stderr = unistd::pipe().unwrap();
         Ok((stdout, stderr))

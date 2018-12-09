@@ -19,10 +19,10 @@ pub fn parse_config(path: &str) -> Config {
             .flat_map(|s| s.chars())
             .collect::<String>()
     );
-    parse_raw_config(raw_config)
+    parse_raw_config(&raw_config)
 }
 
-fn parse_raw_config(raw_config: Vec<String>) -> Config {
+fn parse_raw_config(raw_config: &[String]) -> Config {
     let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
     let parse_errors: Vec<serde_yaml::Result<Config>> =
@@ -122,7 +122,7 @@ mod tests {
         entry.insert("empty_key".to_owned(), None);
         expected_env.push(entry);
 
-        let output = parse_raw_config(vec![FULL_CONFIG.to_owned()]);
+        let output = parse_raw_config(&vec![FULL_CONFIG.to_owned()]);
 
         assert_eq!(1, output.programs.len());
 
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn parse_omitting_all_optional_values() {
-        let output = parse_raw_config(vec![MINIMAL_CONFIG.to_owned()]);
+        let output = parse_raw_config(&vec![MINIMAL_CONFIG.to_owned()]);
 
         assert_eq!(1, output.programs.len());
 
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn parse_cronjob() {
-        let output = parse_raw_config(vec![CRONJOB_CONFIG.to_owned()]);
+        let output = parse_raw_config(&vec![CRONJOB_CONFIG.to_owned()]);
 
         assert_eq!(1, output.programs.len());
 

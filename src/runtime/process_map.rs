@@ -7,7 +7,7 @@ use runtime::process::Process;
 
 use nix::unistd::Pid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum StreamType {
     Stdout,
     Stderr,
@@ -65,15 +65,15 @@ impl ProcessMap {
         }
     }
 
-    pub fn deregister_fd(&mut self, fd: &RawFd) {
-        self.stderr_dict.remove(fd);
-        self.stdout_dict.remove(fd);
+    pub fn deregister_fd(&mut self, fd: RawFd) {
+        self.stderr_dict.remove(&fd);
+        self.stdout_dict.remove(&fd);
     }
 
-    pub fn process_for_fd(&mut self, fd: &RawFd) -> &mut Process {
-        if let Some(index) = self.stdout_dict.get(fd) {
+    pub fn process_for_fd(&mut self, fd: RawFd) -> &mut Process {
+        if let Some(index) = self.stdout_dict.get(&fd) {
             &mut self.processes[*index]
-        } else if let Some(index) = self.stderr_dict.get(fd) {
+        } else if let Some(index) = self.stderr_dict.get(&fd) {
             &mut self.processes[*index]
         } else {
             panic!("Requested invalid fd");
@@ -84,15 +84,15 @@ impl ProcessMap {
         self.pid_dict.insert(pid, process_id);
     }
 
-    pub fn deregister_pid(&mut self, pid: &Pid) {
-        self.pid_dict.remove(pid);
+    pub fn deregister_pid(&mut self, pid: Pid) {
+        self.pid_dict.remove(&pid);
     }
 
-    pub fn process_id_for_pid(&self, pid: &Pid) -> usize {
-        *self.pid_dict.get(pid).expect("Requested invalid pid!")
+    pub fn process_id_for_pid(&self, pid: Pid) -> usize {
+        *self.pid_dict.get(&pid).expect("Requested invalid pid!")
     }
 
-    pub fn process_for_pid(&mut self, pid: &Pid) -> &mut Process {
+    pub fn process_for_pid(&mut self, pid: Pid) -> &mut Process {
         let index = self.process_id_for_pid(pid);
         &mut self.processes[index]
     }

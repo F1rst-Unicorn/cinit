@@ -61,11 +61,17 @@ pub struct Config {
     pub programs: Vec<ProcessConfig>,
 }
 
-impl Config {
-    pub fn new() -> Config {
+impl Default for Config {
+    fn default() -> Self {
         Config {
             programs: Vec::new(),
         }
+    }
+}
+
+impl Config {
+    pub fn new() -> Config {
+        Default::default()
     }
 
     pub fn merge(mut self, mut other: Self) -> Self {

@@ -38,8 +38,8 @@ impl Process {
             }
         }
 
-        let uid = Uid::from_raw(map_uid(&config.uid, &config.user)?);
-        let gid = Gid::from_raw(map_gid(&config.gid, &config.group)?);
+        let uid = Uid::from_raw(map_uid(config.uid, &config.user)?);
+        let gid = Gid::from_raw(map_gid(config.gid, &config.group)?);
 
         let env = convert_env(&config.env, uid);
 
@@ -71,7 +71,7 @@ impl Process {
             &mut config
                 .args
                 .iter()
-                .map(|x| render_template(&env, x).unwrap_or(x.clone()))
+                .map(|x| render_template(&env, x).unwrap_or_else(|_| x.clone()))
                 .map(|x| CString::new(x.clone()).expect("Could not unwrap arg"))
                 .collect(),
         );
@@ -91,7 +91,7 @@ fn sanitise_env(env: &mut HashMap<String, String>, uid: Uid) {
     env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
-fn map_uid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
+fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<u32, Error> {
     let mapped = map_unix_name(id, name, &libc_helpers::user_to_uid);
     if let Ok(id) = mapped {
         if libc_helpers::is_uid_valid(id) {
@@ -104,7 +104,7 @@ fn map_uid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
     }
 }
 
-fn map_gid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
+fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<u32, Error> {
     let mapped = map_unix_name(id, name, &libc_helpers::group_to_gid);
     if let Ok(id) = mapped {
         if libc_helpers::is_gid_valid(id) {
@@ -118,7 +118,7 @@ fn map_gid(id: &Option<u32>, name: &Option<String>) -> Result<u32, Error> {
 }
 
 /// Can be used to get either user id or group id
-fn map_unix_name<T>(id: &Option<u32>, name: &Option<String>, mapper: &T) -> Result<u32, Error>
+fn map_unix_name<T>(id: Option<u32>, name: &Option<String>, mapper: &T) -> Result<u32, Error>
 where
     T: Fn(&str) -> nix::Result<u32>,
 {
@@ -137,7 +137,7 @@ where
     }
 }
 
-fn convert_env(env: &Vec<HashMap<String, Option<String>>>, uid: Uid) -> HashMap<String, String> {
+fn convert_env(env: &[HashMap<String, Option<String>>], uid: Uid) -> HashMap<String, String> {
     let mut result = get_default_env();
     sanitise_env(&mut result, uid);
     copy_from_config(env, result)
@@ -162,7 +162,7 @@ fn get_default_env() -> HashMap<String, String> {
 }
 
 fn copy_from_config(
-    env: &Vec<HashMap<String, Option<String>>>,
+    env: &[HashMap<String, Option<String>>],
     mut result: HashMap<String, String>,
 ) -> HashMap<String, String> {
     for entry in env {
@@ -176,7 +176,7 @@ fn copy_from_config(
                 },
                 Some(raw_value) => {
                     let rendered_value =
-                        render_template(&result, raw_value).unwrap_or(raw_value.to_string());
+                        render_template(&result, raw_value).unwrap_or_else(|_| raw_value.to_string());
                     result.insert(key.to_string(), rendered_value);
                 }
             }
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn invalid_user_id_gives_error() {
-        let result = map_uid(&Some(1001), &None);
+        let result = map_uid(Some(1001), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn invalid_group_id_gives_error() {
-        let result = map_gid(&Some(1001), &None);
+        let result = map_gid(Some(1001), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
@@ -227,7 +227,7 @@ mod tests {
 
     #[test]
     fn no_user_config_gives_root() {
-        let result = map_unix_name(&None, &None, &libc_helpers::group_to_gid);
+        let result = map_unix_name(None, &None, &libc_helpers::group_to_gid);
 
         assert!(result.is_ok());
         assert_eq!(0, result.unwrap());
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn both_user_config_gives_error() {
         let result = map_unix_name(
-            &Some(1000),
+            Some(1000),
             &Some("builder".to_string()),
             &libc_helpers::user_to_uid,
         );
@@ -248,7 +248,7 @@ mod tests {
     #[test]
     fn unknown_user_gives_error() {
         let result = map_unix_name(
-            &None,
+            None,
             &Some("unknownuser".to_string()),
             &libc_helpers::user_to_uid,
         );

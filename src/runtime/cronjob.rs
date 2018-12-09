@@ -36,7 +36,7 @@ impl TimerDescription {
             weekday: parse_element(iter.next(), 0, 6)?,
         });
 
-        if let None = iter.next() {
+        if iter.next().is_none() {
             result
         } else {
             Err("Too many timer specs".to_string())
@@ -44,7 +44,7 @@ impl TimerDescription {
     }
 
     pub fn get_next_execution(&self, from_timepoint: Tm) -> Tm {
-        let mut result = from_timepoint.clone();
+        let mut result = from_timepoint;
         let mut carry = 0;
 
         result.tm_min = match self.minute.range((from_timepoint.tm_min + 1)..).next() {
@@ -100,13 +100,13 @@ impl TimerDescription {
         let weekday_relevant = self.weekday.len() != 7;
         let date_relevant = self.day.len() != 31 || self.month.len() != 12;
 
-        let week_duration = Duration::days(if next_weekday < result.tm_wday {
+        let week_duration = Duration::days(i64::from(if next_weekday < result.tm_wday {
             7 - (result.tm_wday - next_weekday)
         } else {
             next_weekday - result.tm_wday
-        } as i64);
+        }));
 
-        let mut date_duration = Duration::days(carry as i64 * 365 as i64);
+        let mut date_duration = Duration::days(i64::from(carry) * 365 as i64);
         if date_relevant {
             // only compute this if really needed
             let mut tmp = result + date_duration;
@@ -146,10 +146,10 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                     result.insert(i);
                 }
             } else {
-                let mut intervals = timespec.split(",");
+                let mut intervals = timespec.split(',');
 
-                while let Some(interval) = intervals.next() {
-                    let mut values = interval.split("-");
+                for interval in intervals {
+                    let mut values = interval.split('-');
                     let begin = values
                         .next()
                         .ok_or("Invalid timespec")?
@@ -161,7 +161,7 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                     }
 
                     if let Some(end_str) = values.next() {
-                        let mut step_split = end_str.split("/");
+                        let mut step_split = end_str.split('/');
 
                         let end = step_split
                             .next()
@@ -212,7 +212,7 @@ pub struct Cron {
 }
 
 impl Cron {
-    pub fn with_jobs(config: &Vec<(usize, ProcessConfig)>) -> Result<Cron, Error> {
+    pub fn with_jobs(config: &[(usize, ProcessConfig)]) -> Result<Cron, Error> {
         let mut result = Cron {
             timers: HashMap::new(),
             timer: BTreeMap::new(),
@@ -240,15 +240,13 @@ impl Cron {
     }
 
     pub fn pop_runnable(&mut self, now: Tm) -> Option<usize> {
-        let next_job = self.timer.iter().next().map(|t| (t.0.clone(), t.1.clone()));
+        let next_job = self.timer.iter().next().map(|t| (*t.0, *t.1));
 
         if let Some((next_exec_time, process_id)) = next_job {
             if next_exec_time <= now {
                 self.timer.remove(&next_exec_time);
                 let next_execution = self
-                    .timers
-                    .get(&process_id)
-                    .unwrap()
+                    .timers[&process_id]
                     .get_next_execution(now);
                 debug!(
                     "Scheduled next execution at {}",

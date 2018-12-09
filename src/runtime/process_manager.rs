@@ -34,7 +34,7 @@ pub struct ProcessManager {
 
 impl Drop for ProcessManager {
     fn drop(&mut self) {
-        let raw_signal_fd = self.signal_fd.as_raw_fd().clone();
+        let raw_signal_fd = self.signal_fd.as_raw_fd();
         self.deregister_fd(raw_signal_fd);
 
         if let Err(some) = unistd::close(self.epoll_file) {
@@ -81,11 +81,11 @@ impl ProcessManager {
             match status {
                 wait::WaitStatus::Exited(pid, rc) => {
                     debug!("Got signal from child: {:?}", status);
-                    self.handle_finished_child(&pid, rc)
+                    self.handle_finished_child(pid, rc)
                 }
                 wait::WaitStatus::Signaled(pid, signal, _) => {
                     debug!("Got signal from child: {:?}", status);
-                    self.handle_finished_child(&pid, signal as i32)
+                    self.handle_finished_child(pid, signal as i32)
                 }
                 wait::WaitStatus::StillAlive => {
                     break;
@@ -97,7 +97,7 @@ impl ProcessManager {
         }
     }
 
-    fn handle_finished_child(&mut self, pid: &Pid, rc: i32) {
+    fn handle_finished_child(&mut self, pid: Pid, rc: i32) {
         let child_index = self.process_map.process_id_for_pid(pid);
         let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
@@ -138,9 +138,8 @@ impl ProcessManager {
         match epoll_result {
             Ok(count) => {
                 debug!("Got {} events", count);
-                for i in 0..count {
-                    let event = event_buffer[i];
-                    self.handle_event(event);
+                for event in event_buffer.iter().take(count) {
+                    self.handle_event(*event);
                 }
             }
             Err(error) => {
@@ -274,7 +273,7 @@ impl ProcessManager {
             warn!("Could not close fd {}", fd);
         }
 
-        self.process_map.deregister_fd(&fd);
+        self.process_map.deregister_fd(fd);
     }
 
     fn print_child_output(&mut self, fd: RawFd) {
@@ -285,7 +284,7 @@ impl ProcessManager {
             let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
             let output = raw_output.lines();
             let is_stdout = self.process_map.is_stdout(fd);
-            let child_name = &self.process_map.process_for_fd(&fd).name;
+            let child_name = &self.process_map.process_for_fd(fd).name;
 
             for line in output {
                 if !line.is_empty() {
