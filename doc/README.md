@@ -166,7 +166,7 @@ started and cinit terminates.
 ## Usage
 
 ```text
-cinit 1.1.0
+cinit 1.1.1
 init daemon for other programs, suitable for containers
 
 USAGE:
