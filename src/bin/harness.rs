@@ -72,11 +72,8 @@ fn main() {
 
     for _ in 0..sleep_seconds {
         thread::sleep(time::Duration::from_secs(1));
-        match sfd.read_signal() {
-            Ok(Some(_)) => {
-                break;
-            }
-            _ => (),
+        if let Ok(Some(_)) = sfd.read_signal() {
+            break;
         }
     }
 
@@ -90,7 +87,7 @@ fn main() {
 }
 
 fn dump(output: &str) {
-    let mut file = File::create(output).expect(&format!("Failed to open output file '{}'", output));
+    let mut file = File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{}'", output));
 
     file.write_fmt(format_args!("programs:\n"))
         .expect("Failed to open output file");
@@ -135,12 +132,12 @@ fn dump(output: &str) {
     } else {
         cap_string = cap_string.split_off(2);
         cap_string = cap_string
-            .split("+")
+            .split('+')
             .next()
             .expect("Could not parse caps")
             .to_string();
         file.write_fmt(format_args!("\n")).expect("Failed to dump");
-        for cap in cap_string.split(",") {
+        for cap in cap_string.split(',') {
             file.write_fmt(format_args!("      - '{}'\n", cap.to_ascii_uppercase()))
                 .expect("Failed to dump");
         }

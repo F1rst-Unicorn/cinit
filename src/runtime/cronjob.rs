@@ -1,4 +1,4 @@
-use config::config::{ProcessConfig, ProcessType};
+use config::{ProcessConfig, ProcessType};
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;

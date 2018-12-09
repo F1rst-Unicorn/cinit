@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use petgraph::graph::Graph;
 
-use config::config::ProcessConfig;
+use config::ProcessConfig;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
@@ -180,7 +180,7 @@ impl DependencyManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::config::{ProcessConfig, ProcessType};
+    use config::{ProcessConfig, ProcessType};
 
     #[test]
     pub fn single_runnable_process() {

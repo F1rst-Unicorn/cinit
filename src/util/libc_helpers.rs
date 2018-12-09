@@ -5,7 +5,6 @@
 use std::ffi::{CStr, CString};
 use std::os::unix::io::RawFd;
 use std::ptr;
-use std::ptr::null;
 
 use nix::errno;
 use nix::pty;
@@ -21,7 +20,7 @@ ioctl_read_bad!(get_terminal_size, libc::TIOCGWINSZ, pty::Winsize);
 pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     unsafe {
         let raw_name = libc::ttyname(fd);
-        if raw_name as (*const libc::c_char) == null() {
+        if raw_name.is_null() {
             Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())))
         } else {
             Ok(rescue_from_libc(raw_name))
@@ -70,13 +69,13 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
         match ret {
             0 => {
                 if result == &mut user_description {
-                    return Ok((*result).pw_uid);
+                    Ok((*result).pw_uid)
                 } else {
-                    return Err(nix::Error::last());
+                    Err(nix::Error::last())
                 }
             }
             _ => {
-                return Err(nix::Error::last());
+                Err(nix::Error::last())
             }
         }
     }
@@ -113,13 +112,13 @@ unsafe fn uid_to_passwd_struct(
     match ret {
         0 => {
             if result == &mut user_description {
-                return Ok((user_description, string_container));
+                Ok((user_description, string_container))
             } else {
-                return Err(nix::Error::last());
+                Err(nix::Error::last())
             }
         }
         _ => {
-            return Err(nix::Error::last());
+            Err(nix::Error::last())
         }
     }
 }
@@ -145,13 +144,13 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
         match ret {
             0 => {
                 if result == &mut group_description {
-                    return Ok((*result).gr_gid);
+                    Ok((*result).gr_gid)
                 } else {
-                    return Err(nix::Error::last());
+                    Err(nix::Error::last())
                 }
             }
             _ => {
-                return Err(nix::Error::last());
+                Err(nix::Error::last())
             }
         }
     }
@@ -175,11 +174,11 @@ pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
                 if result == &mut group_description {
                     Ok(rescue_from_libc((*result).gr_name))
                 } else {
-                    return Err(nix::Error::last());
+                    Err(nix::Error::last())
                 }
             }
             _ => {
-                return Err(nix::Error::last());
+                Err(nix::Error::last())
             }
         }
     }

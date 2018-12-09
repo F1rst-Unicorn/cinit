@@ -1,6 +1,6 @@
 use std::process::exit;
 
-use config::config::{Config, ProcessConfig, ProcessType};
+use config::{Config, ProcessConfig, ProcessType};
 use runtime::cronjob::{Cron, Error as CronError};
 use runtime::dependency_graph::{DependencyManager, Error};
 use runtime::process::Process;

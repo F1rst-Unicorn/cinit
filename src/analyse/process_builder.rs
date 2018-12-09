@@ -5,7 +5,7 @@ use std::fmt::Error as FmtError;
 use std::fmt::Formatter;
 use std::path::PathBuf;
 
-use config::config::{ProcessConfig, ProcessType};
+use config::{ProcessConfig, ProcessType};
 use runtime::process::{Process, ProcessState};
 use util::libc_helpers;
 

@@ -6,7 +6,7 @@ use std::process::exit;
 
 use serde_yaml;
 
-use config::config::Config;
+use config::Config;
 
 const EXIT_CODE: i32 = 1;
 
@@ -108,7 +108,7 @@ pub fn read_file(file_path: &str) -> Result<String, io::Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::config::ProcessType;
+    use super::super::ProcessType;
     use super::*;
     use std::collections::HashMap;
 
