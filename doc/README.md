@@ -1,12 +1,16 @@
 # cinit
 
 Init program for UNIX processes. Original development was done
-[here](https://github.com/vs-eth/scinit)
+[here](https://github.com/vs-eth/scinit). 
+
+This is the user manual for developers wanting to start their programs in a
+cinit enabled container. See `Integration.md` for information about building a
+cinit enabled container.
 
 ## Configuration
 
-cinit takes its configuration via yaml files. The minimal configuration to start
-a program is:
+cinit takes its configuration via [YAML](https://yaml.org/) files. The minimal
+configuration to start a program is:
 
 ```yml
 programs:
@@ -21,12 +25,13 @@ programs:
   - name: Some descriptive name
 
     # The path of the binary to run
-    path: /usr/bin/echo
+    path: /the/path
 
     # Arguments to pass (see below)
     args:
-      - -e
+      - "-e"
       - "hello world\\n"
+      
       # This will be "my_program_arg", see below
       - "{{ NAME }}_arg"
 
@@ -46,25 +51,24 @@ programs:
 
     # Specify dependencies, see below
     before:
-      - other program name
+      - other-program
     after:
-      - other program name
+      - other-program
 
     # Emulate a pseudo-terminal for this program
     pty: false
 
     # Give capabilities to this program
-    capabilities:
-      - CAP_NET_RAW
+    capabilities: []
 
     # Pass environment variables
     env:
-      - PWD: /home/user
+      - PWD: "/home/user"
         # If no value is given, it is forwarded from cinit
       - PASSWORD:
-      - NAME: my_program
+      - NAME: "my_program"
         # This will be rendered to "my_program_user"
-      - PROGRAM_USER: {{ NAME }}_user
+      - PROGRAM_USER: "{{ NAME }}_user"
 ```
 
 If a file is passed via command line it is the only file used. Passing a
@@ -78,7 +82,8 @@ usually indicated by the subdirectory names.
 ### Arguments
 
 Pass arguments to the program to run. You SHOULD only pass one whitespace-
-separated word per list item.
+separated word per list item. You SHOULD quote all arguments as they might
+contain characters interpreted by the YAML parser.
 
 As with environment variables these strings support templating. You have access
 to all environment variables listed in the current program's `env` list.
@@ -103,7 +108,7 @@ type:
 ```
 
 See [`man cron`](https://manpages.debian.org/stretch/cron/crontab.5.en.html) for
-a description of the time format. A cronjob must not have dependencies.
+a description of the time format. A cronjob MUST NOT have dependencies.
 
 Cronjobs are not reentrant. This means if the timer specification wants the job
 to be executed at a certain time while simultaneously the job is still running
@@ -156,7 +161,7 @@ for a list of all capabilities.
 ### Dependencies
 
 Programs are allowed to depend on each other via the `before` and `after`
-fields. Dendendant processes will only be started once all their
+fields. Dependant processes will only be started once all their
 dependencies have terminated. Refer to other programs in the config via
 their `name` field.
 
@@ -183,8 +188,8 @@ OPTIONS:
 
 ## Logging
 
-cinit combines the log output of children with its own. The log format is as
-follows:
+cinit combines the log output of children with its own. Child output is always
+logged at INFO level. The log format is as follows:
 
 `<TIMESTAMP> <LEVEL> [<NAME>] <MESSAGE>`
 
@@ -197,6 +202,9 @@ follows:
   in the `name` attribute in the YAML config.
 
 * `MESSAGE`: The actual event being reported.
+
+Programs SHOULD log to the standard file descriptors and SHOULD NOT log own
+timestamps.
 
 Specifying `-v` twice gives messages up to the `TRACE` level. Tracing messages
 are considered part of the public API. Specifying `-v` once gives messages up to
