@@ -22,7 +22,6 @@ docker build -t $DOCKER_TAG                                                 \
         .
 
 docker run --rm                                                             \
-        --tty                                                               \
         --interactive                                                       \
         --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
         --volume "$PROJECT_ROOT/target/registry/:/usr/local/cargo/registry" \
