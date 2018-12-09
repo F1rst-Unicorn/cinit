@@ -54,17 +54,17 @@ pub fn prctl_four(
 }
 
 pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
-    let cstring = CString::new(name).expect("Could not parse username for libc");
-    let mut pwd: libc::passwd = unsafe { std::mem::zeroed() };
-    let mut cbuf = [0 as libc::c_char; BUFFER_LENGTH];
-    let mut res = ptr::null_mut();
+    let raw_name = CString::new(name).expect("Could not parse username for libc");
+    let mut user_description: libc::passwd = unsafe { std::mem::zeroed() };
+    let mut string_container = [0 as libc::c_char; BUFFER_LENGTH];
+    let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getpwnam_r(cstring.as_ptr(), &mut pwd, cbuf.as_mut_ptr(), BUFFER_LENGTH, &mut res);
+        let ret = libc::getpwnam_r(raw_name.as_ptr(), &mut user_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
         match ret {
             0 => {
-                if res == &mut pwd {
-                    return Ok((*res).pw_uid);
+                if result == &mut user_description {
+                    return Ok((*result).pw_uid);
                 } else {
                     return Err(nix::Error::last());
                 }
@@ -78,28 +78,28 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
 
 pub fn uid_to_user(uid: libc::uid_t) -> Result<String, nix::Error> {
     unsafe {
-        let passwd = uid_to_passwd_struct(uid)?;
-        Ok(rescue_from_libc(passwd.0.pw_name))
+        let user_description = uid_to_passwd_struct(uid)?;
+        Ok(rescue_from_libc(user_description.0.pw_name))
     }
 }
 
 pub fn uid_to_homedir(uid: libc::uid_t) -> Result<String, nix::Error> {
     unsafe {
-        let passwd = uid_to_passwd_struct(uid)?;
-        Ok(rescue_from_libc(passwd.0.pw_dir))
+        let user_description = uid_to_passwd_struct(uid)?;
+        Ok(rescue_from_libc(user_description.0.pw_dir))
     }
 }
 
 unsafe fn uid_to_passwd_struct(uid: libc::uid_t) -> Result<(libc::passwd, [libc::c_char; BUFFER_LENGTH]), nix::Error> {
-    let mut pwd: libc::passwd = std::mem::zeroed();
-    let mut cbuf = [0 as libc::c_char; BUFFER_LENGTH];
-    let mut res = ptr::null_mut();
+    let mut user_description: libc::passwd = std::mem::zeroed();
+    let mut string_container = [0 as libc::c_char; BUFFER_LENGTH];
+    let mut result = ptr::null_mut();
 
-    let ret = libc::getpwuid_r(uid, &mut pwd, cbuf.as_mut_ptr(), BUFFER_LENGTH, &mut res);
+    let ret = libc::getpwuid_r(uid, &mut user_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
     match ret {
         0 => {
-            if res == &mut pwd {
-                return Ok((pwd, cbuf));
+            if result == &mut user_description {
+                return Ok((user_description, string_container));
             } else {
                 return Err(nix::Error::last());
             }
@@ -115,17 +115,17 @@ pub fn is_uid_valid(uid: libc::uid_t) -> bool {
 }
 
 pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
-    let cstring = CString::new(name).expect("Could not parse groupname for libc");
-    let mut pwd: libc::group = unsafe { std::mem::zeroed() };
-    let mut cbuf = [0 as libc::c_char; BUFFER_LENGTH];
-    let mut res = ptr::null_mut();
+    let raw_name = CString::new(name).expect("Could not parse groupname for libc");
+    let mut group_description: libc::group = unsafe { std::mem::zeroed() };
+    let mut string_container = [0 as libc::c_char; BUFFER_LENGTH];
+    let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getgrnam_r(cstring.as_ptr(), &mut pwd, cbuf.as_mut_ptr(), BUFFER_LENGTH, &mut res);
+        let ret = libc::getgrnam_r(raw_name.as_ptr(), &mut group_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
         match ret {
             0 => {
-                if res == &mut pwd {
-                    return Ok((*res).gr_gid);
+                if result == &mut group_description {
+                    return Ok((*result).gr_gid);
                 } else {
                     return Err(nix::Error::last());
                 }
@@ -138,16 +138,16 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
 }
 
 pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
-    let mut pwd: libc::group = unsafe { std::mem::zeroed() };
-    let mut cbuf = [0 as libc::c_char; BUFFER_LENGTH];
-    let mut res = ptr::null_mut();
+    let mut group_description: libc::group = unsafe { std::mem::zeroed() };
+    let mut string_container = [0 as libc::c_char; BUFFER_LENGTH];
+    let mut result = ptr::null_mut();
 
     unsafe {
-        let ret = libc::getgrgid_r(gid, &mut pwd, cbuf.as_mut_ptr(), BUFFER_LENGTH, &mut res);
+        let ret = libc::getgrgid_r(gid, &mut group_description, string_container.as_mut_ptr(), BUFFER_LENGTH, &mut result);
         match ret {
             0 => {
-                if res == &mut pwd {
-                    Ok(rescue_from_libc((*res).gr_name))
+                if result == &mut group_description {
+                    Ok(rescue_from_libc((*result).gr_name))
                 } else {
                     return Err(nix::Error::last());
                 }
@@ -170,6 +170,9 @@ pub fn map_to_errno(error: Error) -> nix::Error {
     }
 }
 
+/// Take a string returned from libc and copy it into a rust string.
+/// This function makes sure subsequent calls to libc functions don't override
+/// the string, leading to race conditions.
 unsafe fn rescue_from_libc(string: *mut libc::c_char) -> String {
     CStr::from_ptr(string).to_str().expect("Could not rescue cstring").to_string().clone()
 }
