@@ -21,7 +21,13 @@ docker build -t $DOCKER_TAG                                                 \
         --build-arg GROUP_ID=$GROUP_ID                                      \
         .
 
+# Build servers don't have a TTY
+if [[ -t 1 ]] ; then
+    TTY=--tty
+fi
+
 docker run --rm                                                             \
+        $TTY                                                                \
         --interactive                                                       \
         --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
         --volume "$PROJECT_ROOT/target/registry/:/usr/local/cargo/registry" \
