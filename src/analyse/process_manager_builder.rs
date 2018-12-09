@@ -35,7 +35,7 @@ impl ProcessManager {
             dependency_manager,
             cron,
             epoll_file: -1,
-            signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).unwrap(),
+            signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty()).expect("Could not create signalfd"),
         }
     }
 }

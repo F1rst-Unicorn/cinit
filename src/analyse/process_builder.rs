@@ -65,14 +65,14 @@ impl Process {
             pid: Pid::from_raw(0),
         };
 
-        result.args.push(CString::new(result.path.clone()).unwrap());
+        result.args.push(CString::new(result.path.clone()).expect("Could not transform path"));
 
         result.args.append(
             &mut config
                 .args
                 .iter()
                 .map(|x| render_template(&env, x).unwrap_or(x.clone()))
-                .map(|x| CString::new(x.clone()).unwrap())
+                .map(|x| CString::new(x.clone()).expect("Could not unwrap arg"))
                 .collect(),
         );
 
@@ -81,13 +81,13 @@ impl Process {
 }
 
 fn sanitise_env(env: &mut HashMap<String, String>, uid: Uid) {
-    let homedir = libc_helpers::uid_to_homedir(uid.as_raw()).unwrap();
-    let username = libc_helpers::uid_to_user(uid.as_raw()).unwrap();
+    let homedir = libc_helpers::uid_to_homedir(uid.as_raw()).expect("Could not transform homedir");
+    let username = libc_helpers::uid_to_user(uid.as_raw()).expect("Could not transform user name");
 
     env.insert("HOME".to_string(), homedir.clone());
-    env.insert("PWD".to_string(), homedir);
+    env.insert("PWD".to_string(), homedir.clone());
     env.insert("USER".to_string(), username.clone());
-    env.insert("LOGNAME".to_string(), username);
+    env.insert("LOGNAME".to_string(), username.clone());
     env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
@@ -189,8 +189,8 @@ fn copy_from_config(
 fn flatten_to_strings(result: &HashMap<String, String>) -> Vec<CString> {
     let mut ret: Vec<CString> = Vec::new();
     for (key, value) in result.iter() {
-        let entry = key.to_owned() + "=" + value;
-        ret.push(CString::new(entry).unwrap());
+        let entry: String = key.to_owned() + "=" + value;
+        ret.push(CString::new(entry).expect("Could not build env var"));
     }
     ret
 }

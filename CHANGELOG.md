@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+* Heap corruption in user/group lookups
+
 ## [1.1.0]
 
 ### Changed

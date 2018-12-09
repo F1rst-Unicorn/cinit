@@ -24,7 +24,7 @@ pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
         if raw_name as (*const libc::c_char) == null() {
             Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())))
         } else {
-            Ok(CString::from_raw(raw_name).to_str().unwrap().to_string().clone())
+            Ok(rescue_from_libc(raw_name))
         }
     }
 }
@@ -79,14 +79,14 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
 pub fn uid_to_user(uid: libc::uid_t) -> Result<String, nix::Error> {
     unsafe {
         let passwd = uid_to_passwd_struct(uid)?;
-        return Ok(CStr::from_ptr(passwd.0.pw_name).to_string_lossy().into_owned());
+        Ok(rescue_from_libc(passwd.0.pw_name))
     }
 }
 
 pub fn uid_to_homedir(uid: libc::uid_t) -> Result<String, nix::Error> {
     unsafe {
         let passwd = uid_to_passwd_struct(uid)?;
-        return Ok(CStr::from_ptr(passwd.0.pw_dir).to_string_lossy().into_owned());
+        Ok(rescue_from_libc(passwd.0.pw_dir))
     }
 }
 
@@ -147,7 +147,7 @@ pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
         match ret {
             0 => {
                 if res == &mut pwd {
-                    return Ok(CStr::from_ptr((*res).gr_name).to_string_lossy().into_owned());
+                    Ok(rescue_from_libc((*res).gr_name))
                 } else {
                     return Err(nix::Error::last());
                 }
@@ -168,6 +168,10 @@ pub fn map_to_errno(error: Error) -> nix::Error {
         Some(errno) => nix::Error::Sys(nix::errno::Errno::from_i32(errno)),
         _ => nix::Error::Sys(nix::errno::Errno::UnknownErrno),
     }
+}
+
+unsafe fn rescue_from_libc(string: *mut libc::c_char) -> String {
+    CStr::from_ptr(string).to_str().expect("Could not rescue cstring").to_string().clone()
 }
 
 #[cfg(test)]
@@ -249,5 +253,20 @@ mod tests {
         assert!(is_gid_valid(1409));
     }
 
+    #[test]
+    fn rescuing_works() {
+        unsafe {
+            let input = "teststring".as_ptr() as *mut libc::c_char;
+            assert_ne!(input, rescue_from_libc(input).as_ptr() as *mut libc::c_char);
+        }
+    }
+
+    #[test]
+    fn rescuing_empty_works() {
+        unsafe {
+            let input = [0, 0, 61, 61, 61, 61, 61, 61].as_ptr() as *mut libc::c_char;
+            assert_eq!("".to_string(), rescue_from_libc(input));
+        }
+    }
 
 }
