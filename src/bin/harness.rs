@@ -1,10 +1,6 @@
 //! Test program revealing information about its runtime
 //!
 
-extern crate capabilities;
-extern crate clap;
-extern crate nix;
-
 use std::fs::File;
 use std::io::Write;
 use std::os::unix::io::AsRawFd;

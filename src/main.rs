@@ -3,21 +3,6 @@ use std::alloc::System;
 #[global_allocator]
 static A: System = System;
 
-extern crate clap;
-#[macro_use]
-extern crate log;
-extern crate log4rs;
-#[macro_use]
-extern crate serde_derive;
-extern crate libc;
-#[macro_use]
-extern crate nix;
-extern crate capabilities;
-extern crate petgraph;
-extern crate serde_yaml;
-extern crate tera;
-extern crate time;
-
 pub mod analyse;
 pub mod cli_parser;
 pub mod config;
@@ -25,8 +10,10 @@ pub mod logging;
 pub mod runtime;
 pub mod util;
 
-use config::config_parser;
-use runtime::process_manager::ProcessManager;
+use crate::config::config_parser;
+use crate::runtime::process_manager::ProcessManager;
+
+use log::info;
 
 fn main() {
     let arguments = cli_parser::parse_arguments();

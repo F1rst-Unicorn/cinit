@@ -2,11 +2,11 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
-use logging;
-use runtime::cronjob;
-use runtime::dependency_graph;
-use runtime::process::ProcessState;
-use runtime::process_map::ProcessMap;
+use crate::logging;
+use crate::runtime::cronjob;
+use crate::runtime::dependency_graph;
+use crate::runtime::process::ProcessState;
+use crate::runtime::process_map::ProcessMap;
 
 use nix::sys::epoll;
 use nix::sys::signal;
@@ -14,6 +14,8 @@ use nix::sys::signalfd;
 use nix::sys::wait;
 use nix::unistd;
 use nix::unistd::Pid;
+
+use log::{trace, debug, info, warn, error};
 
 const EXIT_CODE: i32 = 3;
 
@@ -101,26 +103,24 @@ impl ProcessManager {
         let child_index = self.process_map.process_id_for_pid(pid);
         let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
-        {
-            let child = &mut self.process_map.process_for_pid(pid);
-            child.state = if rc == 0 {
-                child_crashed = false;
-                if is_cronjob {
-                    info!("Child {} has finished and is going to sleep", child.name);
-                    trace!("Child {} has finished and is going to sleep", child.name);
-                    ProcessState::Sleeping
-                } else {
-                    info!("Child {} exited successfully", child.name);
-                    trace!("Child {} exited successfully", child.name);
-                    ProcessState::Done
-                }
+        let child = &mut self.process_map.process_for_pid(pid);
+        child.state = if rc == 0 {
+            child_crashed = false;
+            if is_cronjob {
+                info!("Child {} has finished and is going to sleep", child.name);
+                trace!("Child {} has finished and is going to sleep", child.name);
+                ProcessState::Sleeping
             } else {
-                error!("Child {} crashed with {}", child.name, rc);
-                trace!("Child {} crashed with {}", child.name, rc);
-                child_crashed = true;
-                ProcessState::Crashed
+                info!("Child {} exited successfully", child.name);
+                trace!("Child {} exited successfully", child.name);
+                ProcessState::Done
             }
-        }
+        } else {
+            error!("Child {} crashed with {}", child.name, rc);
+            trace!("Child {} crashed with {}", child.name, rc);
+            child_crashed = true;
+            ProcessState::Crashed
+        };
 
         if child_crashed {
             self.initiate_shutdown(signal::SIGINT);
@@ -310,23 +310,21 @@ impl ProcessManager {
 
     fn spawn_child(&mut self, child_index: usize) {
         let child_result;
-        {
-            let child = &mut self.process_map[child_index];
-            if child.state != ProcessState::Blocked && child.state != ProcessState::Sleeping {
-                warn!(
-                    "Refusing to start child '{}' which is currently {}",
-                    child.name, child.state
-                );
-                trace!(
-                    "Refusing to start child '{}' which is currently {}",
-                    child.name,
-                    child.state
-                );
-                return;
-            }
-
-            child_result = child.start();
+        let child = &mut self.process_map[child_index];
+        if child.state != ProcessState::Blocked && child.state != ProcessState::Sleeping {
+            warn!(
+                "Refusing to start child '{}' which is currently {}",
+                child.name, child.state
+            );
+            trace!(
+                "Refusing to start child '{}' which is currently {}",
+                child.name,
+                child.state
+            );
+            return;
         }
+
+        child_result = child.start();
         if child_result.is_err() {
             error!("Failed to spawn child: {}", child_result.unwrap_err());
             return;

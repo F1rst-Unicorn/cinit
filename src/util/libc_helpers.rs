@@ -4,12 +4,13 @@
 
 use std::ffi::{CStr, CString};
 use std::os::unix::io::RawFd;
+use std::io::Error;
 use std::ptr;
 
 use nix::errno;
 use nix::pty;
-
-use std::io::Error;
+use nix::ioctl_read_bad;
+use nix::convert_ioctl_res;
 
 use libc;
 

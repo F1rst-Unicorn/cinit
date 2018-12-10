@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 use petgraph::graph::Graph;
 
-use config::ProcessConfig;
+use crate::config::ProcessConfig;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
@@ -99,19 +99,17 @@ impl DependencyManager {
         }
 
         for (current_index, current_config) in (&config).iter() {
-            {
-                let mut current = result
-                    .get_mut(current_index)
+            let mut current = result
+                .get_mut(current_index)
+                .expect("Invalid index in name_dict");
+            for successor_name in &current_config.before {
+                let successor_index = name_dict
+                    .get(successor_name)
                     .expect("Invalid index in name_dict");
-                for successor_name in &current_config.before {
-                    let successor_index = name_dict
-                        .get(successor_name)
-                        .expect("Invalid index in name_dict");
-                    current.after_self.push(*successor_index);
-                }
-
-                current.predecessor_count += current_config.after.len();
+                current.after_self.push(*successor_index);
             }
+
+            current.predecessor_count += current_config.after.len();
 
             for successor_name in &current_config.before {
                 let successor_index = name_dict
@@ -127,7 +125,7 @@ impl DependencyManager {
                 let predecessor_index = name_dict
                     .get(predecessor_name)
                     .expect("Invalid index in name_dict");
-                let mut predecessor = result
+                let predecessor = result
                     .get_mut(&predecessor_index)
                     .expect("Invalid index in name_dict");
                 predecessor.after_self.push(*current_index);
@@ -183,7 +181,7 @@ impl DependencyManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::{ProcessConfig, ProcessType};
+    use crate::config::{ProcessConfig, ProcessType};
 
     #[test]
     pub fn single_runnable_process() {

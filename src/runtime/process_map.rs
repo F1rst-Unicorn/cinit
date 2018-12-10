@@ -3,7 +3,7 @@ use std::ops::Index;
 use std::ops::IndexMut;
 use std::os::unix::io::RawFd;
 
-use runtime::process::Process;
+use crate::runtime::process::Process;
 
 use nix::unistd::Pid;
 

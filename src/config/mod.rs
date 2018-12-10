@@ -2,6 +2,8 @@ pub mod config_parser;
 
 use std::collections::HashMap;
 
+use serde_derive::Deserialize;
+
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum ProcessType {
     #[serde(rename = "oneshot")]

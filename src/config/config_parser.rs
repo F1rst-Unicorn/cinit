@@ -6,7 +6,9 @@ use std::process::exit;
 
 use serde_yaml;
 
-use config::Config;
+use log::{trace, debug, warn, error};
+
+use crate::config::Config;
 
 const EXIT_CODE: i32 = 1;
 

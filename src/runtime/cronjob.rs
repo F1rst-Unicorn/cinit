@@ -1,4 +1,4 @@
-use config::{ProcessConfig, ProcessType};
+use crate::config::{ProcessConfig, ProcessType};
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
@@ -6,6 +6,8 @@ use std::collections::HashMap;
 
 use time::Duration;
 use time::Tm;
+
+use log::debug;
 
 #[derive(Debug)]
 pub struct TimerDescription {
@@ -146,7 +148,7 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                     result.insert(i);
                 }
             } else {
-                let mut intervals = timespec.split(',');
+                let intervals = timespec.split(',');
 
                 for interval in intervals {
                     let mut values = interval.split('-');

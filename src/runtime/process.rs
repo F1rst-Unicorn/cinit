@@ -6,8 +6,9 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
 
-use util::libc_helpers;
-use util::libc_helpers::map_to_errno;
+use crate::util::libc_helpers;
+use crate::util::libc_helpers::map_to_errno;
+use crate::util::libc_helpers::get_terminal_size;
 
 use nix;
 use nix::fcntl;
@@ -21,6 +22,8 @@ use nix::unistd::Pid;
 use capabilities::Capabilities;
 use capabilities::Capability;
 use capabilities::Flag;
+
+use log::{trace, debug, info, error};
 
 const EXIT_CODE: i32 = 4;
 
@@ -243,7 +246,7 @@ impl Process {
         };
 
         unsafe {
-            ioctl_result = libc_helpers::get_terminal_size(stdin, &mut winsize);
+            ioctl_result = get_terminal_size(stdin, &mut winsize);
         }
 
         if tcget_result.is_err() {

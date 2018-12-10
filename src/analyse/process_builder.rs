@@ -5,9 +5,9 @@ use std::fmt::Error as FmtError;
 use std::fmt::Formatter;
 use std::path::PathBuf;
 
-use config::{ProcessConfig, ProcessType};
-use runtime::process::{Process, ProcessState};
-use util::libc_helpers;
+use crate::config::{ProcessConfig, ProcessType};
+use crate::runtime::process::{Process, ProcessState};
+use crate::util::libc_helpers;
 
 use nix::unistd::Gid;
 use nix::unistd::Pid;
