@@ -1,7 +1,7 @@
 # cinit
 
 Init program for UNIX processes. Original development was done
-[here](https://github.com/vs-eth/scinit). 
+[here](https://github.com/vs-eth/scinit).
 
 This is the user manual for developers wanting to start their programs in a
 cinit enabled container. See `Integration.md` for information about building a
@@ -31,7 +31,7 @@ programs:
     args:
       - "-e"
       - "hello world\\n"
-      
+
       # This will be "my_program_arg", see below
       - "{{ NAME }}_arg"
 
@@ -125,8 +125,9 @@ Special string specifications as `@monthly` are not supported.
 ### User / Group
 
 Specify a UNIX user and group under which to run the program. If none is given,
-root is used. If an invalid user is given, this is reported by cinit before any
-program is run.
+root is used. If an invalid name is given (e.g. because it doesn't exist), this
+is reported by cinit before any program is run. cinit does not create or
+otherwise manage users or groups.
 
 ### Environment
 

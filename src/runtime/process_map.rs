@@ -88,13 +88,19 @@ impl ProcessMap {
         self.pid_dict.remove(&pid);
     }
 
-    pub fn process_id_for_pid(&self, pid: Pid) -> usize {
-        *self.pid_dict.get(&pid).expect("Requested invalid pid!")
+    /// This method returns an Option<> to also query for unknown
+    /// PIDs. If the PID is not known to cinit, this PID is an orphan process
+    /// adopted by cinit.
+    pub fn process_id_for_pid(&self, pid: Pid) -> Option<usize> {
+        match self.pid_dict.get(&pid) {
+            None => None,
+            Some(result) => Some(*result)
+        }
     }
 
-    pub fn process_for_pid(&mut self, pid: Pid) -> &mut Process {
-        let index = self.process_id_for_pid(pid);
-        &mut self.processes[index]
+    pub fn process_for_pid(&mut self, pid: Pid) -> Option<&mut Process> {
+        let index = self.process_id_for_pid(pid)?;
+        Some(&mut self.processes[index])
     }
 }
 

@@ -100,10 +100,18 @@ impl ProcessManager {
     }
 
     fn handle_finished_child(&mut self, pid: Pid, rc: i32) {
-        let child_index = self.process_map.process_id_for_pid(pid);
+        let child_index_option = self.process_map.process_id_for_pid(pid);
+
+        if child_index_option.is_none() {
+            info!("Reaped zombie process {} with return code {}", pid, rc);
+            return;
+        }
+
+        let child_index = child_index_option.expect("Has been checked above");
         let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
-        let child = &mut self.process_map.process_for_pid(pid);
+        let child = &mut self.process_map.process_for_pid(pid)
+            .expect("Has been checked above");
         child.state = if rc == 0 {
             child_crashed = false;
             if is_cronjob {

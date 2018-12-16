@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn invalid_user_id_gives_error() {
-        let result = map_uid(Some(1001), &None);
+        let result = map_uid(Some(1410), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn invalid_group_id_gives_error() {
-        let result = map_gid(Some(1001), &None);
+        let result = map_gid(Some(1410), &None);
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err())
