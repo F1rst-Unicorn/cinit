@@ -172,7 +172,7 @@ started and cinit terminates.
 ## Usage
 
 ```text
-cinit 1.1.1
+cinit 1.1.2
 init daemon for other programs, suitable for containers
 
 USAGE:
