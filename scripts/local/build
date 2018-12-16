@@ -32,7 +32,6 @@ docker run --rm                                                             \
         --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
         --volume "$PROJECT_ROOT/target/registry/:/usr/local/cargo/registry" \
         --workdir "$DOCKER_PROJECT_ROOT"                                    \
-        --name $DOCKER_NAME                                                 \
         --env USER_ID=$USER_ID                                              \
         --env GROUP_ID=$GROUP_ID                                            \
         --env BUILD_FLAGS="$BUILD_FLAGS"                                    \
