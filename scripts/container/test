@@ -26,6 +26,7 @@ if echo $BUILD_FLAGS | grep 'release' >/dev/null ; then
 else
     ln -s "x86_64-unknown-linux-musl/debug/" target/path
 fi
+chown -h "$USER_ID":"$GROUP_ID" target/path
 
 system-tests/test
 
