@@ -145,11 +145,7 @@ impl DependencyManager {
 
         for (i, node) in (&self.nodes).iter() {
             for successor in &node.after_self {
-                graph.add_edge(
-                    node_dict[&i],
-                    node_dict[successor],
-                    0,
-                );
+                graph.add_edge(node_dict[&i], node_dict[successor], 0);
             }
         }
 

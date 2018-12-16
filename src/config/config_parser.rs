@@ -6,7 +6,7 @@ use std::process::exit;
 
 use serde_yaml;
 
-use log::{trace, debug, warn, error};
+use log::{debug, error, trace, warn};
 
 use crate::config::Config;
 

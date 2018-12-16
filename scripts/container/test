@@ -9,6 +9,7 @@ export BUILD_FLAGS
 export TARGET="--target=x86_64-unknown-linux-musl"
 
 su $U -c "cargo build $BUILD_FLAGS $TARGET -j 8"
+su $U -c "cargo fmt --all -- --check"
 su $U -c "cargo clippy $BUILD_FLAGS $TARGET -j 8 -- -D clippy::all"
 su $U -c "RUST_BACKTRACE=1 cargo test -j 1 $TARGET"
 su $U -c "cargo doc"

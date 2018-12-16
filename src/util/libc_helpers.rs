@@ -3,14 +3,14 @@
 //! NONE OF THE FUNCTIONS IS THREAD-SAFE!
 
 use std::ffi::{CStr, CString};
-use std::os::unix::io::RawFd;
 use std::io::Error;
+use std::os::unix::io::RawFd;
 use std::ptr;
 
-use nix::errno;
-use nix::pty;
-use nix::ioctl_read_bad;
 use nix::convert_ioctl_res;
+use nix::errno;
+use nix::ioctl_read_bad;
+use nix::pty;
 
 use libc;
 
@@ -75,9 +75,7 @@ pub fn user_to_uid(name: &str) -> Result<libc::uid_t, nix::Error> {
                     Err(nix::Error::last())
                 }
             }
-            _ => {
-                Err(nix::Error::last())
-            }
+            _ => Err(nix::Error::last()),
         }
     }
 }
@@ -118,9 +116,7 @@ unsafe fn uid_to_passwd_struct(
                 Err(nix::Error::last())
             }
         }
-        _ => {
-            Err(nix::Error::last())
-        }
+        _ => Err(nix::Error::last()),
     }
 }
 
@@ -150,9 +146,7 @@ pub fn group_to_gid(name: &str) -> Result<libc::gid_t, nix::Error> {
                     Err(nix::Error::last())
                 }
             }
-            _ => {
-                Err(nix::Error::last())
-            }
+            _ => Err(nix::Error::last()),
         }
     }
 }
@@ -178,9 +172,7 @@ pub fn gid_to_group(gid: libc::gid_t) -> Result<String, nix::Error> {
                     Err(nix::Error::last())
                 }
             }
-            _ => {
-                Err(nix::Error::last())
-            }
+            _ => Err(nix::Error::last()),
         }
     }
 }

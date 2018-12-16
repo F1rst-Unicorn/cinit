@@ -15,7 +15,7 @@ use nix::sys::wait;
 use nix::unistd;
 use nix::unistd::Pid;
 
-use log::{trace, debug, info, warn, error};
+use log::{debug, error, info, trace, warn};
 
 const EXIT_CODE: i32 = 3;
 
@@ -110,7 +110,9 @@ impl ProcessManager {
         let child_index = child_index_option.expect("Has been checked above");
         let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
-        let child = &mut self.process_map.process_for_pid(pid)
+        let child = &mut self
+            .process_map
+            .process_for_pid(pid)
             .expect("Has been checked above");
         child.state = if rc == 0 {
             child_crashed = false;

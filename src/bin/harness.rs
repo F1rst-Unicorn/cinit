@@ -83,7 +83,8 @@ fn main() {
 }
 
 fn dump(output: &str) {
-    let mut file = File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{}'", output));
+    let mut file =
+        File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{}'", output));
 
     file.write_fmt(format_args!("programs:\n"))
         .expect("Failed to open output file");

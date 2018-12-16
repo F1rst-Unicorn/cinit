@@ -94,7 +94,7 @@ impl ProcessMap {
     pub fn process_id_for_pid(&self, pid: Pid) -> Option<usize> {
         match self.pid_dict.get(&pid) {
             None => None,
-            Some(result) => Some(*result)
+            Some(result) => Some(*result),
         }
     }
 

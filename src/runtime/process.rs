@@ -7,8 +7,8 @@ use std::process::exit;
 use std::str::FromStr;
 
 use crate::util::libc_helpers;
-use crate::util::libc_helpers::map_to_errno;
 use crate::util::libc_helpers::get_terminal_size;
+use crate::util::libc_helpers::map_to_errno;
 
 use nix;
 use nix::fcntl;
@@ -23,7 +23,7 @@ use capabilities::Capabilities;
 use capabilities::Capability;
 use capabilities::Flag;
 
-use log::{trace, debug, info, error};
+use log::{debug, error, info, trace};
 
 const EXIT_CODE: i32 = 4;
 

@@ -247,9 +247,7 @@ impl Cron {
         if let Some((next_exec_time, process_id)) = next_job {
             if next_exec_time <= now {
                 self.timer.remove(&next_exec_time);
-                let next_execution = self
-                    .timers[&process_id]
-                    .get_next_execution(now);
+                let next_execution = self.timers[&process_id].get_next_execution(now);
                 debug!(
                     "Scheduled next execution at {}",
                     time::strftime("%FT%T", &next_execution).unwrap()

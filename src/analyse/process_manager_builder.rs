@@ -9,7 +9,7 @@ use crate::runtime::process_map::ProcessMap;
 
 use nix::sys::signalfd;
 
-use log::{trace, error};
+use log::{error, trace};
 
 const EXIT_CODE: i32 = 2;
 

@@ -175,8 +175,8 @@ fn copy_from_config(
                     }
                 },
                 Some(raw_value) => {
-                    let rendered_value =
-                        render_template(&result, raw_value).unwrap_or_else(|_| raw_value.to_string());
+                    let rendered_value = render_template(&result, raw_value)
+                        .unwrap_or_else(|_| raw_value.to_string());
                     result.insert(key.to_string(), rendered_value);
                 }
             }
