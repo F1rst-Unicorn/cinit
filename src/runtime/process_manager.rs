@@ -1,3 +1,4 @@
+use std::fs::remove_file;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
@@ -7,15 +8,19 @@ use crate::runtime::cronjob;
 use crate::runtime::dependency_graph;
 use crate::runtime::process::ProcessState;
 use crate::runtime::process_map::ProcessMap;
+use crate::util::libc_helpers;
 
 use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
+use nix::sys::socket;
 use nix::sys::wait;
 use nix::unistd;
 use nix::unistd::Pid;
 
 use log::{debug, error, info, trace, warn};
+
+const SOCKET_PATH: &str = "/run/cinit.socket";
 
 const EXIT_CODE: i32 = 3;
 
@@ -32,6 +37,8 @@ pub struct ProcessManager {
     pub epoll_fd: RawFd,
 
     pub signal_fd: signalfd::SignalFd,
+
+    pub status_fd: RawFd,
 }
 
 impl Drop for ProcessManager {
@@ -160,6 +167,7 @@ impl ProcessManager {
 
     fn setup(&mut self) -> Result<(), nix::Error> {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
+        self.status_fd = self.setup_status_fd()?;
         self.epoll_fd = self.setup_epoll_fd()?;
         Ok(())
     }
@@ -174,6 +182,29 @@ impl ProcessManager {
         signalfd::SignalFd::with_flags(&signals, signalfd::SfdFlags::SFD_CLOEXEC)
     }
 
+    fn setup_status_fd(&mut self) -> Result<RawFd, nix::Error> {
+        match remove_file(SOCKET_PATH).map_err(libc_helpers::map_to_errno) {
+            Err(nix::Error::Sys(nix::errno::Errno::ENOENT)) => Ok(()),
+            e => e,
+        }?;
+
+        let listener = socket::socket(
+            socket::AddressFamily::Unix,
+            socket::SockType::Stream,
+            socket::SockFlag::SOCK_CLOEXEC,
+            None,
+        )?;
+
+        socket::bind(
+            listener,
+            &socket::SockAddr::Unix(socket::UnixAddr::new(SOCKET_PATH)?),
+        )?;
+        socket::listen(listener, 0)?;
+
+        debug!("Status uds open");
+        Ok(listener)
+    }
+
     fn setup_epoll_fd(&mut self) -> Result<RawFd, nix::Error> {
         let epoll_fd = epoll::epoll_create1(epoll::EpollCreateFlags::EPOLL_CLOEXEC)?;
         epoll::epoll_ctl(
@@ -184,6 +215,12 @@ impl ProcessManager {
                 epoll::EpollFlags::EPOLLIN,
                 self.signal_fd.as_raw_fd() as u64,
             ),
+        )?;
+        epoll::epoll_ctl(
+            epoll_fd,
+            epoll::EpollOp::EpollCtlAdd,
+            self.status_fd,
+            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.status_fd as u64),
         )?;
         Ok(epoll_fd)
     }
