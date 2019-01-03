@@ -212,3 +212,45 @@ are considered part of the public API. Specifying `-v` once gives messages up to
 the `DEBUG` level. This is the expected level for bug reports. Production
 installations should not specify the `-v` flag which gives messages up to the
 `INFO` level.
+
+## Status Reporting
+
+While running cinit holds an open UNIX Domain Socket at `/run/cinit.socket`.
+When connecting to the socket cinit reports information about its current
+runtime status. The output format is similar to the configuration file format.
+
+A program consists of the following runtime keys:
+
+* `name`: The name of the program as given in the configuration file.
+
+* `state`: The current status of the program. One of:
+
+  * `blocked`: The program is currently waiting for its dependencies to
+    terminate.
+  * `sleeping`: The program is a cronjob waiting for the next scheduled
+    execution.
+  * `running`: The program is currently running.
+  * `done`: The program has terminated successfully.
+  * `crashed`: The program has terminated with an error code.
+
+* `pid`: Optional. The process id of a running child.
+
+* `scheduled_at`: Optional. Next execution time of a cronjob.
+
+* `exit_code`: Optional. The returned exit code of a child that is `done` or
+  `crashed`.
+
+An example report looks like this:
+
+```yaml
+programs:
+  - name: 'program 1'
+    state: 'done'
+    exit_code: 0
+  - name: 'program 2'
+    state: 'running'
+    pid: 1409
+  - name: 'cronjob'
+    state: 'sleeping'
+    scheduled_at: '2019-01-03T17:41:39'
+```

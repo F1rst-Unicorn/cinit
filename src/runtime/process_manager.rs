@@ -341,7 +341,7 @@ impl ProcessManager {
 
         for (id, p) in self.process_map.processes().iter().enumerate() {
             file.write_fmt(format_args!(
-                "  - name: '{}'\n    status: '{:?}'\n",
+                "  - name: '{}'\n    state: '{}'\n",
                 p.name, p.state
             ))
             .map_err(libc_helpers::map_to_errno)?;
@@ -365,7 +365,7 @@ impl ProcessManager {
 
             if self.cron.is_cronjob(id) {
                 file.write_fmt(format_args!(
-                    "    scheduled_at: {}\n",
+                    "    scheduled_at: '{}'\n",
                     time::strftime("%FT%T", &self.cron.get_next_execution(id)).unwrap()
                 ))
                 .map_err(libc_helpers::map_to_errno)?;
