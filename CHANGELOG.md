@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.0]
+
+### Added
+
 * Implement status reporting ([#4](https://gitlab.com/veenj/cinit/issues/4))
 
 ## [1.1.2]
