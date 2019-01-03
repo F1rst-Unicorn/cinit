@@ -36,7 +36,7 @@ impl ProcessManager {
             keep_running: true,
             dependency_manager,
             cron,
-            epoll_file: -1,
+            epoll_fd: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
                 .expect("Could not create signalfd"),
         }

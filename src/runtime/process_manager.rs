@@ -29,7 +29,7 @@ pub struct ProcessManager {
 
     pub cron: cronjob::Cron,
 
-    pub epoll_file: RawFd,
+    pub epoll_fd: RawFd,
 
     pub signal_fd: signalfd::SignalFd,
 }
@@ -39,7 +39,7 @@ impl Drop for ProcessManager {
         let raw_signal_fd = self.signal_fd.as_raw_fd();
         self.deregister_fd(raw_signal_fd);
 
-        if let Err(some) = unistd::close(self.epoll_file) {
+        if let Err(some) = unistd::close(self.epoll_fd) {
             warn!("Could not close epoll fd: {}", some);
         }
     }
@@ -144,7 +144,7 @@ impl ProcessManager {
 
     fn dispatch_epoll(&mut self) {
         let mut event_buffer = [epoll::EpollEvent::empty(); 10];
-        let epoll_result = epoll::epoll_wait(self.epoll_file, &mut event_buffer, 1000);
+        let epoll_result = epoll::epoll_wait(self.epoll_fd, &mut event_buffer, 1000);
         match epoll_result {
             Ok(count) => {
                 debug!("Got {} events", count);
@@ -160,7 +160,7 @@ impl ProcessManager {
 
     fn setup(&mut self) -> Result<(), nix::Error> {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
-        self.epoll_file = self.setup_epoll_fd()?;
+        self.epoll_fd = self.setup_epoll_fd()?;
         Ok(())
     }
 
@@ -256,7 +256,7 @@ impl ProcessManager {
     fn register_fd(&mut self, fd: RawFd) {
         debug!("Registering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
-            self.epoll_file,
+            self.epoll_fd,
             epoll::EpollOp::EpollCtlAdd,
             fd,
             &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
@@ -269,7 +269,7 @@ impl ProcessManager {
     fn deregister_fd(&mut self, fd: RawFd) {
         debug!("Deregistering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
-            self.epoll_file,
+            self.epoll_fd,
             epoll::EpollOp::EpollCtlDel,
             fd as RawFd,
             &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
