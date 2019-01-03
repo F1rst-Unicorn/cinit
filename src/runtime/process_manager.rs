@@ -1,5 +1,7 @@
 use std::fs::remove_file;
+use std::io::Write;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::io::FromRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
@@ -136,7 +138,7 @@ impl ProcessManager {
             error!("Child {} crashed with {}", child.name, rc);
             trace!("Child {} crashed with {}", child.name, rc);
             child_crashed = true;
-            ProcessState::Crashed
+            ProcessState::Crashed(rc)
         };
 
         if child_crashed {
@@ -230,6 +232,8 @@ impl ProcessManager {
             let fd = event.data() as RawFd;
             if fd == self.signal_fd.as_raw_fd() {
                 self.handle_signal();
+            } else if fd == self.status_fd {
+                self.report_status();
             } else {
                 self.print_child_output(fd);
             }
@@ -321,6 +325,55 @@ impl ProcessManager {
         }
 
         self.process_map.deregister_fd(fd);
+    }
+
+    fn report_status(&mut self) {
+        if let Err(e) = self.write_report() {
+            warn!("Failed to print report: {:#?}", e);
+        }
+    }
+
+    fn write_report(&mut self) -> Result<(), nix::Error> {
+        let mut file = unsafe { std::fs::File::from_raw_fd(socket::accept(self.status_fd)?) };
+
+        file.write_fmt(format_args!("programs:\n"))
+            .map_err(libc_helpers::map_to_errno)?;
+
+        for (id, p) in self.process_map.processes().iter().enumerate() {
+            file.write_fmt(format_args!(
+                "  - name: '{}'\n    status: '{:?}'\n",
+                p.name, p.state
+            ))
+            .map_err(libc_helpers::map_to_errno)?;
+
+            match p.state {
+                ProcessState::Done => {
+                    file.write_fmt(format_args!("    exit_code: 0\n"))
+                        .map_err(libc_helpers::map_to_errno)?;
+                }
+                ProcessState::Crashed(rc) => {
+                    file.write_fmt(format_args!("    exit_code: {}\n", rc))
+                        .map_err(libc_helpers::map_to_errno)?;
+                }
+                _ => {}
+            }
+
+            if self.process_map.process_id_for_pid(p.pid).is_some() {
+                file.write_fmt(format_args!("    pid: {}\n", p.pid))
+                    .map_err(libc_helpers::map_to_errno)?;
+            }
+
+            if self.cron.is_cronjob(id) {
+                file.write_fmt(format_args!(
+                    "    scheduled_at: {}\n",
+                    time::strftime("%FT%T", &self.cron.get_next_execution(id)).unwrap()
+                ))
+                .map_err(libc_helpers::map_to_errno)?;
+            }
+        }
+
+        unistd::close(file.as_raw_fd())?;
+        Ok(())
     }
 
     fn print_child_output(&mut self, fd: RawFd) {

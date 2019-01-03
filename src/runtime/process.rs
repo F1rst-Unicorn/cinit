@@ -43,7 +43,7 @@ pub enum ProcessState {
     Done,
 
     /// The process has finished unsucessfully
-    Crashed,
+    Crashed(i32),
 }
 
 type Pipe = (RawFd, RawFd);
@@ -55,7 +55,7 @@ impl Display for ProcessState {
             ProcessState::Sleeping => "sleeping",
             ProcessState::Running => "running",
             ProcessState::Done => "done",
-            ProcessState::Crashed => "crashed",
+            ProcessState::Crashed(_) => "crashed",
         };
         write!(f, "{}", message)
     }

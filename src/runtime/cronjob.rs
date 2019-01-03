@@ -265,6 +265,15 @@ impl Cron {
     pub fn is_cronjob(&self, id: usize) -> bool {
         self.timers.contains_key(&id)
     }
+
+    pub fn get_next_execution(&self, id: usize) -> Tm {
+        for (time, item_id) in &self.timer {
+            if id == *item_id {
+                return *time;
+            }
+        }
+        panic!("Queried cron manager with invalid id");
+    }
 }
 
 #[cfg(test)]
