@@ -8,6 +8,7 @@ pub mod cli_parser;
 pub mod config;
 pub mod logging;
 pub mod runtime;
+pub mod startup_checks;
 pub mod util;
 
 use crate::config::config_parser;
@@ -20,6 +21,7 @@ fn main() {
     logging::initialise(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
+    startup_checks::do_startup_checks();
 
     let config_path = arguments
         .value_of(cli_parser::FLAG_CONFIG)
