@@ -162,7 +162,7 @@ impl DependencyManager {
     ) -> Result<HashMap<String, usize>, Error> {
         let mut result = HashMap::new();
 
-        for (i, desc) in descriptions.into_iter() {
+        for (i, desc) in descriptions {
             if result.contains_key(&desc.name) {
                 return Err(Error::Duplicate(*i));
             } else {
