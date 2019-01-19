@@ -1,6 +1,6 @@
 [package]
 name = "cinit"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
            "Jan Veen <jan.veen@posteo.de>"]
 description = "Init program for UNIX processes"

@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.1]
+
+### Fixed
+
+* Implement startup check for mandatory OS
+  properties ([#27](https://gitlab.com/veenj/cinit/issues/27))
+
 ## [1.2.0]
 
 ### Added
