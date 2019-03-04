@@ -33,6 +33,8 @@ impl ProcessNode {
 pub enum Error {
     Cycle(usize),
     Duplicate(usize),
+    UnknownPredecessor(usize, usize),
+    UnknownSuccessor(usize, usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -49,6 +51,19 @@ impl DependencyManager {
     /// contains the index of some program involved in the cycle
     pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config)?;
+        for (prog_index, program) in config {
+            for (before_index, dependency) in program.before.iter().enumerate() {
+                if name_dict.get(dependency).is_none() {
+                    return Err(Error::UnknownPredecessor(*prog_index, before_index));
+                }
+            }
+            for (after_index, dependency) in program.after.iter().enumerate() {
+                if name_dict.get(dependency).is_none() {
+                    return Err(Error::UnknownSuccessor(*prog_index, after_index));
+                }
+            }
+        }
+
         let nodes = DependencyManager::build_dependencies(config, &name_dict);
         let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),

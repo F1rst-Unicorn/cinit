@@ -1,0 +1,8 @@
+programs:
+  - name: echo
+    path: echo
+    args:
+      - hello
+      - world
+    after:
+      - doesnotexist
