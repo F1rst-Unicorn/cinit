@@ -241,14 +241,21 @@ class ProgramConfigError(RegexMatcher):
     def __str__(self):
         return self.regex
 
-class UnknownDependencyError(RegexMatcher):
+class UnknownAfterDependencyError(RegexMatcher):
     def __init__(self, name, unknown_dep):
-        super(UnknownDependencyError, self).__init__(
-            "Unknown (suc|prede)cessor '" + unknown_dep + "' of program " + name)
+        super(UnknownAfterDependencyError, self).__init__(
+            "Unknown 'after' dependency '" + unknown_dep + "' of program " + name)
 
     def __str__(self):
         return self.regex
 
+class UnknownBeforeDependencyError(RegexMatcher):
+    def __init__(self, name, unknown_dep):
+        super(UnknownBeforeDependencyError, self).__init__(
+            "Unknown 'before' dependency '" + unknown_dep + "' of program " + name)
+
+    def __str__(self):
+        return self.regex
 
 class ChildCrashed(RegexMatcher):
     def __init__(self, name, rc):

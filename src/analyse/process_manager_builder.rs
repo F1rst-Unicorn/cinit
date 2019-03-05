@@ -77,27 +77,27 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
                     config.programs[id].name
                 );
             }
-            Error::UnknownPredecessor(prog_index, before_index) => {
+            Error::UnknownAfterReference(prog_index, after_index) => {
                 error!(
-                    "Unknown predecessor '{}' of program {}",
-                    config.programs[prog_index].before[before_index],
+                    "Unknown 'after' dependency '{}' of program {}",
+                    config.programs[prog_index].after[after_index],
                     config.programs[prog_index].name
                 );
                 trace!(
-                    "Unknown predecessor '{}' of program {}",
-                    config.programs[prog_index].before[before_index],
+                    "Unknown 'after' dependency '{}' of program {}",
+                    config.programs[prog_index].after[after_index],
                     config.programs[prog_index].name
                 );
             }
-            Error::UnknownSuccessor(prog_index, after_index) => {
+            Error::UnknownBeforeReference(prog_index, before_index) => {
                 error!(
-                    "Unknown predecessor '{}' of program {}",
-                    config.programs[prog_index].after[after_index],
+                    "Unknown 'before' dependency '{}' of program {}",
+                    config.programs[prog_index].before[before_index],
                     config.programs[prog_index].name
                 );
                 trace!(
-                    "Unknown predecessor '{}' of program {}",
-                    config.programs[prog_index].after[after_index],
+                    "Unknown 'before' dependency '{}' of program {}",
+                    config.programs[prog_index].before[before_index],
                     config.programs[prog_index].name
                 );
             }

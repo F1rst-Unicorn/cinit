@@ -8,7 +8,7 @@ class Test(CinitTest):
 
         self.assert_on_trace().that(
             Sequential(
-                UnknownDependencyError("echo", "doesnotexist"),
+                UnknownBeforeDependencyError("echo", "doesnotexist"),
             )
         )
 

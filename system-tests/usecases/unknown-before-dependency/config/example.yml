@@ -1,8 +1,5 @@
 programs:
   - name: echo
     path: echo
-    args:
-      - hello
-      - world
-    after:
+    before:
       - doesnotexist

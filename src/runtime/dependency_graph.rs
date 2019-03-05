@@ -33,8 +33,8 @@ impl ProcessNode {
 pub enum Error {
     Cycle(usize),
     Duplicate(usize),
-    UnknownPredecessor(usize, usize),
-    UnknownSuccessor(usize, usize),
+    UnknownAfterReference(usize, usize),
+    UnknownBeforeReference(usize, usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,19 +51,7 @@ impl DependencyManager {
     /// contains the index of some program involved in the cycle
     pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config)?;
-        for (prog_index, program) in config {
-            for (before_index, dependency) in program.before.iter().enumerate() {
-                if name_dict.get(dependency).is_none() {
-                    return Err(Error::UnknownPredecessor(*prog_index, before_index));
-                }
-            }
-            for (after_index, dependency) in program.after.iter().enumerate() {
-                if name_dict.get(dependency).is_none() {
-                    return Err(Error::UnknownSuccessor(*prog_index, after_index));
-                }
-            }
-        }
-
+        DependencyManager::validate_references(config, &name_dict)?;
         let nodes = DependencyManager::build_dependencies(config, &name_dict);
         let result = DependencyManager {
             runnable: DependencyManager::find_initial_runnables(&nodes),
@@ -186,6 +174,25 @@ impl DependencyManager {
         }
 
         Ok(result)
+    }
+
+    fn validate_references(
+        config: &[(usize, ProcessConfig)],
+        name_dict: &HashMap<String, usize>,
+    ) -> Result<(), Error> {
+        for (prog_index, program) in config {
+            for (after_index, dependency) in program.after.iter().enumerate() {
+                if name_dict.get(dependency).is_none() {
+                    return Err(Error::UnknownAfterReference(*prog_index, after_index));
+                }
+            }
+            for (before_index, dependency) in program.before.iter().enumerate() {
+                if name_dict.get(dependency).is_none() {
+                    return Err(Error::UnknownBeforeReference(*prog_index, before_index));
+                }
+            }
+        }
+        Ok(())
     }
 }
 
