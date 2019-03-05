@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.2]
+
 ### Fixed
 
 * Detect invalid references in dependency specification
