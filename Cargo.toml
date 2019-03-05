@@ -2,7 +2,8 @@
 name = "cinit"
 version = "1.2.1"
 authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
-           "Jan Veen <jan.veen@posteo.de>"]
+           "Jan Veen <jan.veen@posteo.de>",
+           "Ben Fiedler <ben@sjfiedler.de>"]
 description = "Init program for UNIX processes"
 license-file = "LICENSE"
 build = "build.rs"

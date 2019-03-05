@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+* Detect invalid references in dependency specification
+  ([#28](https://gitlab.com/veenj/cinit/issues/28))
+
 ## [1.2.1]
 
 ### Fixed
