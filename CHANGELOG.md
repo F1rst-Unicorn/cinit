@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## [1.2.3]
+
 ### Fixed
 
 * Fix kernel version check for 5.0
