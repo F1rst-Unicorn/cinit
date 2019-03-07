@@ -26,7 +26,9 @@ fn check_kernel_version() {
                 return;
             }
 
-            if major.unwrap() < 4 || minor.unwrap() < 3 {
+            let major = major.unwrap();
+
+            if major < 4 || (major == 4 && minor.unwrap() < 3) {
                 error!("Your kernel is older than 4.3. Ambient capabilities");
                 error!("are not supported on your kernel but are needed for");
                 error!("cinit to work properly. Aborting");
