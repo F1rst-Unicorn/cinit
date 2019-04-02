@@ -19,7 +19,7 @@ GREEN='\033[1;32m'
 NC='\033[0m'
 
 echo
-echo -e "    ${GREEN}Running system tests${NC}"
+echo "    ${GREEN}Running system tests${NC}"
 
 rm -rf target/path
 if echo $BUILD_FLAGS | grep 'release' >/dev/null ; then

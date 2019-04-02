@@ -151,47 +151,53 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                 let intervals = timespec.split(',');
 
                 for interval in intervals {
-                    let mut values = interval.split('-');
-                    let begin = values
-                        .next()
-                        .ok_or("Invalid timespec")?
-                        .parse::<i32>()
-                        .map_err(|_| "Invalid number")?;
+                    let mut values = interval.split('/');
+                    let interval = values.next().ok_or("Invalid timespec")?;
 
-                    if begin < min || max < begin {
-                        return Err("Invalid range in timer spec".to_string());
-                    }
+                    let step = if let Some(step) = values.next() {
+                        step.parse::<i32>().map_err(|_| "Invalid step number")?
+                    } else {
+                        1
+                    };
 
-                    if let Some(end_str) = values.next() {
-                        let mut step_split = end_str.split('/');
-
-                        let end = step_split
+                    let begin: i32;
+                    let end: i32;
+                    if interval == "*" {
+                        begin = min;
+                        end = max;
+                    } else {
+                        let mut interval_split = interval.split('-');
+                        begin = interval_split
                             .next()
                             .ok_or("Invalid timespec")?
                             .parse::<i32>()
                             .map_err(|_| "Invalid number")?;
 
-                        if end < min || max < end {
-                            return Err("Invalid range in timer spec".to_string());
-                        }
-
-                        let step = if let Some(step) = step_split.next() {
-                            step.parse::<i32>().map_err(|_| "Invalid number")?
+                        if let Some(end_str) = interval_split.next() {
+                            end = end_str
+                                .parse::<i32>()
+                                .map_err(|_| "Invalid number in end of interval")?;
                         } else {
-                            1
-                        };
-
-                        if end < begin {
-                            return Err("Interval end < begin".to_string());
+                            end = begin;
                         }
+                    }
 
-                        for i in begin..=end {
-                            if i % step == begin % step {
-                                result.insert(i);
-                            }
+                    if begin < min || max < begin {
+                        return Err("Invalid range in timer spec".to_string());
+                    }
+
+                    if end < min || max < end {
+                        return Err("Invalid range in timer spec".to_string());
+                    }
+
+                    if end < begin {
+                        return Err("Interval end < begin".to_string());
+                    }
+
+                    for i in begin..=end {
+                        if i % step == begin % step {
+                            result.insert(i);
                         }
-                    } else {
-                        result.insert(begin);
                     }
                 }
             }
@@ -488,7 +494,7 @@ mod tests {
 
         assert!(result.is_err());
         let message = result.unwrap_err();
-        assert_eq!("Invalid number", message);
+        assert_eq!("Invalid number in end of interval", message);
     }
 
     #[test]
@@ -497,7 +503,7 @@ mod tests {
 
         assert!(result.is_err());
         let message = result.unwrap_err();
-        assert_eq!("Invalid number", message);
+        assert_eq!("Invalid step number", message);
     }
 
     #[test]

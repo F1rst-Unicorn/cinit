@@ -10,6 +10,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Fix panic when having cronjobs between dependent applications
   ([#30](https://gitlab.com/veenj/cinit/issues/30))
 
+* Support cron expressions with wildcard and stepping (`*/5`)
+  ([#29](https://gitlab.com/veenj/cinit/issues/29))
+
 ## [1.2.3]
 
 ### Fixed
