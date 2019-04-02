@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -8,11 +8,11 @@ export BUILD_FLAGS
 
 export TARGET="--target=x86_64-unknown-linux-musl"
 
-su $U -c "cargo build $BUILD_FLAGS $TARGET -j 8"
-su $U -c "cargo fmt --all -- --check"
-su $U -c "cargo clippy $BUILD_FLAGS $TARGET -j 8 -- -D clippy::all"
-su $U -c "RUST_BACKTRACE=1 cargo test -j 1 $TARGET"
-su $U -c "cargo doc"
+su $U -c "/usr/local/cargo/bin/cargo build $BUILD_FLAGS $TARGET -j 8"
+su $U -c "/usr/local/cargo/bin/cargo fmt --all -- --check"
+su $U -c "/usr/local/cargo/bin/cargo clippy $BUILD_FLAGS $TARGET -j 8 -- -D clippy::all"
+su $U -c "RUST_BACKTRACE=1 /usr/local/cargo/bin/cargo test -j 1 $TARGET"
+su $U -c "/usr/local/cargo/bin/cargo doc"
 
 
 GREEN='\033[1;32m'

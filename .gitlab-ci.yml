@@ -1,0 +1,23 @@
+---
+
+image: docker:latest
+services:
+  - docker:dind
+
+stages:
+  - build-debug
+  - build-release
+
+build-debug:
+  stage: build-debug
+  script:
+    - scripts/local/build
+
+build-release:
+  stage: build-release
+  script:
+    - export BUILD_FLAGS="--release"
+    - scripts/local/build
+  only:
+    - tags
+
