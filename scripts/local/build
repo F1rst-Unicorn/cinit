@@ -22,7 +22,7 @@ docker build -t $DOCKER_TAG                                                 \
         .
 
 # Build servers don't have a TTY
-if [[ -t 1 ]] ; then
+if [ -t 1 ] ; then
     TTY=--tty
 fi
 

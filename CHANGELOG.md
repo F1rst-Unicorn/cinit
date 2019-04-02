@@ -13,6 +13,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Support cron expressions with wildcard and stepping (`*/5`)
   ([#29](https://gitlab.com/veenj/cinit/issues/29))
 
+* Fix bourne shell compliance in build script
+  ([#31](https://gitlab.com/veenj/cinit/issues/31))
+
 ## [1.2.3]
 
 ### Fixed
