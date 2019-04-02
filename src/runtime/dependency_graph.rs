@@ -97,11 +97,11 @@ impl DependencyManager {
     ) -> HashMap<usize, ProcessNode> {
         let mut result = HashMap::with_capacity(config.len());
 
-        for (k, _) in config.iter() {
+        for (k, _) in config {
             result.insert(*k, ProcessNode::new());
         }
 
-        for (current_index, current_config) in (&config).iter() {
+        for (current_index, current_config) in config {
             let mut current = result
                 .get_mut(current_index)
                 .expect("Invalid index in name_dict");
@@ -141,20 +141,20 @@ impl DependencyManager {
         let mut graph = Graph::<_, _>::new();
         let mut node_dict = HashMap::new();
 
-        for (i, _) in (&self.nodes).iter().enumerate() {
+        for i in self.nodes.keys() {
             let node = graph.add_node(i);
             node_dict.insert(i, node);
         }
 
-        for (i, node) in (&self.nodes).iter() {
+        for (i, node) in &self.nodes {
             for successor in &node.after_self {
-                graph.add_edge(node_dict[&i], node_dict[successor], 0);
+                graph.add_edge(node_dict[&i], node_dict[&successor], 0);
             }
         }
 
         if let Err(cycle) = petgraph::algo::toposort(&graph, None) {
             let node_id = cycle.node_id();
-            Err(Error::Cycle(*graph.node_weight(node_id).unwrap()))
+            Err(Error::Cycle(**graph.node_weight(node_id).unwrap()))
         } else {
             Ok(())
         }
