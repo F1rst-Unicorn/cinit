@@ -331,6 +331,19 @@ mod tests {
     }
 
     #[test]
+    fn parse_star_with_stepping() {
+        let result = parse_element(Some("*/3"), 0, 11);
+
+        assert!(result.is_ok());
+        let map = result.unwrap();
+        assert_eq!(4, map.len());
+        assert!(map.contains(&0));
+        assert!(map.contains(&3));
+        assert!(map.contains(&6));
+        assert!(map.contains(&9));
+    }
+
+    #[test]
     fn parse_enum() {
         let result = parse_element(Some("4,8,16,32,64"), 0, 99);
 
