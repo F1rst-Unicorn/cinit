@@ -1,0 +1,14 @@
+programs:
+  - name: first
+    path: echo
+
+  - name: cronjob
+    path: echo
+    type:
+      cronjob:
+        timer: "0 0 * * *"
+
+  - name: second
+    after:
+      - first
+    path: echo
