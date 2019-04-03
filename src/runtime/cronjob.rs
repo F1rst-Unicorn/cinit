@@ -4,22 +4,22 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
-use time::Duration;
-use time::Tm;
+use chrono::prelude::{DateTime, Local};
+use chrono::{Datelike, Duration, Timelike};
 
 use log::debug;
 
 #[derive(Debug)]
 pub struct TimerDescription {
-    minute: BTreeSet<i32>,
+    minute: BTreeSet<u32>,
 
-    hour: BTreeSet<i32>,
+    hour: BTreeSet<u32>,
 
-    day: BTreeSet<i32>,
+    day: BTreeSet<u32>,
 
-    month: BTreeSet<i32>,
+    month: BTreeSet<u32>,
 
-    weekday: BTreeSet<i32>,
+    weekday: BTreeSet<u32>,
 }
 
 impl TimerDescription {
@@ -31,10 +31,7 @@ impl TimerDescription {
             day: parse_element(iter.next(), 1, 31)?,
 
             // account for zero-basing in struct Tm
-            month: parse_element(iter.next(), 1, 12)?
-                .iter()
-                .map(|i| i - 1)
-                .collect(),
+            month: parse_element(iter.next(), 1, 12)?,
             weekday: parse_element(iter.next(), 0, 6)?,
         });
 
@@ -45,19 +42,20 @@ impl TimerDescription {
         }
     }
 
-    pub fn get_next_execution(&self, from_timepoint: Tm) -> Tm {
+    pub fn get_next_execution(&self, from_timepoint: DateTime<Local>) -> DateTime<Local> {
         let mut result = from_timepoint;
         let mut carry = 0;
 
-        result.tm_min = match self.minute.range((from_timepoint.tm_min + 1)..).next() {
+        let min = match self.minute.range((from_timepoint.minute() + 1u32)..).next() {
             Some(&min) => min,
             None => {
                 carry = 1;
                 *self.minute.iter().next().unwrap()
             }
         };
+        result = result.with_minute(min).unwrap();
 
-        result.tm_hour = match self.hour.range((from_timepoint.tm_hour + carry)..).next() {
+        let hour = match self.hour.range((from_timepoint.hour() + carry)..).next() {
             Some(&h) => {
                 carry = 0;
                 h
@@ -67,17 +65,18 @@ impl TimerDescription {
                 *self.hour.iter().next().unwrap()
             }
         };
+        result = result.with_hour(hour).unwrap();
 
         let next_weekday = match self
             .weekday
-            .range((from_timepoint.tm_wday + carry)..)
+            .range((from_timepoint.weekday().num_days_from_sunday() + carry)..)
             .next()
         {
             Some(&day) => day,
             None => *self.weekday.iter().next().unwrap(),
         };
 
-        let next_day = match self.day.range((from_timepoint.tm_mday + carry)..).next() {
+        let next_day = match self.day.range((from_timepoint.day() + carry)..).next() {
             Some(&day) => {
                 carry = 0;
                 day
@@ -88,7 +87,7 @@ impl TimerDescription {
             }
         };
 
-        let next_month = match self.month.range((from_timepoint.tm_mon + carry)..).next() {
+        let next_month = match self.month.range((from_timepoint.month() + carry)..).next() {
             Some(&month) => {
                 carry = 0;
                 month
@@ -102,36 +101,38 @@ impl TimerDescription {
         let weekday_relevant = self.weekday.len() != 7;
         let date_relevant = self.day.len() != 31 || self.month.len() != 12;
 
-        let week_duration = Duration::days(i64::from(if next_weekday < result.tm_wday {
-            7 - (result.tm_wday - next_weekday)
-        } else {
-            next_weekday - result.tm_wday
-        }));
+        let week_duration = Duration::days(i64::from(
+            if next_weekday < result.weekday().num_days_from_sunday() {
+                7 - (result.weekday().num_days_from_sunday() - next_weekday)
+            } else {
+                next_weekday - result.weekday().num_days_from_sunday()
+            },
+        ));
 
         let mut date_duration = Duration::days(i64::from(carry) * 365 as i64);
         if date_relevant {
             // only compute this if really needed
             let mut tmp = result + date_duration;
-            while tmp.tm_mday != next_day || tmp.tm_mon != next_month {
+            while tmp.day() != next_day || tmp.month() != next_month {
                 date_duration = date_duration + Duration::days(1);
                 tmp = result + date_duration;
             }
         }
 
         if weekday_relevant && date_relevant {
-            (result + std::cmp::min(week_duration, date_duration)).to_local()
+            result + std::cmp::min(week_duration, date_duration)
         } else if !weekday_relevant && date_relevant {
-            (result + date_duration).to_local()
+            result + date_duration
         } else {
             // For only weekday_relevant this is obviously the result
             // If none of the flags are set, any day works which is expressed
             // already by the week_duration
-            (result + week_duration).to_local()
+            result + week_duration
         }
     }
 }
 
-fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32>, String> {
+fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32>, String> {
     if min > max {
         return Err("Invalid range given".to_string());
     }
@@ -155,13 +156,13 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                     let interval = values.next().ok_or("Invalid timespec")?;
 
                     let step = if let Some(step) = values.next() {
-                        step.parse::<i32>().map_err(|_| "Invalid step number")?
+                        step.parse::<u32>().map_err(|_| "Invalid step number")?
                     } else {
                         1
                     };
 
-                    let begin: i32;
-                    let end: i32;
+                    let begin: u32;
+                    let end: u32;
                     if interval == "*" {
                         begin = min;
                         end = max;
@@ -170,12 +171,12 @@ fn parse_element(input: Option<&str>, min: i32, max: i32) -> Result<BTreeSet<i32
                         begin = interval_split
                             .next()
                             .ok_or("Invalid timespec")?
-                            .parse::<i32>()
+                            .parse::<u32>()
                             .map_err(|_| "Invalid number")?;
 
                         if let Some(end_str) = interval_split.next() {
                             end = end_str
-                                .parse::<i32>()
+                                .parse::<u32>()
                                 .map_err(|_| "Invalid number in end of interval")?;
                         } else {
                             end = begin;
@@ -216,7 +217,7 @@ pub enum Error {
 pub struct Cron {
     timers: HashMap<usize, TimerDescription>,
 
-    timer: BTreeMap<Tm, usize>,
+    timer: BTreeMap<DateTime<Local>, usize>,
 }
 
 impl Cron {
@@ -234,11 +235,11 @@ impl Cron {
 
             let time_desc =
                 TimerDescription::parse(&raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
-            let next_execution = time_desc.get_next_execution(time::now());
+            let next_execution = time_desc.get_next_execution(Local::now());
             debug!(
                 "Scheduled execution of '{}' at {}",
                 program_config.name,
-                time::strftime("%FT%T", &next_execution).unwrap()
+                &next_execution.to_rfc3339()
             );
             result.timer.insert(next_execution, *id);
             result.timers.insert(*id, time_desc);
@@ -247,7 +248,7 @@ impl Cron {
         Ok(result)
     }
 
-    pub fn pop_runnable(&mut self, now: Tm) -> Option<usize> {
+    pub fn pop_runnable(&mut self, now: DateTime<Local>) -> Option<usize> {
         let next_job = self.timer.iter().next().map(|t| (*t.0, *t.1));
 
         if let Some((next_exec_time, process_id)) = next_job {
@@ -256,7 +257,7 @@ impl Cron {
                 let next_execution = self.timers[&process_id].get_next_execution(now);
                 debug!(
                     "Scheduled next execution at {}",
-                    time::strftime("%FT%T", &next_execution).unwrap()
+                    &next_execution.to_rfc3339()
                 );
                 self.timer.insert(next_execution, process_id);
                 Some(process_id)
@@ -272,7 +273,7 @@ impl Cron {
         self.timers.contains_key(&id)
     }
 
-    pub fn get_next_execution(&self, id: usize) -> Tm {
+    pub fn get_next_execution(&self, id: usize) -> DateTime<Local> {
         for (time, item_id) in &self.timer {
             if id == *item_id {
                 return *time;
@@ -285,7 +286,7 @@ impl Cron {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use time::*;
+    use chrono::offset::TimeZone;
 
     #[test]
     fn parse_star() {
@@ -528,7 +529,7 @@ mod tests {
         assert_eq!(1, timer.day.len());
         assert!(timer.day.contains(&3));
         assert_eq!(1, timer.month.len());
-        assert!(timer.month.contains(&3));
+        assert!(timer.month.contains(&4));
         assert_eq!(1, timer.weekday.len());
         assert!(timer.weekday.contains(&5));
     }
@@ -546,7 +547,7 @@ mod tests {
         assert_eq!(1, timer.day.len());
         assert!(timer.day.contains(&3));
         assert_eq!(1, timer.month.len());
-        assert!(timer.month.contains(&3));
+        assert!(timer.month.contains(&4));
         assert_eq!(1, timer.weekday.len());
         assert!(timer.weekday.contains(&5));
     }
@@ -575,7 +576,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::minutes(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::minutes(1), result);
     }
 
     #[test]
@@ -584,7 +585,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::minutes(2)).to_local(), result);
+        assert_eq!(mock_time() + Duration::minutes(2), result);
     }
 
     #[test]
@@ -593,7 +594,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::minutes(59)).to_local(), result);
+        assert_eq!(mock_time() + Duration::minutes(59), result);
     }
 
     #[test]
@@ -602,7 +603,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::hours(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::hours(1), result);
     }
 
     #[test]
@@ -611,7 +612,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::hours(2)).to_local(), result);
+        assert_eq!(mock_time() + Duration::hours(2), result);
     }
 
     #[test]
@@ -620,7 +621,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::hours(23)).to_local(), result);
+        assert_eq!(mock_time() + Duration::hours(23), result);
     }
 
     #[test]
@@ -629,7 +630,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(1), result);
     }
 
     #[test]
@@ -638,7 +639,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(2)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(2), result);
     }
 
     #[test]
@@ -647,7 +648,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(29)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(29), result);
     }
 
     #[test]
@@ -656,7 +657,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(30)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(30), result);
     }
 
     #[test]
@@ -665,7 +666,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(30 + 31)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(30 + 31), result);
     }
 
     #[test]
@@ -674,7 +675,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(365)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(365), result);
     }
 
     #[test]
@@ -683,7 +684,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(1), result);
     }
 
     #[test]
@@ -692,7 +693,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(2)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(2), result);
     }
 
     #[test]
@@ -701,7 +702,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(6)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(6), result);
     }
 
     #[test]
@@ -710,7 +711,7 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(1), result);
     }
 
     #[test]
@@ -719,12 +720,12 @@ mod tests {
 
         let result = uut.unwrap().get_next_execution(mock_time());
 
-        assert_eq!((mock_time() + Duration::days(1)).to_local(), result);
+        assert_eq!(mock_time() + Duration::days(1), result);
     }
 
     // Return 1970-06-15T12:30:00 CET Monday
-    fn mock_time() -> Tm {
-        time::at(Timespec::new(14297400, 0))
+    fn mock_time() -> DateTime<Local> {
+        Local.timestamp(14297400, 0)
     }
 
 }

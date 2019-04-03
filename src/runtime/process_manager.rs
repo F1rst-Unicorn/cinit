@@ -20,6 +20,8 @@ use nix::sys::wait;
 use nix::unistd;
 use nix::unistd::Pid;
 
+use chrono::prelude::Local;
+
 use log::{debug, error, info, trace, warn};
 
 const SOCKET_PATH: &str = "/run/cinit.socket";
@@ -366,7 +368,7 @@ impl ProcessManager {
             if self.cron.is_cronjob(id) {
                 file.write_fmt(format_args!(
                     "    scheduled_at: '{}'\n",
-                    time::strftime("%FT%T", &self.cron.get_next_execution(id)).unwrap()
+                    &self.cron.get_next_execution(id).to_rfc3339()
                 ))
                 .map_err(libc_helpers::map_to_errno)?;
             }
@@ -403,7 +405,7 @@ impl ProcessManager {
             self.spawn_child(child_index);
         }
 
-        while let Some(child_index) = self.cron.pop_runnable(time::now()) {
+        while let Some(child_index) = self.cron.pop_runnable(Local::now()) {
             self.spawn_child(child_index);
         }
     }
