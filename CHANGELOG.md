@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Release [1.2.4]
+
 ### Fixed
 
 * Fix panic when having cronjobs between dependent applications
