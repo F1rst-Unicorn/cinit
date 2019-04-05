@@ -241,7 +241,7 @@ impl Cron {
                 program_config.name,
                 &next_execution.to_rfc3339()
             );
-            result.timer.insert(next_execution, *id);
+            result.insert_job(next_execution, *id);
             result.timers.insert(*id, time_desc);
         }
 
@@ -259,7 +259,7 @@ impl Cron {
                     "Scheduled next execution at {}",
                     &next_execution.to_rfc3339()
                 );
-                self.timer.insert(next_execution, process_id);
+                self.insert_job(next_execution, process_id);
                 Some(process_id)
             } else {
                 None
@@ -280,6 +280,13 @@ impl Cron {
             }
         }
         panic!("Queried cron manager with invalid id");
+    }
+
+    fn insert_job(&mut self, mut next_execution: DateTime<Local>, id: usize) {
+        while self.timer.contains_key(&next_execution) {
+            next_execution = next_execution + Duration::nanoseconds(1);
+        }
+        self.timer.insert(next_execution, id);
     }
 }
 
@@ -728,4 +735,22 @@ mod tests {
         Local.timestamp(14297400, 0)
     }
 
+    #[test]
+    fn cronjobs_at_same_time_are_both_executed() {
+        // setup two jobs at precisely the same time
+        let mut timer: BTreeMap<DateTime<Local>, usize> = BTreeMap::new();
+        let mut timers: HashMap<usize, TimerDescription> = HashMap::new();
+        timers.insert(1, TimerDescription::parse("* * * * *").unwrap());
+        timers.insert(2, TimerDescription::parse("* * * * *").unwrap());
+        timer.insert(mock_time() - Duration::minutes(1), 1);
+        timer.insert(mock_time() - Duration::minutes(2), 2);
+        let mut cron = Cron { timers, timer };
+
+        // run the two jobs
+        cron.pop_runnable(mock_time()).expect("Job is missing");
+        cron.pop_runnable(mock_time()).expect("Job is missing");
+
+        // make sure both jobs are scheduled again
+        assert_eq!(2, cron.timer.len());
+    }
 }

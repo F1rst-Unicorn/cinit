@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+* Fix accidental dropping of cronjobs
+  ([#35](https://gitlab.com/veenj/cinit/issues/35))
+
 ## Release [1.2.4]
 
 ### Fixed
