@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::process::exit;
+use std::result::Result;
 
 use serde_yaml;
 
@@ -28,7 +29,7 @@ fn parse_raw_config(raw_config: &[String]) -> Config {
     let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
     let parse_errors: Vec<serde_yaml::Result<Config>> =
-        parse_result.clone().filter(|s| s.is_err()).collect();
+        parse_result.clone().filter(Result::is_err).collect();
 
     if !parse_errors.is_empty() {
         error!("Could not parse config: ");
@@ -39,7 +40,7 @@ fn parse_raw_config(raw_config: &[String]) -> Config {
         exit(EXIT_CODE);
     } else {
         parse_result
-            .map(|s| s.unwrap())
+            .map(Result::unwrap)
             .fold(Config::new(), Config::merge)
     }
 }

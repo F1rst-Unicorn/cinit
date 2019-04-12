@@ -104,23 +104,19 @@ impl Process {
                 unistd::close(stderr.1)?;
                 Ok((child_pid, stdout.0, stderr.0))
             }
-            Ok(unistd::ForkResult::Child) => {
-                match self.setup_child(stdout.1, stderr.1) {
-                    Ok(_) => {
-                        assert!(false, "exec() was successful but did not replace program");
-                        // Intentionally other exit code as this is the child
-                        exit(1);
-                    }
-                    Err(nix::Error::Sys(errno)) => {
-                        println!("Could not exec child {}: {}", self.name, errno.desc());
-                        exit(EXIT_CODE);
-                    }
-                    _ => {
-                        println!("Could not exec child {}", self.name);
-                        exit(EXIT_CODE);
-                    }
+            Ok(unistd::ForkResult::Child) => match self.setup_child(stdout.1, stderr.1) {
+                Ok(_) => {
+                    panic!("exec() was successful but did not replace program");
                 }
-            }
+                Err(nix::Error::Sys(errno)) => {
+                    println!("Could not exec child {}: {}", self.name, errno.desc());
+                    exit(EXIT_CODE);
+                }
+                _ => {
+                    println!("Could not exec child {}", self.name);
+                    exit(EXIT_CODE);
+                }
+            },
             _ => {
                 error!("Forking failed");
                 exit(EXIT_CODE)
