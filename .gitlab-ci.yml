@@ -12,12 +12,18 @@ build-debug:
   stage: build-debug
   script:
     - scripts/local/build
+  artifacts:
+    paths:
+      - target/path/cinit
 
 build-release:
   stage: build-release
   script:
     - export BUILD_FLAGS="--release"
     - scripts/local/build
+  artifacts:
+    paths:
+      - target/path/cinit
   only:
     - tags
 
