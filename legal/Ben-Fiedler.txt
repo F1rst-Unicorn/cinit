@@ -1,0 +1,23 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+Hiermit bestätige ich, Ben Fiedler, dass ich einverstanden damit bin, cinit auf
+die "GNU GPLv3 or later" [1] umzulizensieren.
+
+[1]: https://www.gnu.org/licenses/gpl-3.0.en.html
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEbmhfr/Gs8leixAxJgZB9+iiZvgUFAlzb1tkACgkQgZB9+iiZ
+vgW/9A//SPixOCLC9ePuXMN8Xxtr44+NA5kKuL3Wy1xMw50e7dtNqb6ttlFiUsVl
+HbpQS3DLNJH74Yda82rqUo3u3ckhqSCU76ZG1OogrurgZubKu1fHD4ZppEEHf1ZD
+6A30OWHhVQhOwEgSzxg+B+DlOfW/+Y3a33nn2YsQknwXLjH2c6uWpQxvqaVbYvfM
+SZZIaCatd1sNJPHs+y4Mfy4sbk9g2VXgPa90UCgVom8a4RxoPUe5Wx4p8uhD9yPQ
+Zkvw6aj9sXHdXAwNgFDNYciGXKjqiG5TuZXaJ/89tEOVmUa2WLNvwZh7/HszTKnB
+hvfMySFBcm3kQVwTCSE06EYO3ro15B1GRlCxksjM8+eIkZsjjHx3370qG/QFiIzG
+HBfydA4d9cb/L1nQe41ghASUGsjHe+TQSxtA8eh8MMMZFIjGgVGiSgHpoOVJo3Z7
+ZVrhiqcoIDutMsOrFvRAketA+zAf07AOJG4kGUWYnTiPCBjYjVHRyEXLOCP+5x3W
+DncWJfiS4FT8xiW6xieb/xYSxPbqDvm7QxaeOovDNLpkl9nnS/rUSJ3vJzCrxP1u
+WJ2HW5xy3u6DUisGQF8VYUt4C2qXxZCn9Mo99iNoz5FI6wQYRZGSEXXB46fuhwFf
+ItXYTLLfDHUeIsA5QCF+J/JsJU9Ufu3iV8wjf1pFiWdA0AfDlxk=
+=XK5/
+-----END PGP SIGNATURE-----

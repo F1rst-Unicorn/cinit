@@ -5,7 +5,7 @@ authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
            "Jan Veen <jan.veen@posteo.de>",
            "Ben Fiedler <ben@sjfiedler.de>"]
 description = "Init program for UNIX processes"
-license-file = "LICENSE"
+license = "GPL-3.0-or-later"
 build = "build.rs"
 edition = "2018"
 
