@@ -24,7 +24,6 @@ use std::io::Error;
 use std::os::unix::io::RawFd;
 use std::ptr;
 
-use nix::convert_ioctl_res;
 use nix::errno;
 use nix::ioctl_read_bad;
 use nix::pty;
