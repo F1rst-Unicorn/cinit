@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Release [1.2.6]
+
+### Maintenance
+
+* Update to Rust 1.36
+
+* Update library dependencies
+
 ## Release [1.2.5]
 
 ### Fixed
