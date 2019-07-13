@@ -49,7 +49,6 @@ impl ProcessNode {
 #[derive(Debug, PartialEq)]
 pub enum Error {
     Cycle(usize),
-    Duplicate(usize),
     UnknownAfterReference(usize, usize),
     UnknownBeforeReference(usize, usize),
 }
@@ -184,7 +183,10 @@ impl DependencyManager {
 
         for (i, desc) in descriptions {
             if result.contains_key(&desc.name) {
-                return Err(Error::Duplicate(*i));
+                panic!(
+                    "Duplicate name {} should have already been eliminated",
+                    desc.name
+                );
             } else {
                 result.insert(desc.name.to_owned(), *i);
             }
@@ -245,16 +247,14 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
     pub fn duplicate_name() {
         let config = vec![
             (0, ProcessConfig::new("first", vec![], vec![])),
             (1, ProcessConfig::new("first", vec![], vec![])),
         ];
 
-        let uut = DependencyManager::with_nodes(&config);
-
-        assert!(uut.is_err());
-        assert!(Err(Error::Duplicate(0)) == uut || Err(Error::Duplicate(1)) == uut);
+        let _ = DependencyManager::with_nodes(&config);
     }
 
     #[test]
@@ -300,7 +300,7 @@ mod tests {
         pub fn new(name: &str, before: Vec<&str>, after: Vec<&str>) -> ProcessConfig {
             ProcessConfig {
                 name: name.to_string(),
-                path: "".to_string(),
+                path: Some("".to_string()),
                 args: vec![],
                 workdir: None,
                 process_type: ProcessType::Oneshot,

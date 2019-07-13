@@ -169,6 +169,60 @@ their `name` field.
 If the dependencies form a cycle, this is reported before any process is
 started and cinit terminates.
 
+## Advanced Features
+
+### Merging configuration
+
+Each program is identified by a name. Several programs containing the same name
+will be merged into a single program configuration. This is especially useful if
+cinit is configured to read the configuration from a directory. The fields which
+are allowed in more than only one place are listed below. All other fields are
+only permitted in one location.
+
+#### `env`
+
+All list entries will be merged into a single list. The order of the sublists is
+not defined. The order of entries within one list will be preserved. This has
+some implications:
+
+* When specifying duplicate keys, the value is taken from one of the duplicates
+  but it's not defined, which one.
+
+* When using a key from one location in the template of a different key, the
+  result can be either the template without variable substitution or a
+  successful substitution. It is not guaranteed to be consistent.
+
+#### `before` and `after`
+
+All list entries will be merged into a single list. The dependencies will be
+treated according to this merged list. Duplicates are handled by cinit.
+
+#### `capabilities`
+
+All list entries will be merged into a single list. Capabilities will be granted
+according to this merged list. Duplicates are handled by cinit.
+
+#### `args`
+
+All list entries will be merged into a single list. The list from the location
+containing a `path` entry is always put first. Apart from that there are no
+guarantees on the order of the lists. The order of entries within one sublist
+will be preserved. Arguments can use environment variables from any location
+specifying environment variables. The same implications about duplicate
+environment variables as in `env` do apply.
+
+#### `type`
+
+Setting a type other than `oneshot` is only allowed in the list entry which also
+contains the `path` (the so called primary list entry). If the primary is set to
+a different value than `oneshot` it is not possible to change it from a
+different list entry.
+
+#### `pty`
+
+The logical disjunction of all flags is computed, with `false` as the default if
+none is given.
+
 ## Usage
 
 ```text

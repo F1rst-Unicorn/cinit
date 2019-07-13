@@ -84,16 +84,6 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
                     config.programs[id].name
                 );
             }
-            Error::Duplicate(id) => {
-                error!(
-                    "Duplicate program found for name {}",
-                    config.programs[id].name
-                );
-                trace!(
-                    "Duplicate program found for name {}",
-                    config.programs[id].name
-                );
-            }
             Error::UnknownAfterReference(prog_index, after_index) => {
                 error!(
                     "Unknown 'after' dependency '{}' of program {}",

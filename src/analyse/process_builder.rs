@@ -34,6 +34,7 @@ use nix::unistd::Uid;
 pub enum Error {
     CronjobDependency,
     UserGroupInvalid,
+    PathMissing,
 }
 
 impl Display for Error {
@@ -41,6 +42,7 @@ impl Display for Error {
         let message = match self {
             Error::CronjobDependency => "Cronjobs may not have dependencies",
             Error::UserGroupInvalid => "User/Group config invalid",
+            Error::PathMissing => "Missing 'path' attribute",
         };
 
         write!(f, "{}", message)
@@ -60,9 +62,13 @@ impl Process {
 
         let env = convert_env(&config.env, uid);
 
+        if config.path.is_none() {
+            return Err(Error::PathMissing);
+        }
+
         let mut result = Process {
             name: config.name.to_owned(),
-            path: config.path.to_owned(),
+            path: config.path.to_owned().expect("was checked above"),
             args: Vec::new(),
             workdir: PathBuf::from(match &config.workdir {
                 None => ".",

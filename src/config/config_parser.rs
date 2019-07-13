@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
 use std::io;
@@ -27,6 +28,7 @@ use serde_yaml;
 use log::{debug, error, trace, warn};
 
 use crate::config::Config;
+use crate::config::ProcessConfig;
 
 const EXIT_CODE: i32 = 1;
 
@@ -39,27 +41,9 @@ pub fn parse_config(path: &str) -> Config {
             .flat_map(|s| s.chars())
             .collect::<String>()
     );
-    parse_raw_config(&raw_config)
-}
+    let config = parse_raw_config(&raw_config);
 
-fn parse_raw_config(raw_config: &[String]) -> Config {
-    let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
-
-    let parse_errors: Vec<serde_yaml::Result<Config>> =
-        parse_result.clone().filter(Result::is_err).collect();
-
-    if !parse_errors.is_empty() {
-        error!("Could not parse config: ");
-        for error in parse_errors {
-            error!("{:#?}", error.unwrap_err());
-        }
-        trace!("Error in configuration file");
-        exit(EXIT_CODE);
-    } else {
-        parse_result
-            .map(Result::unwrap)
-            .fold(Config::new(), Config::merge)
-    }
+    merge_dropins(config)
 }
 
 pub fn read_config(path: &str) -> Vec<String> {
@@ -119,6 +103,54 @@ pub fn read_config(path: &str) -> Vec<String> {
     result
 }
 
+fn parse_raw_config(raw_config: &[String]) -> Config {
+    let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
+
+    let parse_errors: Vec<serde_yaml::Result<Config>> =
+        parse_result.clone().filter(Result::is_err).collect();
+
+    if !parse_errors.is_empty() {
+        error!("Could not parse config: ");
+        for error in parse_errors {
+            error!("{:#?}", error.unwrap_err());
+        }
+        trace!("Error in configuration file");
+        exit(EXIT_CODE);
+    } else {
+        parse_result
+            .map(Result::unwrap)
+            .fold(Config::new(), Config::merge)
+    }
+}
+
+fn merge_dropins(config: Config) -> Config {
+    let mut dict: HashMap<String, ProcessConfig> = HashMap::new();
+
+    for process_config in config.programs {
+        match dict.remove(&process_config.name) {
+            Some(process) => {
+                let merged = process.merge(process_config);
+
+                if let Err(e) = merged {
+                    error!("{}", e);
+                    trace!("{}", e);
+                    exit(EXIT_CODE);
+                }
+
+                let merged = merged.unwrap();
+                dict.insert(merged.name.to_owned(), merged);
+            }
+            None => {
+                dict.insert(process_config.name.to_owned(), process_config);
+            }
+        };
+    }
+    let processes = dict.drain().map(|(_, v)| v).collect();
+    Config {
+        programs: processes,
+    }
+}
+
 pub fn read_file(file_path: &str) -> Result<String, io::Error> {
     let mut file = File::open(file_path)?;
     let mut content = String::new();
@@ -148,9 +180,9 @@ mod tests {
 
         let program = &output.programs[0];
         assert_eq!("test", program.name);
-        assert_eq!("/some/path", program.path);
+        assert_eq!(Some("/some/path".to_owned()), program.path);
         assert_eq!(Vec::new() as Vec<String>, program.args);
-        assert_eq!(Some("/hello/path".to_string()), program.workdir);
+        assert_eq!(Some("/hello/path".to_owned()), program.workdir);
         assert_eq!(ProcessType::Oneshot, program.process_type);
         assert_eq!(Some(3), program.uid);
         assert_eq!(Some(1), program.gid);
@@ -171,7 +203,7 @@ mod tests {
 
         let program = &output.programs[0];
         assert_eq!("test", program.name);
-        assert_eq!("/path", program.path);
+        assert_eq!(Some("/path".to_owned()), program.path);
         assert_eq!(Vec::new() as Vec<String>, program.args);
         assert_eq!(None, program.workdir);
         assert_eq!(ProcessType::Oneshot, program.process_type);
@@ -197,7 +229,7 @@ mod tests {
 
         let program = &output.programs[0];
         assert_eq!("test", program.name);
-        assert_eq!("/path", program.path);
+        assert_eq!(Some("/path".to_owned()), program.path);
         assert_eq!(
             ProcessType::CronJob {
                 timer: "1 2 3 4 5".to_string()
