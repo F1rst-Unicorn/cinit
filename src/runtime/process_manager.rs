@@ -132,6 +132,7 @@ impl ProcessManager {
 
         if child_index_option.is_none() {
             info!("Reaped zombie process {} with return code {}", pid, rc);
+            trace!("Reaped zombie process {} with return code {}", pid, rc);
             return;
         }
 
@@ -190,6 +191,7 @@ impl ProcessManager {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
         self.status_fd = self.setup_status_fd()?;
         self.epoll_fd = self.setup_epoll_fd()?;
+        libc_helpers::prctl_one(libc::PR_SET_CHILD_SUBREAPER, 1)?;
         Ok(())
     }
 

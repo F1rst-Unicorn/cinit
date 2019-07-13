@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Added
+
+* Let cinit always inherit zombie processes left by its children
+  ([#37](https://gitlab.com/veenj/cinit/issues/37))
+
 ## Release [1.2.6]
 
 ### Maintenance

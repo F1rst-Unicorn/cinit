@@ -240,6 +240,15 @@ class Exited(RegexMatcher):
         return self.regex
 
 
+class ZombieReaped(RegexMatcher):
+    def __init__(self):
+        super(ZombieReaped, self).__init__(
+                "Reaped zombie process.*")
+
+    def __str__(self):
+        return self.regex
+
+
 class ConfigError(RegexMatcher):
     def __init__(self):
         super(ConfigError, self).__init__(
