@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Let cinit always inherit zombie processes left by its children
   ([#37](https://gitlab.com/veenj/cinit/issues/37))
 
-* Implement drop-in configuration
+* Implement
+  [drop-in configuration](https://gitlab.com/veenj/cinit/tree/master/doc#merging-configuration)
   ([#36](https://gitlab.com/veenj/cinit/issues/36))
 
 ## Release [1.2.6]
