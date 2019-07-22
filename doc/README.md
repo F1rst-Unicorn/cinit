@@ -166,6 +166,25 @@ fields. Dependant processes will only be started once all their
 dependencies have terminated. Refer to other programs in the config via
 their `name` field.
 
+The direction of a dependency is taken from the view of the program currently
+being configured. E.g. the configuration
+
+```yaml
+  - name: current
+    before:
+      - other
+```
+
+reads as "`current` runs before `other`". Similarly
+
+```yaml
+  - name: current
+    after:
+      - other
+```
+
+reads as "`current` runs after `other`"
+
 If the dependencies form a cycle, this is reported before any process is
 started and cinit terminates.
 
