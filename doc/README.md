@@ -245,7 +245,7 @@ none is given.
 ## Usage
 
 ```text
-cinit 1.3.0
+cinit 1.3.1
 init daemon for other programs, suitable for containers
 
 USAGE:
