@@ -5,6 +5,12 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Release [1.3.2]
+
+### Maintenance
+
+* Update library dependencies
+
 ## Release [1.3.1]
 
 ### Maintenance

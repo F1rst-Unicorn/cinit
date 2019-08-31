@@ -225,7 +225,7 @@ fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result
     for (key, value) in context {
         internal_context.insert(key, value);
     }
-    tera.render(name, &context).map_err(|_| ())
+    tera.render(name, internal_context).map_err(|_| ())
 }
 
 #[cfg(test)]
