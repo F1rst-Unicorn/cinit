@@ -49,12 +49,8 @@ pub fn parse_config(path: &str) -> Config {
 pub fn read_config(path: &str) -> Vec<String> {
     let metadata_result = fs::metadata(path);
 
-    if metadata_result.is_err() {
-        error!(
-            "Failed to read metadata of {}: {}",
-            path,
-            metadata_result.unwrap_err()
-        );
+    if let Err(err) = metadata_result {
+        error!("Failed to read metadata of {}: {}", path, err);
         exit(EXIT_CODE);
     }
 
@@ -63,20 +59,16 @@ pub fn read_config(path: &str) -> Vec<String> {
 
     if metadata.file_type().is_dir() {
         let content = fs::read_dir(path);
-        if content.is_err() {
-            error!(
-                "Failed to get directory content of {}: {}",
-                path,
-                content.unwrap_err()
-            );
+        if let Err(err) = content {
+            error!("Failed to get directory content of {}: {}", path, err);
             exit(EXIT_CODE);
         }
 
         result = Vec::new();
 
         for entry in content.unwrap() {
-            if entry.is_err() {
-                error!("Failed to read {}: {}", path, entry.unwrap_err());
+            if let Err(err) = entry {
+                error!("Failed to read {}: {}", path, err);
                 exit(EXIT_CODE);
             }
             let entry_path = entry.unwrap().path();
@@ -274,5 +266,4 @@ programs:
       - key: value
       - empty_key:
 ";
-
 }

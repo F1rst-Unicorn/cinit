@@ -148,8 +148,7 @@ impl Process {
             self.create_pipes()
         };
 
-        if result.is_ok() {
-            let fds = result.unwrap();
+        if let Ok(fds) = result {
             fcntl::fcntl(
                 (fds.0).0,
                 fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),

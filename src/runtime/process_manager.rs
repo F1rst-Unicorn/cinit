@@ -401,8 +401,8 @@ impl ProcessManager {
         let mut buffer = [0 as u8; 4096];
         let length = unistd::read(fd, &mut buffer);
 
-        if length.is_ok() {
-            let raw_output = String::from_utf8_lossy(&buffer[..length.unwrap()]);
+        if let Ok(length) = length {
+            let raw_output = String::from_utf8_lossy(&buffer[..length]);
             let output = raw_output.lines();
             let is_stdout = self.process_map.is_stdout(fd);
             let child_name = &self.process_map.process_for_fd(fd).name;
@@ -446,8 +446,8 @@ impl ProcessManager {
         }
 
         child_result = child.start();
-        if child_result.is_err() {
-            error!("Failed to spawn child: {}", child_result.unwrap_err());
+        if let Err(child_result) = child_result {
+            error!("Failed to spawn child: {}", child_result);
             return;
         }
         let child = child_result.unwrap();

@@ -253,12 +253,12 @@ mod tests {
 
     #[test]
     fn testuser_homedir_is_correct() {
-        assert_eq!(Ok("/home/testuser".to_string()), uid_to_homedir(1409));;
+        assert_eq!(Ok("/home/testuser".to_string()), uid_to_homedir(1409));
     }
 
     #[test]
     fn invalid_user_homedir_is_reported() {
-        assert!(uid_to_homedir(1410).is_err());;
+        assert!(uid_to_homedir(1410).is_err());
     }
 
     #[test]
@@ -311,5 +311,4 @@ mod tests {
             assert_eq!("".to_string(), rescue_from_libc(input));
         }
     }
-
 }
