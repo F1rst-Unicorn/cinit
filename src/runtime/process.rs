@@ -30,6 +30,7 @@ use crate::util::libc_helpers::map_to_errno;
 use nix;
 use nix::fcntl;
 use nix::pty;
+use nix::sys::signal;
 use nix::sys::stat;
 use nix::sys::termios;
 use nix::unistd;
@@ -164,6 +165,9 @@ impl Process {
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
         while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
         while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
+
+        let signals = nix::sys::signal::SigSet::empty();
+        signal::sigprocmask(signal::SigmaskHow::SIG_SETMASK, Some(&signals), None)?;
 
         unistd::close(stdout)?;
         unistd::close(stderr)?;

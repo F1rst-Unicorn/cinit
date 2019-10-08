@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+* Don't mask signals in child processes
+  ([#38](https://gitlab.com/veenj/cinit/issues/38))
+
 ## Release [1.3.3]
 
 ### Maintenance
@@ -25,7 +30,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Release [1.3.0]
 
-## Added
+### Added
 
 * Let cinit always inherit zombie processes left by its children
   ([#37](https://gitlab.com/veenj/cinit/issues/37))
