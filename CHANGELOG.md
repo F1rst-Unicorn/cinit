@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Release [1.3.4]
+
 ### Fixed
 
 * Don't mask signals in child processes
