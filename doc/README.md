@@ -107,7 +107,7 @@ type:
     timer: 1 2 3 4 5
 ```
 
-See [`man cron`](https://manpages.debian.org/stretch/cron/crontab.5.en.html) for
+See [`man cron`](https://manpages.debian.org/buster/cron/crontab.5.en.html) for
 a description of the time format. A cronjob MUST NOT have dependencies.
 
 Cronjobs are not reentrant. This means if the timer specification wants the job
