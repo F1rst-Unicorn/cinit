@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## Release [1.3.5]
+
+### Maintenance
+
+* Update library dependencies
+
+* Fix linter issues of Rust 1.39
+
 ## Release [1.3.4]
 
 ### Fixed

@@ -32,7 +32,14 @@ use libc;
 
 const BUFFER_LENGTH: usize = 4096;
 
-ioctl_read_bad!(get_terminal_size, libc::TIOCGWINSZ, pty::Winsize);
+ioctl_read_bad! {
+    /// See `man 2 ioctl_tty` for general information about this call.
+    ///
+    /// # Safety
+    ///
+    /// Must be called with a valid file descriptor and a `&mut pty::Winsize`.
+    get_terminal_size, libc::TIOCGWINSZ, pty::Winsize
+}
 
 pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     unsafe {
