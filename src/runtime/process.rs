@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::ffi::CStr;
 use std::ffi::CString;
 use std::fmt::{Display, Error as FmtError, Formatter};
 use std::os::unix::io::AsRawFd;
@@ -181,8 +182,16 @@ impl Process {
 
         unistd::execvpe(
             &CString::new(self.path.to_owned()).unwrap(),
-            self.args.as_slice(),
-            self.env.as_slice(),
+            self.args
+                .iter()
+                .map(CString::as_c_str)
+                .collect::<Vec<&CStr>>()
+                .as_slice(),
+            self.env
+                .iter()
+                .map(CString::as_c_str)
+                .collect::<Vec<&CStr>>()
+                .as_slice(),
         )?;
         Ok(())
     }

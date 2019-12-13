@@ -15,6 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+use std::convert::TryFrom;
 use std::fs::remove_file;
 use std::io::Write;
 use std::os::unix::io::AsRawFd;
@@ -268,7 +269,7 @@ impl ProcessManager {
     fn handle_signal(&mut self) {
         match self.signal_fd.read_signal() {
             Ok(Some(signal)) => {
-                match signal::Signal::from_c_int(signal.ssi_signo as i32).unwrap() {
+                match signal::Signal::try_from(signal.ssi_signo as i32).unwrap() {
                     signal @ signal::SIGINT | signal @ signal::SIGQUIT => {
                         self.initiate_shutdown(signal);
                     }

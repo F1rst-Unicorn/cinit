@@ -24,11 +24,12 @@ use std::path::PathBuf;
 
 use crate::config::{ProcessConfig, ProcessType};
 use crate::runtime::process::{Process, ProcessState};
-use crate::util::libc_helpers;
 
 use nix::unistd::Gid;
+use nix::unistd::Group;
 use nix::unistd::Pid;
 use nix::unistd::Uid;
+use nix::unistd::User;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
@@ -57,10 +58,10 @@ impl Process {
             }
         }
 
-        let uid = Uid::from_raw(map_uid(config.uid, &config.user)?);
-        let gid = Gid::from_raw(map_gid(config.gid, &config.group)?);
+        let user = map_uid(config.uid, &config.user)?;
+        let group = map_gid(config.gid, &config.group)?;
 
-        let env = convert_env(&config.env, uid);
+        let env = convert_env(&config.env, &user);
 
         if config.path.is_none() {
             return Err(Error::PathMissing);
@@ -74,8 +75,8 @@ impl Process {
                 None => ".",
                 Some(path) => path,
             }),
-            uid,
-            gid,
+            uid: user.uid,
+            gid: group.gid,
             emulate_pty: config.emulate_pty,
             capabilities: config.capabilities.to_owned(),
             env: flatten_to_strings(&env),
@@ -103,66 +104,55 @@ impl Process {
     }
 }
 
-fn sanitise_env(env: &mut HashMap<String, String>, uid: Uid) {
-    let homedir = libc_helpers::uid_to_homedir(uid.as_raw()).expect("Could not transform homedir");
-    let username = libc_helpers::uid_to_user(uid.as_raw()).expect("Could not transform user name");
-
-    env.insert("HOME".to_string(), homedir.clone());
-    env.insert("PWD".to_string(), homedir.clone());
-    env.insert("USER".to_string(), username.clone());
-    env.insert("LOGNAME".to_string(), username.clone());
+fn sanitise_env(env: &mut HashMap<String, String>, user: &User) {
+    env.insert("HOME".to_string(), user.dir.to_string_lossy().to_string());
+    env.insert("PWD".to_string(), user.dir.to_string_lossy().to_string());
+    env.insert("USER".to_string(), user.name.clone());
+    env.insert("LOGNAME".to_string(), user.name.clone());
     env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
-fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<u32, Error> {
-    let mapped = map_unix_name(id, name, &libc_helpers::user_to_uid);
-    if let Ok(id) = mapped {
-        if libc_helpers::is_uid_valid(id) {
-            Ok(id)
-        } else {
-            Err(Error::UserGroupInvalid)
-        }
-    } else {
-        mapped
-    }
+fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
+    map_id(
+        id,
+        name,
+        |v| User::from_uid(Uid::from_raw(v)),
+        |v| User::from_name(v.as_str()),
+    )
 }
 
-fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<u32, Error> {
-    let mapped = map_unix_name(id, name, &libc_helpers::group_to_gid);
-    if let Ok(id) = mapped {
-        if libc_helpers::is_gid_valid(id) {
-            Ok(id)
-        } else {
-            Err(Error::UserGroupInvalid)
-        }
-    } else {
-        mapped
-    }
+fn map_gid(mut id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
+    map_id(
+        id,
+        name,
+        |v| Group::from_gid(Gid::from_raw(v)),
+        |v| Group::from_name(v.as_str()),
+    )
 }
 
-/// Can be used to get either user id or group id
-fn map_unix_name<T>(id: Option<u32>, name: &Option<String>, mapper: &T) -> Result<u32, Error>
+fn map_id<T, F, G>(
+    mut id: Option<u32>,
+    name: &Option<String>,
+    from_id: F,
+    from_name: G,
+) -> Result<T, Error>
 where
-    T: Fn(&str) -> nix::Result<u32>,
+    F: Fn(u32) -> Result<Option<T>, nix::Error>,
+    G: Fn(String) -> Result<Option<T>, nix::Error>,
 {
-    if id.is_some() && name.is_some() {
-        Err(Error::UserGroupInvalid)
-    } else if id.is_some() && name.is_none() {
-        Ok(id.unwrap())
-    } else if id.is_none() && name.is_some() {
-        let mapped = mapper(name.as_ref().unwrap());
-        match mapped {
-            Ok(id) => Ok(id),
-            Err(_) => Err(Error::UserGroupInvalid),
-        }
-    } else {
-        Ok(0)
+    match (id, name) {
+        (None, None) => id = Some(0),
+        (Some(_), Some(_)) => return Err(Error::UserGroupInvalid),
     }
+
+    let id = id.map(from_id).map(Result::ok).flatten().flatten();
+    let name = name.map(from_name).map(Result::ok).flatten().flatten();
+    id.or(name).ok_or(Error::UserGroupInvalid)
 }
 
-fn convert_env(env: &[HashMap<String, Option<String>>], uid: Uid) -> HashMap<String, String> {
+fn convert_env(env: &[HashMap<String, Option<String>>], user: &User) -> HashMap<String, String> {
     let mut result = get_default_env();
-    sanitise_env(&mut result, uid);
+    sanitise_env(&mut result, user);
     copy_from_config(env, result)
 }
 
@@ -250,7 +240,7 @@ mod tests {
 
     #[test]
     fn no_user_config_gives_root() {
-        let result = map_unix_name(None, &None, &libc_helpers::group_to_gid);
+        let result = map_uid(None, &None);
 
         assert!(result.is_ok());
         assert_eq!(0, result.unwrap());
@@ -258,11 +248,7 @@ mod tests {
 
     #[test]
     fn both_user_config_gives_error() {
-        let result = map_unix_name(
-            Some(1000),
-            &Some("builder".to_string()),
-            &libc_helpers::user_to_uid,
-        );
+        let result = map_uid(Some(1000), &Some("builder".to_string()));
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err());
@@ -270,11 +256,7 @@ mod tests {
 
     #[test]
     fn unknown_user_gives_error() {
-        let result = map_unix_name(
-            None,
-            &Some("unknownuser".to_string()),
-            &libc_helpers::user_to_uid,
-        );
+        let result = map_uid(None, &Some("unknownuser".to_string()));
 
         assert!(result.is_err());
         assert_eq!(Error::UserGroupInvalid, result.unwrap_err());
