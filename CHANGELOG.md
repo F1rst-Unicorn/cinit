@@ -9,6 +9,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Update library dependencies
 
+* Delegate user/group resolution to library
+  ([#18](https://gitlab.com/veenj/cinit/issues/18))
+
 ## Release [1.3.5]
 
 ### Maintenance
