@@ -16,6 +16,7 @@
  */
 
 use std::collections::HashMap;
+use std::convert;
 use std::ffi::CString;
 use std::fmt::Display;
 use std::fmt::Error as FmtError;
@@ -117,16 +118,16 @@ fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
         id,
         name,
         |v| User::from_uid(Uid::from_raw(v)),
-        |v| User::from_name(v.as_str()),
+        |v| User::from_name(v),
     )
 }
 
-fn map_gid(mut id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
+fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
     map_id(
         id,
         name,
         |v| Group::from_gid(Gid::from_raw(v)),
-        |v| Group::from_name(v.as_str()),
+        |v| Group::from_name(v),
     )
 }
 
@@ -138,15 +139,25 @@ fn map_id<T, F, G>(
 ) -> Result<T, Error>
 where
     F: Fn(u32) -> Result<Option<T>, nix::Error>,
-    G: Fn(String) -> Result<Option<T>, nix::Error>,
+    G: Fn(&String) -> Result<Option<T>, nix::Error>,
 {
-    match (id, name) {
-        (None, None) => id = Some(0),
-        (Some(_), Some(_)) => return Err(Error::UserGroupInvalid),
+    match (id, &name) {
+        (None, &None) => id = Some(0),
+        (Some(_), &Some(_)) => return Err(Error::UserGroupInvalid),
+        _ => {}
     }
 
-    let id = id.map(from_id).map(Result::ok).flatten().flatten();
-    let name = name.map(from_name).map(Result::ok).flatten().flatten();
+    let id = id
+        .map(from_id)
+        .map(Result::ok)
+        .and_then(convert::identity)
+        .and_then(convert::identity);
+    let name = name
+        .as_ref()
+        .map(from_name)
+        .map(Result::ok)
+        .and_then(convert::identity)
+        .and_then(convert::identity);
     id.or(name).ok_or(Error::UserGroupInvalid)
 }
 
@@ -243,7 +254,7 @@ mod tests {
         let result = map_uid(None, &None);
 
         assert!(result.is_ok());
-        assert_eq!(0, result.unwrap());
+        assert!(result.unwrap().uid.is_root());
     }
 
     #[test]
