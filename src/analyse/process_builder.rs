@@ -97,7 +97,7 @@ impl Process {
                 .args
                 .iter()
                 .map(|x| render_template(&env, x).unwrap_or_else(|_| x.clone()))
-                .map(|x| CString::new(x.clone()).expect("Could not unwrap arg"))
+                .map(|x| CString::new(x).expect("Could not unwrap arg"))
                 .collect(),
         );
 
@@ -175,10 +175,10 @@ fn get_default_env() -> HashMap<String, String> {
     for key in default_env.iter() {
         match std::env::var(key) {
             Err(_) => {
-                result.insert(key.to_string(), String::from(""));
+                result.insert((*key).to_string(), String::from(""));
             }
             Ok(real_value) => {
-                result.insert(key.to_string(), real_value);
+                result.insert((*key).to_string(), real_value);
             }
         }
     }

@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [1.3.6]
 
 ### Maintenance
 
@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Delegate user/group resolution to library
   ([#18](https://gitlab.com/veenj/cinit/issues/18))
+
+* Fix linter issues of Rust 1.40
 
 ## Release [1.3.5]
 

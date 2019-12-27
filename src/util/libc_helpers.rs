@@ -90,7 +90,6 @@ unsafe fn rescue_from_libc(string: *mut libc::c_char) -> String {
         .to_str()
         .expect("Could not rescue cstring")
         .to_string()
-        .clone()
 }
 
 #[cfg(test)]
