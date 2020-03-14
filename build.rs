@@ -14,8 +14,17 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
+extern crate vergen;
+
+use vergen::generate_cargo_keys;
+use vergen::ConstantsFlags;
 
 fn main() {
     println!("cargo:rustc-link-search=/usr/lib");
     println!("cargo:rustc-link-lib=static=cap");
+
+    let mut flags = ConstantsFlags::all();
+    flags.toggle(ConstantsFlags::REBUILD_ON_HEAD_CHANGE);
+
+    generate_cargo_keys(flags).expect("vergen could not generate flags");
 }

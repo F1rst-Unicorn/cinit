@@ -29,3 +29,6 @@ chrono = "0.4.6"
 version = "0.10.0"
 default-features = false
 features = ["file", "pattern_encoder", "console_appender"]
+
+[build-dependencies]
+vergen = "3"
