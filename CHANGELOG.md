@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Maintenance
+
+* Update library dependencies
+
 ### Added
 
 * `cinit --version` also prints the commit hash and date of the build
