@@ -28,7 +28,6 @@ use crate::util::libc_helpers;
 use crate::util::libc_helpers::get_terminal_size;
 use crate::util::libc_helpers::map_to_errno;
 
-use nix;
 use nix::fcntl;
 use nix::pty;
 use nix::sys::signal;

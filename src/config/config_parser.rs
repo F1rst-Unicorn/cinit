@@ -23,8 +23,6 @@ use std::io::Read;
 use std::process::exit;
 use std::result::Result;
 
-use serde_yaml;
-
 use log::{debug, error, trace, warn};
 
 use crate::config::Config;

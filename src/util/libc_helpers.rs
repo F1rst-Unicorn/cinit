@@ -27,8 +27,6 @@ use nix::errno;
 use nix::ioctl_read_bad;
 use nix::pty;
 
-use libc;
-
 ioctl_read_bad! {
     /// See `man 2 ioctl_tty` for general information about this call.
     ///
