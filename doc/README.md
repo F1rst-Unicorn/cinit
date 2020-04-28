@@ -148,9 +148,11 @@ Additional parameters may be specified. If no value is given, cinit will
 forward the value from its own environment. If the value is not present in
 cinit's environment, no value will be passed (instead of an empty one).
 
-The values of the variables support simple templating. Use `{{ VAR }}` to
+The values of the variables support templating by using the [tera
+library](https://tera.netlify.app/docs/). Use `{{ VAR }}` to
 refer to another variable in the environment. Note that `VAR` has to be
-defined before it can be referenced!
+defined before it can be referenced! For a complete reference and many more
+features follow the link to tera.
 
 ### Capabilities
 
