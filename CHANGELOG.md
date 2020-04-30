@@ -5,16 +5,23 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
-### Maintenance
-
-* Update library dependencies
+## [1.3.9]
 
 ### Added
 
 * `cinit --version` also prints the commit hash and date of the build
 
+* Publish [tera](https://tera.netlify.app/docs/) as part of the public API
+  ([#43](https://gitlab.com/veenj/cinit/issues/43))
+
 * Warn users about template errors
   ([#42](https://gitlab.com/veenj/cinit/issues/42))
+
+### Maintenance
+
+* Update library dependencies
+
+* Fix linter issues of Rust 1.41
 
 ## [1.3.8]
 
