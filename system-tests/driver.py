@@ -285,7 +285,43 @@ class UnknownBeforeDependencyError(RegexMatcher):
 class ChildCrashed(RegexMatcher):
     def __init__(self, name, rc):
         super(ChildCrashed, self).__init__(
-                "Child " + name + " crashed with {}".format(rc))
+                "Child {} crashed with {}".format(name, rc))
+
+    def __str__(self):
+        return self.regex
+
+
+class EnvVarTemplatingFailed(RegexMatcher):
+    def __init__(self, name):
+        super(EnvVarTemplatingFailed, self).__init__(
+                "Templating of environment variable {} failed.*".format(name))
+
+    def __str__(self):
+        return self.regex
+
+
+class EnvVarLooksLikeTemplate(RegexMatcher):
+    def __init__(self, name):
+        super(EnvVarLooksLikeTemplate, self).__init__(
+                "Environment variable {} looks like a tera template.*".format(name))
+
+    def __str__(self):
+        return self.regex
+
+
+class ArgumentTemplatingFailed(RegexMatcher):
+    def __init__(self, index):
+        super(ArgumentTemplatingFailed, self).__init__(
+                "Templating of argument {} failed.*".format(index))
+
+    def __str__(self):
+        return self.regex
+
+
+class ArgumentLooksLikeTemplate(RegexMatcher):
+    def __init__(self, index):
+        super(ArgumentLooksLikeTemplate, self).__init__(
+                "Argument {} looks like a tera template.*".format(index))
 
     def __str__(self):
         return self.regex

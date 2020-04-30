@@ -13,6 +13,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * `cinit --version` also prints the commit hash and date of the build
 
+* Warn users about template errors
+  ([#42](https://gitlab.com/veenj/cinit/issues/42))
+
 ## [1.3.8]
 
 ### Maintenance

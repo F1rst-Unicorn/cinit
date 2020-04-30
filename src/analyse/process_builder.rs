@@ -32,6 +32,10 @@ use nix::unistd::Pid;
 use nix::unistd::Uid;
 use nix::unistd::User;
 
+use log::trace;
+use log::warn;
+use std::error::Error as StdError;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     CronjobDependency,
@@ -96,7 +100,9 @@ impl Process {
             &mut config
                 .args
                 .iter()
-                .map(|x| render_template(&env, x).unwrap_or_else(|_| x.clone()))
+                .enumerate()
+                .map(|(i, x)| (i, x, render_template(&format!("Argument {}", i), &env, x)))
+                .map(|(i, x, y)| treat_template_error_in_argument(i, x, y))
                 .map(|x| CString::new(x).expect("Could not unwrap arg"))
                 .collect(),
         );
@@ -199,8 +205,28 @@ fn copy_from_config(
                     }
                 },
                 Some(raw_value) => {
-                    let rendered_value = render_template(&result, raw_value)
-                        .unwrap_or_else(|_| raw_value.to_string());
+                    let rendered_value = match render_template(key, &result, raw_value) {
+                        Err(e) => {
+                            warn!(
+                                "Templating of environment variable {} failed. cinit will use raw value\n{}",
+                                key,
+                                render_tera_error(&e)
+                            );
+                            trace!(
+                                "Templating of environment variable {} failed. cinit will use raw value\n{}",
+                                key,
+                                render_tera_error(&e)
+                            );
+                            raw_value.clone()
+                        }
+                        Ok(value) => {
+                            if looks_like_tera_template(&value) {
+                                warn!("Environment variable {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", key, value);
+                                trace!("Environment variable {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", key, value);
+                            }
+                            value
+                        }
+                    };
                     result.insert(key.to_string(), rendered_value);
                 }
             }
@@ -218,15 +244,62 @@ fn flatten_to_strings(result: &HashMap<String, String>) -> Vec<CString> {
     ret
 }
 
-fn render_template(context: &HashMap<String, String>, raw_value: &str) -> Result<String, ()> {
+fn render_template(
+    name: &str,
+    context: &HashMap<String, String>,
+    raw_value: &str,
+) -> Result<String, tera::Error> {
     let mut tera: tera::Tera = Default::default();
     let mut internal_context = tera::Context::new();
-    let name = "name";
-    tera.add_raw_template(name, raw_value).map_err(|_| ())?;
+    tera.add_raw_template(name, raw_value)?;
     for (key, value) in context {
         internal_context.insert(key, value);
     }
-    tera.render(name, &internal_context).map_err(|_| ())
+    tera.render(name, &internal_context)
+}
+
+fn treat_template_error_in_argument(
+    i: usize,
+    raw_value: &str,
+    render_result: Result<String, tera::Error>,
+) -> String {
+    match render_result {
+        Err(e) => {
+            warn!(
+                "Templating of argument {} failed. cinit will use raw value\n{}",
+                i,
+                render_tera_error(&e)
+            );
+            trace!(
+                "Templating of argument {} failed. cinit will use raw value\n{}",
+                i,
+                render_tera_error(&e)
+            );
+            raw_value.to_string()
+        }
+        Ok(value) => {
+            if looks_like_tera_template(&value) {
+                warn!("Argument {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", i, value);
+                trace!("Argument {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", i, value);
+            }
+            value
+        }
+    }
+}
+
+fn looks_like_tera_template(value: &str) -> bool {
+    value.contains('{') || value.contains('}')
+}
+
+fn render_tera_error(error: &tera::Error) -> String {
+    let mut result = String::new();
+    result += &format!("{}\n", error);
+    let mut source = error.source();
+    while let Some(error) = source {
+        result += &format!("{}\n", error);
+        source = error.source();
+    }
+    result
 }
 
 #[cfg(test)]
