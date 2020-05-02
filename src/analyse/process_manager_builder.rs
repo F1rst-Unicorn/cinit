@@ -55,6 +55,7 @@ impl ProcessManager {
             cron,
             epoll_fd: -1,
             status_fd: -1,
+            notify_fd: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
                 .expect("Could not create signalfd"),
         }
@@ -67,7 +68,9 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
         .iter()
         .map(Clone::clone)
         .enumerate()
-        .filter(|(_, p)| p.process_type == ProcessType::Oneshot)
+        .filter(|(_, p)| {
+            p.process_type == ProcessType::Oneshot || p.process_type == ProcessType::Notify
+        })
         .collect();
 
     let dependency_manager = DependencyManager::with_nodes(&input);

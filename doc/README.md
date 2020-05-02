@@ -96,6 +96,22 @@ A program to be executed once is of type `oneshot`. The corresponding
 representation in YAML is just `type: oneshot`. This is the default if none
 is given.
 
+#### Notify
+
+A program which can notify cinit is of type `notify`. This notification works
+by
+[`sd_notify`](https://www.freedesktop.org/software/systemd/man/sd_notify.html)
+which means that any program built with notify-support of systemd will work on
+cinit as well. Understood options are as follows:
+
+* `READY=1`: cinit treats the program as started successfully. Programs
+  depending on it will be started. This is a huge difference to `oneshot`
+  programs. `notify` programs can still run while dependent programs are started
+  as well.
+
+* `STATUS=...`: cinit will log the published status of the child and publish it
+  on the status socket (see Status Reporting below).
+
 #### Cronjob
 
 A program which is called periodically is of type `cronjob`. The YAML

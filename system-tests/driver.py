@@ -203,6 +203,24 @@ class ChildSpawned(RegexMatcher):
         return self.regex
 
 
+class ChildStarted(RegexMatcher):
+    def __init__(self, name):
+        super(ChildStarted, self).__init__(
+                "Child " + name + " has started successfully")
+
+    def __str__(self):
+        return self.regex
+
+
+class ChildStatus(RegexMatcher):
+    def __init__(self, name, status):
+        super(ChildStatus, self).__init__(
+                "Child " + name + ": " + status)
+
+    def __str__(self):
+        return self.regex
+
+
 class ChildExited(RegexMatcher):
     def __init__(self, name):
         super(ChildExited, self).__init__(

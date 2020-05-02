@@ -102,6 +102,8 @@ pub struct Process {
     pub state: ProcessState,
 
     pub pid: Pid,
+
+    pub status: String,
 }
 
 impl Process {

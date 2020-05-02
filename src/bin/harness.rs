@@ -20,7 +20,9 @@
 
 use std::fs::File;
 use std::io::Write;
+use std::net::Shutdown;
 use std::os::unix::io::AsRawFd;
+use std::os::unix::net::UnixDatagram;
 use std::process::exit;
 use std::thread;
 use std::time;
@@ -65,11 +67,44 @@ fn main() {
                 .default_value("test-output/harness.txt"),
         )
         .arg(
+            Arg::with_name("status")
+                .long("status")
+                .short("S")
+                .value_name("TEXT")
+                .help("Status to report")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("ready")
+                .long("ready")
+                .short("n")
+                .help("Notify cinit that we are ready"),
+        )
+        .arg(
             Arg::with_name("rest")
                 .help("Anything else to pass")
                 .multiple(true),
         )
         .get_matches();
+
+    if arguments.is_present("ready") {
+        let sock = UnixDatagram::unbound().expect("failed to create socket");
+        sock.connect("/run/cinit-notify.socket")
+            .expect("failed to connect to notify socket");
+        sock.send(b"READY=1").expect("failed to notify cinit");
+        sock.shutdown(Shutdown::Both)
+            .expect("failed to close socket");
+    }
+
+    if let Some(status) = arguments.value_of("status") {
+        let sock = UnixDatagram::unbound().expect("failed to create socket");
+        sock.connect("/run/cinit-notify.socket")
+            .expect("failed to connect to notify socket");
+        sock.send(("STATUS=".to_string() + status).as_bytes())
+            .expect("failed to notify cinit");
+        sock.shutdown(Shutdown::Both)
+            .expect("failed to close socket");
+    }
 
     dump(arguments.value_of("output").unwrap());
 
