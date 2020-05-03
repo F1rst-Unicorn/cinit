@@ -114,6 +114,9 @@ cinit as well. Understood options are as follows:
 * `STATUS=...`: cinit will log the published status of the child and publish it
   on the status socket (see [below](#status-reporting)).
 
+* `MAINPID=<PID>`: cinit is informed to treat the passed PID as the main PID of
+  the program.
+
 #### Cronjob
 
 A program which is called periodically is of type `cronjob`. The YAML

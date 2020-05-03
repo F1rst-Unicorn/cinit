@@ -26,6 +26,8 @@ RUN apt update && \
                 musl \
                 musl-tools \
                 musl-dev \
+                systemd \
+                python3-systemd \
                 python3-yaml && \
         rm -rf /var/lib/apt/lists/*
 

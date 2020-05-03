@@ -83,27 +83,36 @@ impl ProcessManager {
                 warn!("{} is not allowed to send notifications", process.name);
                 return;
             }
+            let pid = process.pid;
 
             let variables = ProcessManager::parse(state);
             for (key, value) in &variables {
                 process.handle_notification(key, value);
             }
             for (key, value) in &variables {
-                self.handle_notification(process_id, key, value);
+                self.handle_notification(process_id, pid, key, value);
             }
         } else {
             warn!("Got notification from unknown pid {}", peer.pid());
         }
     }
 
-    fn handle_notification(&mut self, process_id: usize, key: &str, value: &str) {
+    fn handle_notification(&mut self, process_id: usize, pid: Pid, key: &str, value: &str) {
         if key == "READY" {
             if value != "1" {
-                warn!("Expected READY=1 but value was '{}'", value);
                 return;
             }
 
             self.dependency_manager.notify_process_finished(process_id);
+        } else if key == "MAINPID" {
+            let pid_result = value.parse::<libc::pid_t>();
+            if pid_result.is_err() {
+                return;
+            }
+
+            let new_pid = Pid::from_raw(pid_result.unwrap());
+            self.process_map.deregister_pid(pid);
+            self.process_map.register_pid(process_id, new_pid);
         }
     }
 
@@ -113,6 +122,7 @@ impl ProcessManager {
         allowed_keys.insert("READY");
         allowed_keys.insert("STOPPING");
         allowed_keys.insert("STATUS");
+        allowed_keys.insert("MAINPID");
 
         for line in state.lines() {
             let mut split = line.splitn(2, '=');

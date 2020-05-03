@@ -175,8 +175,8 @@ impl Process {
                     return;
                 }
 
-                info!("Child {} has started successfully", self.name);
-                trace!("Child {} has started successfully", self.name);
+                info!("child {} has started successfully", self.name);
+                trace!("child {} has started successfully", self.name);
                 self.state = ProcessState::Running;
             }
             "STOPPING" => {
@@ -190,9 +190,29 @@ impl Process {
                 self.state = ProcessState::Stopping;
             }
             "STATUS" => {
-                info!("Child {}: {}", self.name, value);
-                trace!("Child {}: {}", self.name, value);
+                info!("child {}: {}", self.name, value);
+                trace!("child {}: {}", self.name, value);
                 self.status = value.to_string();
+            }
+            "MAINPID" => {
+                let pid_result = value.parse::<libc::pid_t>();
+                if let Err(e) = pid_result {
+                    warn!("could not parse new main pid '{}': {}", value, e);
+                    return;
+                }
+
+                let pid = Pid::from_raw(pid_result.unwrap());
+                info!(
+                    "child {} main pid is changed from {} to {}",
+                    self.name, self.pid, pid
+                );
+                trace!(
+                    "child {} main pid is changed from {} to {}",
+                    self.name,
+                    self.pid,
+                    pid
+                );
+                self.pid = pid;
             }
             _ => {}
         };
