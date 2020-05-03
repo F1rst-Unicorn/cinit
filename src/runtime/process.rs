@@ -175,9 +175,16 @@ impl Process {
                     return;
                 }
 
-                info!("child {} has started successfully", self.name);
-                trace!("child {} has started successfully", self.name);
-                self.state = ProcessState::Running;
+                if self.state == ProcessState::Starting {
+                    info!("child {} has started successfully", self.name);
+                    trace!("child {} has started successfully", self.name);
+                    self.state = ProcessState::Running;
+                } else {
+                    debug!(
+                        "child {} in {} state has notified about startup",
+                        self.name, self.state
+                    );
+                }
             }
             "STOPPING" => {
                 if value != "1" {
@@ -190,7 +197,6 @@ impl Process {
                 self.state = ProcessState::Stopping;
             }
             "STATUS" => {
-                info!("child {}: {}", self.name, value);
                 trace!("child {}: {}", self.name, value);
                 self.status = value.to_string();
             }
@@ -202,16 +208,20 @@ impl Process {
                 }
 
                 let pid = Pid::from_raw(pid_result.unwrap());
-                info!(
-                    "child {} main pid is changed from {} to {}",
-                    self.name, self.pid, pid
-                );
-                trace!(
-                    "child {} main pid is changed from {} to {}",
-                    self.name,
-                    self.pid,
-                    pid
-                );
+
+                if pid != self.pid {
+                    info!(
+                        "child {} main pid is changed from {} to {}",
+                        self.name, self.pid, pid
+                    );
+                    trace!(
+                        "child {} main pid is changed from {} to {}",
+                        self.name,
+                        self.pid,
+                        pid
+                    );
+                }
+
                 self.pid = pid;
             }
             _ => {}
