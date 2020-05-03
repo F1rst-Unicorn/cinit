@@ -15,11 +15,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+mod notify_manager;
+mod status_reporter;
+
 use std::convert::TryFrom;
+use std::ffi::CString;
 use std::fs::remove_file;
-use std::io::Write;
 use std::os::unix::io::AsRawFd;
-use std::os::unix::io::FromRawFd;
 use std::os::unix::io::RawFd;
 use std::process::exit;
 
@@ -27,6 +29,7 @@ use crate::logging;
 use crate::runtime::cronjob;
 use crate::runtime::dependency_graph;
 use crate::runtime::process::ProcessState;
+use crate::runtime::process::ProcessType;
 use crate::runtime::process_map::ProcessMap;
 use crate::util::libc_helpers;
 
@@ -34,15 +37,19 @@ use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
 use nix::sys::socket;
+use nix::sys::socket::sockopt::PassCred;
+use nix::sys::socket::{setsockopt, SockType};
 use nix::sys::wait;
-use nix::unistd;
 use nix::unistd::Pid;
+use nix::{errno, unistd};
 
 use chrono::prelude::Local;
 
 use log::{debug, error, info, trace, warn};
 
 const SOCKET_PATH: &str = "/run/cinit.socket";
+
+pub const NOTIFY_SOCKET_PATH: &str = "/run/cinit-notify.socket";
 
 const EXIT_CODE: i32 = 3;
 
@@ -61,12 +68,17 @@ pub struct ProcessManager {
     pub signal_fd: signalfd::SignalFd,
 
     pub status_fd: RawFd,
+
+    pub notify_fd: RawFd,
 }
 
 impl Drop for ProcessManager {
     fn drop(&mut self) {
         let raw_signal_fd = self.signal_fd.as_raw_fd();
         self.deregister_fd(raw_signal_fd);
+
+        self.deregister_fd(self.status_fd);
+        self.deregister_fd(self.notify_fd);
 
         if let Err(some) = unistd::close(self.epoll_fd) {
             warn!("Could not close epoll fd: {}", some);
@@ -138,12 +150,12 @@ impl ProcessManager {
         }
 
         let child_index = child_index_option.expect("Has been checked above");
-        let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
         let child = &mut self
             .process_map
             .process_for_pid(pid)
             .expect("Has been checked above");
+        let is_cronjob = child.process_type == ProcessType::Cronjob;
         child.state = if rc == 0 {
             child_crashed = false;
             if is_cronjob {
@@ -190,7 +202,8 @@ impl ProcessManager {
 
     fn setup(&mut self) -> Result<(), nix::Error> {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
-        self.status_fd = self.setup_status_fd()?;
+        self.status_fd = self.setup_unix_socket(SOCKET_PATH, socket::SockType::Stream)?;
+        self.notify_fd = self.setup_unix_socket(NOTIFY_SOCKET_PATH, socket::SockType::Datagram)?;
         self.epoll_fd = self.setup_epoll_fd()?;
         libc_helpers::prctl_one(libc::PR_SET_CHILD_SUBREAPER, 1)?;
         Ok(())
@@ -206,27 +219,39 @@ impl ProcessManager {
         signalfd::SignalFd::with_flags(&signals, signalfd::SfdFlags::SFD_CLOEXEC)
     }
 
-    fn setup_status_fd(&mut self) -> Result<RawFd, nix::Error> {
-        match remove_file(SOCKET_PATH).map_err(libc_helpers::map_to_errno) {
+    fn setup_unix_socket(&mut self, path: &str, typ: SockType) -> Result<RawFd, nix::Error> {
+        match remove_file(path).map_err(libc_helpers::map_to_errno) {
             Err(nix::Error::Sys(nix::errno::Errno::ENOENT)) => Ok(()),
             e => e,
         }?;
 
-        let listener = socket::socket(
+        let socket_fd = socket::socket(
             socket::AddressFamily::Unix,
-            socket::SockType::Stream,
+            typ,
             socket::SockFlag::SOCK_CLOEXEC,
             None,
         )?;
 
         socket::bind(
-            listener,
-            &socket::SockAddr::Unix(socket::UnixAddr::new(SOCKET_PATH)?),
+            socket_fd,
+            &socket::SockAddr::Unix(socket::UnixAddr::new(path)?),
         )?;
-        socket::listen(listener, 0)?;
 
-        debug!("Status uds open");
-        Ok(listener)
+        unsafe {
+            let raw_path = CString::new(path).expect("could not build cstring");
+            let res = libc::chmod(raw_path.into_raw(), 0o777);
+            if res == -1 {
+                return Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())));
+            }
+        }
+
+        setsockopt(socket_fd, PassCred {}, &true)?;
+        if typ == socket::SockType::Stream {
+            socket::listen(socket_fd, 0)?;
+        }
+
+        debug!("{} unix domain socket open", path);
+        Ok(socket_fd)
     }
 
     fn setup_epoll_fd(&mut self) -> Result<RawFd, nix::Error> {
@@ -246,6 +271,12 @@ impl ProcessManager {
             self.status_fd,
             &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.status_fd as u64),
         )?;
+        epoll::epoll_ctl(
+            epoll_fd,
+            epoll::EpollOp::EpollCtlAdd,
+            self.notify_fd,
+            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.notify_fd as u64),
+        )?;
         Ok(epoll_fd)
     }
 
@@ -256,6 +287,8 @@ impl ProcessManager {
                 self.handle_signal();
             } else if fd == self.status_fd {
                 self.report_status();
+            } else if fd == self.notify_fd {
+                self.read_notification();
             } else {
                 self.print_child_output(fd);
             }
@@ -347,55 +380,6 @@ impl ProcessManager {
         }
 
         self.process_map.deregister_fd(fd);
-    }
-
-    fn report_status(&mut self) {
-        if let Err(e) = self.write_report() {
-            warn!("Failed to print report: {:#?}", e);
-        }
-    }
-
-    fn write_report(&mut self) -> Result<(), nix::Error> {
-        let mut file = unsafe { std::fs::File::from_raw_fd(socket::accept(self.status_fd)?) };
-
-        file.write_fmt(format_args!("programs:\n"))
-            .map_err(libc_helpers::map_to_errno)?;
-
-        for (id, p) in self.process_map.processes().iter().enumerate() {
-            file.write_fmt(format_args!(
-                "  - name: '{}'\n    state: '{}'\n",
-                p.name, p.state
-            ))
-            .map_err(libc_helpers::map_to_errno)?;
-
-            match p.state {
-                ProcessState::Done => {
-                    file.write_fmt(format_args!("    exit_code: 0\n"))
-                        .map_err(libc_helpers::map_to_errno)?;
-                }
-                ProcessState::Crashed(rc) => {
-                    file.write_fmt(format_args!("    exit_code: {}\n", rc))
-                        .map_err(libc_helpers::map_to_errno)?;
-                }
-                _ => {}
-            }
-
-            if self.process_map.process_id_for_pid(p.pid).is_some() {
-                file.write_fmt(format_args!("    pid: {}\n", p.pid))
-                    .map_err(libc_helpers::map_to_errno)?;
-            }
-
-            if self.cron.is_cronjob(id) {
-                file.write_fmt(format_args!(
-                    "    scheduled_at: '{}'\n",
-                    &self.cron.get_next_execution(id).to_rfc3339()
-                ))
-                .map_err(libc_helpers::map_to_errno)?;
-            }
-        }
-
-        unistd::close(file.as_raw_fd())?;
-        Ok(())
     }
 
     fn print_child_output(&mut self, fd: RawFd) {

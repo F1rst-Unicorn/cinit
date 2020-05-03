@@ -286,10 +286,6 @@ impl Cron {
         }
     }
 
-    pub fn is_cronjob(&self, id: usize) -> bool {
-        self.timers.contains_key(&id)
-    }
-
     pub fn get_next_execution(&self, id: usize) -> DateTime<Local> {
         for (time, item_id) in &self.timer {
             if id == *item_id {

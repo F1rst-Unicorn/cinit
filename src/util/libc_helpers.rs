@@ -80,10 +80,17 @@ pub fn map_to_errno(error: Error) -> nix::Error {
     }
 }
 
+/// Take a byte array representing a C String with unknown length. In particular
+/// the length can be smaller than the slice, indicated by a zero byte in the
+/// middle of the string
+pub fn slice_to_string(buffer: &[u8]) -> String {
+    unsafe { rescue_from_libc(buffer.as_ptr() as *const libc::c_char) }
+}
+
 /// Take a string returned from libc and copy it into a rust string.
 /// This function makes sure subsequent calls to libc functions don't override
 /// the string, leading to race conditions.
-unsafe fn rescue_from_libc(string: *mut libc::c_char) -> String {
+unsafe fn rescue_from_libc(string: *const libc::c_char) -> String {
     CStr::from_ptr(string)
         .to_str()
         .expect("Could not rescue cstring")

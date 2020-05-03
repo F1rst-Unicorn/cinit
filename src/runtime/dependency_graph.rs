@@ -18,6 +18,8 @@
 use std::collections::HashMap;
 use std::collections::VecDeque;
 
+use log::debug;
+
 use petgraph::graph::Graph;
 
 use crate::config::ProcessConfig;
@@ -26,9 +28,11 @@ use crate::config::ProcessConfig;
 /// via ongoing topological sorting
 #[derive(Debug, PartialEq)]
 pub struct ProcessNode {
-    pub after_self: Vec<usize>,
+    after_self: Vec<usize>,
 
-    pub predecessor_count: usize,
+    predecessor_count: usize,
+
+    finished: bool,
 }
 
 impl Default for ProcessNode {
@@ -36,6 +40,7 @@ impl Default for ProcessNode {
         ProcessNode {
             after_self: Vec::new(),
             predecessor_count: 0,
+            finished: false,
         }
     }
 }
@@ -86,8 +91,17 @@ impl DependencyManager {
         self.runnable.pop_back()
     }
 
-    pub fn notify_process_finished(&mut self, process: usize) {
-        for successor_index in self.nodes[&process].after_self.clone() {
+    pub fn notify_process_finished(&mut self, process_id: usize) {
+        let process = self.nodes.get_mut(&process_id).expect("invalid process id");
+        if process.finished {
+            debug!(
+                "Process {} has already triggered its dependants",
+                process_id
+            );
+            return;
+        }
+        process.finished = true;
+        for successor_index in self.nodes[&process_id].after_self.clone() {
             let mut successor = self.nodes.get_mut(&successor_index).expect("Invalid index");
             successor.predecessor_count -= 1;
             if successor.predecessor_count == 0 {

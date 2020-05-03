@@ -17,6 +17,7 @@
 
 use std::collections::HashMap;
 use std::convert;
+use std::error::Error as StdError;
 use std::ffi::CString;
 use std::fmt::Display;
 use std::fmt::Error as FmtError;
@@ -24,7 +25,9 @@ use std::fmt::Formatter;
 use std::path::PathBuf;
 
 use crate::config::{ProcessConfig, ProcessType};
+use crate::runtime::process::ProcessType as RuntimeType;
 use crate::runtime::process::{Process, ProcessState};
+use crate::runtime::process_manager::NOTIFY_SOCKET_PATH;
 
 use nix::unistd::Gid;
 use nix::unistd::Group;
@@ -34,7 +37,6 @@ use nix::unistd::User;
 
 use log::trace;
 use log::warn;
-use std::error::Error as StdError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
@@ -66,7 +68,11 @@ impl Process {
         let user = map_uid(config.uid, &config.user)?;
         let group = map_gid(config.gid, &config.group)?;
 
-        let env = convert_env(&config.env, &user);
+        let mut env = convert_env(&config.env, &user);
+
+        if config.process_type == ProcessType::Notify {
+            env.insert("NOTIFY_SOCKET".to_string(), NOTIFY_SOCKET_PATH.to_string());
+        }
 
         if config.path.is_none() {
             return Err(Error::PathMissing);
@@ -87,9 +93,16 @@ impl Process {
             env: flatten_to_strings(&env),
             state: match config.process_type {
                 ProcessType::Oneshot => ProcessState::Blocked,
+                ProcessType::Notify => ProcessState::Blocked,
                 ProcessType::CronJob { .. } => ProcessState::Sleeping,
             },
+            process_type: match config.process_type {
+                ProcessType::Oneshot => RuntimeType::Oneshot,
+                ProcessType::Notify => RuntimeType::Notify,
+                ProcessType::CronJob { .. } => RuntimeType::Cronjob,
+            },
             pid: Pid::from_raw(0),
+            status: String::new(),
         };
 
         result
