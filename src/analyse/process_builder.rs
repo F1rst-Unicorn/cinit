@@ -25,6 +25,7 @@ use std::fmt::Formatter;
 use std::path::PathBuf;
 
 use crate::config::{ProcessConfig, ProcessType};
+use crate::runtime::process::ProcessType as RuntimeType;
 use crate::runtime::process::{Process, ProcessState};
 use crate::runtime::process_manager::NOTIFY_SOCKET_PATH;
 
@@ -94,6 +95,11 @@ impl Process {
                 ProcessType::Oneshot => ProcessState::Blocked,
                 ProcessType::Notify => ProcessState::Blocked,
                 ProcessType::CronJob { .. } => ProcessState::Sleeping,
+            },
+            process_type: match config.process_type {
+                ProcessType::Oneshot => RuntimeType::Oneshot,
+                ProcessType::Notify => RuntimeType::Notify,
+                ProcessType::CronJob { .. } => RuntimeType::Cronjob,
             },
             pid: Pid::from_raw(0),
             status: String::new(),

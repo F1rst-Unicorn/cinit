@@ -29,6 +29,7 @@ use crate::logging;
 use crate::runtime::cronjob;
 use crate::runtime::dependency_graph;
 use crate::runtime::process::ProcessState;
+use crate::runtime::process::ProcessType;
 use crate::runtime::process_map::ProcessMap;
 use crate::util::libc_helpers;
 
@@ -149,12 +150,12 @@ impl ProcessManager {
         }
 
         let child_index = child_index_option.expect("Has been checked above");
-        let is_cronjob = self.cron.is_cronjob(child_index);
         let child_crashed: bool;
         let child = &mut self
             .process_map
             .process_for_pid(pid)
             .expect("Has been checked above");
+        let is_cronjob = child.process_type == ProcessType::Cronjob;
         child.state = if rc == 0 {
             child_crashed = false;
             if is_cronjob {

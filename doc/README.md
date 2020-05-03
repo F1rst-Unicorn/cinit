@@ -109,8 +109,10 @@ cinit as well. Understood options are as follows:
   programs. `notify` programs can still run while dependent programs are started
   as well.
 
+* `STOPPING=1`: cinit is informed that the program is about to exit.
+
 * `STATUS=...`: cinit will log the published status of the child and publish it
-  on the status socket (see Status Reporting below).
+  on the status socket (see [below](#status-reporting)).
 
 #### Cronjob
 
@@ -174,15 +176,22 @@ features follow the link to tera.
 
 Processes can be restricted in what they are allowed to do. This can also
 mean that non-root process get elevated capabilities. See
-[here](http://man7.org/linux/man-pages/man7/capabilities.7.html)
+[man 7 capabilities](http://man7.org/linux/man-pages/man7/capabilities.7.html)
 for a list of all capabilities.
 
 ### Dependencies
 
 Programs are allowed to depend on each other via the `before` and `after`
 fields. Dependant processes will only be started once all their
-dependencies have terminated. Refer to other programs in the config via
-their `name` field.
+dependencies completed. A process is considered completed if
+
+* it is of type `oneshot` and has terminated successfully
+
+* it is of type `notify` and has either informed cinit that it has started
+  successfully (see [above](#notify)) or has terminated successfully, whichever
+  happens first.
+
+Refer to other programs in the config via their `name` field.
 
 The direction of a dependency is taken from the view of the program currently
 being configured. E.g. the configuration
@@ -298,7 +307,7 @@ Programs SHOULD log to the standard file descriptors and SHOULD NOT log own
 timestamps.
 
 Specifying `-v` twice gives messages up to the `TRACE` level. Tracing messages
-are considered part of the public API. Specifying `-v` once gives messages up to
+are part of the public API. Specifying `-v` once gives messages up to
 the `DEBUG` level. This is the expected level for bug reports. Production
 installations should not specify the `-v` flag which gives messages up to the
 `INFO` level.
@@ -319,7 +328,11 @@ A program consists of the following runtime keys:
     terminate.
   * `sleeping`: The program is a cronjob waiting for the next scheduled
     execution.
+  * `starting`: The program of type `notify` was started and has not informed
+    cinit about successful startup yet.
   * `running`: The program is currently running.
+  * `stopping`: The program of type `notify` has informed cinit about its
+    shutdown.
   * `done`: The program has terminated successfully.
   * `crashed`: The program has terminated with an error code.
 

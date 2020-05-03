@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-use crate::runtime::process::ProcessState;
+use crate::runtime::process::{ProcessState, ProcessType};
 use crate::runtime::process_manager::ProcessManager;
 use crate::util::libc_helpers;
 
@@ -76,7 +76,7 @@ impl ProcessManager {
                     .map_err(libc_helpers::map_to_errno)?;
             }
 
-            if self.cron.is_cronjob(id) {
+            if p.process_type == ProcessType::Cronjob {
                 file.write_fmt(format_args!(
                     "    scheduled_at: '{}'\n",
                     &self.cron.get_next_execution(id).to_rfc3339()

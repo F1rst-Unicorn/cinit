@@ -41,9 +41,18 @@ use capabilities::Capabilities;
 use capabilities::Capability;
 use capabilities::Flag;
 
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 
 const EXIT_CODE: i32 = 4;
+
+#[derive(Debug, PartialEq)]
+pub enum ProcessType {
+    Oneshot,
+
+    Notify,
+
+    Cronjob,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
@@ -54,8 +63,15 @@ pub enum ProcessState {
     /// The process is a cronjob and waits for its timer to be triggered
     Sleeping,
 
-    /// The process is running
+    /// The process is a notify and has not told cinit that it has started
+    Starting,
+
+    /// The process is running. Set automatically for oneshot and by the process
+    /// itself for notify
     Running,
+
+    /// The process is a notify and has told cinit that it is stopping
+    Stopping,
 
     /// The process has finished successfully
     Done,
@@ -71,7 +87,9 @@ impl Display for ProcessState {
         let message = match self {
             ProcessState::Blocked => "blocked",
             ProcessState::Sleeping => "sleeping",
+            ProcessState::Starting => "starting",
             ProcessState::Running => "running",
+            ProcessState::Stopping => "stopping",
             ProcessState::Done => "done",
             ProcessState::Crashed(_) => "crashed",
         };
@@ -101,6 +119,8 @@ pub struct Process {
 
     pub state: ProcessState,
 
+    pub process_type: ProcessType,
+
     pub pid: Pid,
 
     pub status: String,
@@ -118,7 +138,10 @@ impl Process {
             Ok(unistd::ForkResult::Parent { child: child_pid }) => {
                 trace!("Started child {}", self.name);
                 info!("Started child {}", child_pid);
-                self.state = ProcessState::Running;
+                self.state = match self.process_type {
+                    ProcessType::Notify => ProcessState::Starting,
+                    _ => ProcessState::Running,
+                };
                 self.pid = child_pid;
                 unistd::close(stdout.1)?;
                 unistd::close(stderr.1)?;
@@ -142,6 +165,37 @@ impl Process {
                 exit(EXIT_CODE)
             }
         }
+    }
+
+    pub fn handle_notification(&mut self, key: &str, value: &str) {
+        match key {
+            "READY" => {
+                if value != "1" {
+                    warn!("Expected READY=1 but value was '{}'", value);
+                    return;
+                }
+
+                info!("Child {} has started successfully", self.name);
+                trace!("Child {} has started successfully", self.name);
+                self.state = ProcessState::Running;
+            }
+            "STOPPING" => {
+                if value != "1" {
+                    warn!("Expected STOPPING=1 but value was '{}'", value);
+                    return;
+                }
+
+                info!("child {} is shutting down", self.name);
+                trace!("child {} is shutting down", self.name);
+                self.state = ProcessState::Stopping;
+            }
+            "STATUS" => {
+                info!("Child {}: {}", self.name, value);
+                trace!("Child {}: {}", self.name, value);
+                self.status = value.to_string();
+            }
+            _ => {}
+        };
     }
 
     fn create_std_fds(&self) -> Result<(Pipe, Pipe), nix::Error> {
