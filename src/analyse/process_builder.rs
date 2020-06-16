@@ -71,7 +71,14 @@ impl Process {
         let mut env = convert_env(&config.env, &user);
 
         if config.process_type == ProcessType::Notify {
-            env.insert("NOTIFY_SOCKET".to_string(), NOTIFY_SOCKET_PATH.to_string());
+            let result = env.insert("NOTIFY_SOCKET".to_string(), NOTIFY_SOCKET_PATH.to_string());
+            if result.is_some() {
+                warn!(
+                    "program '{}' must not have NOTIFY_SOCKET because it's type notify",
+                    config.name
+                );
+                warn!("The value from the configuration file is ignored");
+            }
         }
 
         if config.path.is_none() {
