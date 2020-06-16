@@ -249,8 +249,8 @@ impl Process {
     }
 
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
-        while let Err(_) = unistd::dup2(stdout, std::io::stdout().as_raw_fd()) {}
-        while let Err(_) = unistd::dup2(stderr, std::io::stderr().as_raw_fd()) {}
+        while unistd::dup2(stdout, std::io::stdout().as_raw_fd()).is_err() {}
+        while unistd::dup2(stderr, std::io::stderr().as_raw_fd()).is_err() {}
 
         let signals = nix::sys::signal::SigSet::empty();
         signal::sigprocmask(signal::SigmaskHow::SIG_SETMASK, Some(&signals), None)?;

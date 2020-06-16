@@ -34,7 +34,7 @@ use nix::unistd::Pid;
 static mut LOCK: i32 = 0;
 
 extern "C" fn signal_handler(_: libc::c_int) {
-    while let Ok(_) = waitpid(Pid::from_raw(-1), None) {}
+    while waitpid(Pid::from_raw(-1), None).is_ok() {}
     unsafe {
         LOCK = 1;
     }
