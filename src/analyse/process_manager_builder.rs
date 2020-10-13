@@ -124,13 +124,7 @@ fn build_cron(config: &Config) -> Cron {
         .iter()
         .map(Clone::clone)
         .enumerate()
-        .filter(|(_, p)| {
-            if let ProcessType::CronJob { .. } = p.process_type {
-                true
-            } else {
-                false
-            }
-        })
+        .filter(|(_, p)| matches!(p.process_type, ProcessType::CronJob { .. }))
         .collect();
 
     let cron = Cron::with_jobs(&input);
