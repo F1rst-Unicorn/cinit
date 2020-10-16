@@ -68,9 +68,6 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
         .iter()
         .map(Clone::clone)
         .enumerate()
-        .filter(|(_, p)| {
-            p.process_type == ProcessType::Oneshot || p.process_type == ProcessType::Notify
-        })
         .collect();
 
     let dependency_manager = DependencyManager::with_nodes(&input);
@@ -108,6 +105,16 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
                 trace!(
                     "Unknown 'before' dependency '{}' of program {}",
                     config.programs[prog_index].before[before_index],
+                    config.programs[prog_index].name
+                );
+            }
+            Error::CronjobDependency(prog_index) => {
+                error!(
+                    "Program {} contains error: Depending on cronjobs is not allowed",
+                    config.programs[prog_index].name
+                );
+                trace!(
+                    "Program {} contains error: Depending on cronjobs is not allowed",
                     config.programs[prog_index].name
                 );
             }

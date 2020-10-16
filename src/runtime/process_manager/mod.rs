@@ -406,11 +406,24 @@ impl ProcessManager {
 
     fn spawn_children(&mut self) {
         while let Some(child_index) = self.dependency_manager.pop_runnable() {
-            self.spawn_child(child_index);
+            if self.process_map[child_index].process_type != ProcessType::Cronjob {
+                self.spawn_child(child_index);
+            }
         }
 
         while let Some(child_index) = self.cron.pop_runnable(Local::now()) {
-            self.spawn_child(child_index);
+            if self.dependency_manager.is_runnable(child_index) {
+                self.spawn_child(child_index);
+            } else {
+                debug!(
+                    "Refusing to start cronjob child '{}' because of uncompleted dependencies",
+                    self.process_map[child_index].name,
+                );
+                trace!(
+                    "Refusing to start cronjob child '{}' because of uncompleted dependencies",
+                    self.process_map[child_index].name,
+                );
+            }
         }
     }
 

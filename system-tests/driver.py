@@ -194,6 +194,24 @@ class CycleDetected(RegexMatcher):
         return self.regex
 
 
+class CronjobDependency(RegexMatcher):
+    def __init__(self, name):
+        super(CronjobDependency, self).__init__(
+                "Program {} contains error: Cronjobs may not have dependencies".format(name))
+
+    def __str__(self):
+        return self.regex
+
+
+class DependencyOnCronjob(RegexMatcher):
+    def __init__(self, name):
+        super(DependencyOnCronjob, self).__init__(
+                "Program {} contains error: Depending on cronjobs is not allowed".format(name))
+
+    def __str__(self):
+        return self.regex
+
+
 class ChildSpawned(RegexMatcher):
     def __init__(self, name):
         super(ChildSpawned, self).__init__(
@@ -243,6 +261,16 @@ class ChildSleeping(RegexMatcher):
     def __init__(self, name):
         super(ChildSleeping, self).__init__(
                 "Child " + name + " has finished and is going to sleep")
+
+    def __str__(self):
+        return self.regex
+
+
+class ChildCronjobSkipped(RegexMatcher):
+    def __init__(self, name):
+        super(ChildCronjobSkipped, self).__init__(
+                "Refusing to start cronjob child '" + name + "' because of uncompleted "
+                                                    "dependencies")
 
     def __str__(self):
         return self.regex

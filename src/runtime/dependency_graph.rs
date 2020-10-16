@@ -16,13 +16,16 @@
  */
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::iter::FromIterator;
 
 use log::debug;
 
 use petgraph::graph::Graph;
 
 use crate::config::ProcessConfig;
+use crate::config::ProcessType;
 
 /// Process information relevant for dependency resolution
 /// via ongoing topological sorting
@@ -56,6 +59,7 @@ pub enum Error {
     Cycle(usize),
     UnknownAfterReference(usize, usize),
     UnknownBeforeReference(usize, usize),
+    CronjobDependency(usize),
 }
 
 #[derive(Debug, PartialEq)]
@@ -63,6 +67,8 @@ pub struct DependencyManager {
     nodes: HashMap<usize, ProcessNode>,
 
     runnable: VecDeque<usize>,
+
+    runnable_archive: HashSet<usize>,
 }
 
 impl DependencyManager {
@@ -74,9 +80,11 @@ impl DependencyManager {
         let name_dict = DependencyManager::build_name_dict(config)?;
         DependencyManager::validate_references(config, &name_dict)?;
         let nodes = DependencyManager::build_dependencies(config, &name_dict);
+        let mut initial_runnables = DependencyManager::find_initial_runnables(&nodes);
         let result = DependencyManager {
-            runnable: DependencyManager::find_initial_runnables(&nodes),
+            runnable: initial_runnables.clone(),
             nodes,
+            runnable_archive: HashSet::from_iter(initial_runnables.drain(..)),
         };
 
         result.check_for_cycles()?;
@@ -89,6 +97,10 @@ impl DependencyManager {
 
     pub fn pop_runnable(&mut self) -> Option<usize> {
         self.runnable.pop_back()
+    }
+
+    pub fn is_runnable(&self, process_id: usize) -> bool {
+        self.runnable_archive.contains(&process_id)
     }
 
     pub fn notify_process_finished(&mut self, process_id: usize) {
@@ -107,6 +119,7 @@ impl DependencyManager {
             if successor.predecessor_count == 0 {
                 // no need to remove `process` from successor's dependencies
                 self.runnable.push_back(successor_index);
+                self.runnable_archive.insert(successor_index);
             }
         }
     }
@@ -215,8 +228,17 @@ impl DependencyManager {
     ) -> Result<(), Error> {
         for (prog_index, program) in config {
             for (after_index, dependency) in program.after.iter().enumerate() {
-                if name_dict.get(dependency).is_none() {
-                    return Err(Error::UnknownAfterReference(*prog_index, after_index));
+                match name_dict.get(dependency) {
+                    None => {
+                        return Err(Error::UnknownAfterReference(*prog_index, after_index));
+                    }
+                    Some(after_prog_index) => {
+                        if let ProcessType::CronJob { .. } =
+                            config[*after_prog_index].1.process_type
+                        {
+                            return Err(Error::CronjobDependency(*prog_index));
+                        }
+                    }
                 }
             }
             for (before_index, dependency) in program.before.iter().enumerate() {

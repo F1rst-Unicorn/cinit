@@ -185,7 +185,7 @@ for a list of all capabilities.
 ### Dependencies
 
 Programs are allowed to depend on each other via the `before` and `after`
-fields. Dependant processes will only be started once all their
+fields. Dependent processes will only be started once all their
 dependencies completed. A process is considered completed if
 
 * it is of type `oneshot` and has terminated successfully
@@ -217,6 +217,10 @@ reads as "`current` runs after `other`"
 
 If the dependencies form a cycle, this is reported before any process is
 started and cinit terminates.
+
+Cronjobs are only allowed to depend on other programs. Depending on a cronjob is
+not allowed. A cronjob will only run if its timer schedule demands it and all
+dependencies have completed.
 
 ## Advanced Features
 

@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+* Cronjobs may now depend on programs
+  ([#46](https://gitlab.com/veenj/cinit/issues/46))
+
 ### Maintenance
 
 * Fix linter issues

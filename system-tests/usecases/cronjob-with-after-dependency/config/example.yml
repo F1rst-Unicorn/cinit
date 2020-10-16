@@ -15,58 +15,15 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 programs:
-  - name: echo
+  - name: dummy
+    path: echo
+    after:
+      - cronjob
+
+  - name: cronjob
     path: echo
     args:
       - Hello World
     type:
       cronjob:
         timer: "* * * * *"
-
-  - name: waiter
-    path: target/path/harness
-    workdir: "."
-    args:
-      - -o
-      - system-tests/child-dump/waiter.yml
-      - -s
-      - 125
-    type: oneshot
-
-  - name: non-reentrant
-    path: target/path/harness
-    workdir: "."
-    args:
-      - -o
-      - system-tests/child-dump/non-reentrant.yml
-      - -s
-      - 62
-    type:
-      cronjob:
-        timer: "* * * * *"
-
-# Test cronjob dependencies
-  - name: dependency
-    path: target/path/harness
-    workdir: "."
-    args:
-      - -o
-      - system-tests/child-dump/dependency.yml
-      - -s
-      - 65
-    type: oneshot
-
-  - name: dependent-cronjob
-    path: echo
-    after:
-      - dependency
-    type:
-      cronjob:
-        timer: "* * * * *"
-
-  - name: independent-cronjob
-    path: echo
-    type:
-      cronjob:
-        timer: "* * * * *"
-

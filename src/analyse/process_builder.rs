@@ -60,7 +60,7 @@ impl Display for Error {
 impl Process {
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
         if let ProcessType::CronJob { .. } = &config.process_type {
-            if !config.before.is_empty() || !config.after.is_empty() {
+            if !config.before.is_empty() {
                 return Err(Error::CronjobDependency);
             }
         }

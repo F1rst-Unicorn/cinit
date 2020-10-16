@@ -24,7 +24,10 @@ class Test(CinitTest):
 
         self.assert_on_trace().that(
             Sequential(
-                ChildSpawned("waiter"),
+                Parallel(
+                    ChildSpawned("waiter"),
+                    ChildSpawned("dependency"),
+                ),
                 Parallel(
                     Sequential(
                         ChildSpawned("echo"),
@@ -36,7 +39,27 @@ class Test(CinitTest):
                         ChildSpawned("non-reentrant"),
                         ChildSkipped("non-reentrant"),
                         ChildSleeping("non-reentrant"),
-                    )
+                    ),
+                    Sequential(
+                        Parallel(
+                            Sequential(
+                                ChildSpawned("independent-cronjob"),
+                                ChildSleeping("independent-cronjob"),
+                            ),
+                            ChildCronjobSkipped("dependent-cronjob"),
+                        ),
+                        Parallel(
+                            Sequential(
+                                ChildSpawned("independent-cronjob"),
+                                ChildSleeping("independent-cronjob"),
+                            ),
+                            Sequential(
+                                ChildExited("dependency"),
+                                ChildSpawned("dependent-cronjob"),
+                                ChildSleeping("dependent-cronjob"),
+                            ),
+                        ),
+                    ),
                 ),
                 ChildExited("waiter"),
                 Exited()
