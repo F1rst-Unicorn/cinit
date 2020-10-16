@@ -119,7 +119,7 @@ dependencies = [
 
 [[package]]
 name = "cinit"
-version = "1.4.2"
+version = "1.5.0"
 dependencies = [
  "capabilities 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.19 (registry+https://github.com/rust-lang/crates.io-index)",
