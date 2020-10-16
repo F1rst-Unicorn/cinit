@@ -179,9 +179,8 @@ fn dump(output: &str) {
         file.write_fmt(format_args!(" []\n"))
             .expect("Failed to dump");
     } else {
-        cap_string = cap_string.split_off(2);
         cap_string = cap_string
-            .split('+')
+            .split('=')
             .next()
             .expect("Could not parse caps")
             .to_string();

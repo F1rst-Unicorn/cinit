@@ -19,7 +19,7 @@
 cd /usr/src
 
 git clone                                                                   \
-        --branch libcap-2.33                                                \
+        --branch libcap-2.44                                                \
         --depth 1                                                           \
         https://git.kernel.org/pub/scm/libs/libcap/libcap.git               \
         libcap
