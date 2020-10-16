@@ -55,7 +55,13 @@ fn main() -> Result<(), nix::Error> {
         }
     }
 
-    match fork() {
+    let fork_result = unsafe {
+        // We are in a single-threaded program, so this unsafe call is ok
+        // https://docs.rs/nix/0.19.0/nix/unistd/fn.fork.html#safety
+        fork()
+    };
+
+    match fork_result {
         Ok(nix::unistd::ForkResult::Parent { .. }) => {
             let time = time::Duration::from_secs(2);
             thread::yield_now();

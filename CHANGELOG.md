@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Fix linter issues
 
+* Update library dependencies
+
 ## [1.4.2]
 
 ### Maintenance

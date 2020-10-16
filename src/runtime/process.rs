@@ -132,7 +132,11 @@ impl Process {
 
         let (stdout, stderr) = self.create_std_fds()?;
 
-        let fork_result = fork();
+        let fork_result = unsafe {
+            // We are in a single-threaded program, so this unsafe call is ok
+            // https://docs.rs/nix/0.19.0/nix/unistd/fn.fork.html#safety
+            fork()
+        };
 
         match fork_result {
             Ok(unistd::ForkResult::Parent { child: child_pid }) => {
