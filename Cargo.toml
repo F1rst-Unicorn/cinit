@@ -1,6 +1,6 @@
 [package]
 name = "cinit"
-version = "1.5.0"
+version = "1.5.1"
 authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
            "Jan Veen <jan.veen@posteo.de>",
            "Ben Fiedler <ben@sjfiedler.de>"]
