@@ -126,7 +126,7 @@ impl TimerDescription {
             },
         ));
 
-        let mut date_duration = Duration::days(i64::from(carry) * 365 as i64);
+        let mut date_duration = Duration::days(i64::from(carry) * 365_i64);
         if date_relevant {
             // only compute this if really needed
             let mut tmp = result + date_duration;
@@ -159,7 +159,7 @@ fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32
 
         Some(timespec) => {
             let mut result = BTreeSet::new();
-            if timespec == "" {
+            if timespec.is_empty() {
                 return Err("Incomplete timer spec".to_string());
             } else if timespec == "*" {
                 for i in min..=max {

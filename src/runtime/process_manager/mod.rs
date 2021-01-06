@@ -383,7 +383,7 @@ impl ProcessManager {
     }
 
     fn print_child_output(&mut self, fd: RawFd) {
-        let mut buffer = [0 as u8; 4096];
+        let mut buffer = [0_u8; 4096];
         let length = unistd::read(fd, &mut buffer);
 
         if let Ok(length) = length {

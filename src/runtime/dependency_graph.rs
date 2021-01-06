@@ -84,7 +84,7 @@ impl DependencyManager {
         let result = DependencyManager {
             runnable: initial_runnables.clone(),
             nodes,
-            runnable_archive: HashSet::from_iter(initial_runnables.drain(..)),
+            runnable_archive: initial_runnables.drain(..).collect(),
         };
 
         result.check_for_cycles()?;

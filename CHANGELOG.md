@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Maintenance
+
+* Fix linter issues
+
 ## [1.5.1]
 
 * Update library dependencies
