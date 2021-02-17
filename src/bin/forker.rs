@@ -40,7 +40,7 @@ extern "C" fn signal_handler(_: libc::c_int) {
     }
 }
 
-fn main() -> Result<(), nix::Error> {
+fn main() {
     let mut flags = SaFlags::empty();
     flags.insert(SaFlags::SA_RESTART);
     flags.insert(SaFlags::SA_NOCLDSTOP);
@@ -80,5 +80,4 @@ fn main() -> Result<(), nix::Error> {
             exit(-1)
         }
     };
-    Ok(())
 }

@@ -418,8 +418,8 @@ impl Process {
     }
 
     fn create_pipes(&self) -> Result<(Pipe, Pipe), nix::Error> {
-        let stdout = unistd::pipe().unwrap();
-        let stderr = unistd::pipe().unwrap();
+        let stdout = unistd::pipe()?;
+        let stderr = unistd::pipe()?;
         Ok((stdout, stderr))
     }
 }

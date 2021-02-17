@@ -18,7 +18,6 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
-use std::iter::FromIterator;
 
 use log::debug;
 
@@ -77,7 +76,7 @@ impl DependencyManager {
     /// If the config contains cyclic dependency the Err(index)
     /// contains the index of some program involved in the cycle
     pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
-        let name_dict = DependencyManager::build_name_dict(config)?;
+        let name_dict = DependencyManager::build_name_dict(config);
         DependencyManager::validate_references(config, &name_dict)?;
         let nodes = DependencyManager::build_dependencies(config, &name_dict);
         let mut initial_runnables = DependencyManager::find_initial_runnables(&nodes);
@@ -203,9 +202,7 @@ impl DependencyManager {
         }
     }
 
-    fn build_name_dict(
-        descriptions: &[(usize, ProcessConfig)],
-    ) -> Result<HashMap<String, usize>, Error> {
+    fn build_name_dict(descriptions: &[(usize, ProcessConfig)]) -> HashMap<String, usize> {
         let mut result = HashMap::new();
 
         for (i, desc) in descriptions {
@@ -219,7 +216,7 @@ impl DependencyManager {
             }
         }
 
-        Ok(result)
+        result
     }
 
     fn validate_references(
