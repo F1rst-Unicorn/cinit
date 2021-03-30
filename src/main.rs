@@ -15,6 +15,44 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! container init system
+//!
+//! This documentation targets developers of cinit. If you want to learn how to
+//! use cinit, see [`doc/README.md`](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md).
+//!
+//! Run processes and take init (PID 0) responsibilities inside containers.
+//!
+//! # Features
+//!
+//! * **Clean Termination**: If cinit receives a termination signal it forwards
+//!   it to all its child processes so they can terminate properly.
+//!
+//! * **Capabilities**: Set Linux Capabilities on child processes.
+//!
+//! * **Environment Sanitisation**: Control what environment variables are
+//!   available in child processes using an expressive template language.
+//!
+//! * **Dependency Trees**: Declare a relative ordering on the processes
+//!   being spawned.
+//!
+//! * **Cron jobs**: Run processes repeatedly using a cron-like API.
+//!
+//! * **Zombie Reaping**: Adopt and terminate abandoned child processes.
+//!
+//! # Architecture
+//!
+//! cinit execution is split into three phases:
+//!
+//! 1. [Configuration Collection](config):
+//!    Read all configuration files, merge them into a single structure
+//!    and perform basic validity checks.
+//!
+//! 2. [Analysis](analyse):
+//!    Do validation analysis and build data structures for later execution
+//!
+//! 3. [Runtime](runtime):
+//!    Start executing processes and manage runtime events.
+
 use std::alloc::System;
 
 #[global_allocator]

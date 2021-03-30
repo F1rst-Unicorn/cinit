@@ -15,12 +15,18 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Parse command line
+
 use clap::App;
 use clap::Arg;
 
+/// Control cinit's logging verbosity
 pub const FLAG_VERBOSE: &str = "verbose";
+
+/// Control cinit's configuration root
 pub const FLAG_CONFIG: &str = "config";
 
+/// Transform command line into [clap](clap) struct
 pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
     let app = App::new("cinit")
         .version(concat!(

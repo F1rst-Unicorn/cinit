@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Additions to [ProcessManager](ProcessManager) to report the runtime status
+
 use crate::runtime::process::{ProcessState, ProcessType};
 use crate::runtime::process_manager::ProcessManager;
 use crate::util::libc_helpers;
@@ -29,12 +31,14 @@ use std::os::unix::io::AsRawFd;
 use std::os::unix::io::FromRawFd;
 
 impl ProcessManager {
+    /// Print the runtime state handling potential errors
     pub fn report_status(&mut self) {
         if let Err(e) = self.write_report() {
             warn!("Failed to print report: {:#?}", e);
         }
     }
 
+    /// Open the socket and write a report to it
     fn write_report(&mut self) -> Result<(), nix::Error> {
         let mut file = unsafe { std::fs::File::from_raw_fd(socket::accept(self.status_fd)?) };
 
@@ -44,6 +48,7 @@ impl ProcessManager {
         Ok(())
     }
 
+    /// Generate the report and write it to a stream
     fn format_report<W: Write>(&mut self, file: &mut W) -> Result<(), nix::Error> {
         file.write_fmt(format_args!("programs:\n"))
             .map_err(libc_helpers::map_to_errno)?;

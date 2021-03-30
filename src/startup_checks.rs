@@ -15,18 +15,23 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Check if cinit can run on this platform
+
 use log::{debug, error, warn};
 use nix::sys::utsname::uname;
 use nix::unistd::getuid;
 use std::process::exit;
 
+/// Unique exit code for this module
 const EXIT_CODE: i32 = 5;
 
+/// Terminate if requirements are not met
 pub fn do_startup_checks() {
     check_kernel_version();
     check_user();
 }
 
+/// Terminate if linux version doesn't support capabilities
 fn check_kernel_version() {
     let kernel_info = uname();
     let mut release = kernel_info.release().split('.');
@@ -67,6 +72,7 @@ fn check_kernel_version() {
     }
 }
 
+/// Terminate if not run as root
 fn check_user() {
     let uid = getuid();
     if !uid.is_root() {

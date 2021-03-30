@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Spawn and manage child processes and execute the system
+
 pub mod process;
 pub mod process_manager;
 

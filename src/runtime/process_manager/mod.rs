@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Overall runtime data structure
+
 mod notify_manager;
 mod status_reporter;
 
@@ -47,16 +49,21 @@ use chrono::prelude::Local;
 
 use log::{debug, error, info, trace, warn};
 
+/// Path of the report socket
 const SOCKET_PATH: &str = "/run/cinit.socket";
 
+/// Path of the notify socket for children
 pub const NOTIFY_SOCKET_PATH: &str = "/run/cinit-notify.socket";
 
+/// Unique exit code for this module
 const EXIT_CODE: i32 = 3;
 
+/// Overall runtime data structure
 #[derive(Debug)]
 pub struct ProcessManager {
     pub process_map: ProcessMap,
 
+    /// Event loop condition
     pub keep_running: bool,
 
     pub dependency_manager: dependency_graph::DependencyManager,
@@ -73,6 +80,7 @@ pub struct ProcessManager {
 }
 
 impl Drop for ProcessManager {
+    /// Close all open file descriptors
     fn drop(&mut self) {
         let raw_signal_fd = self.signal_fd.as_raw_fd();
         self.deregister_fd(raw_signal_fd);
@@ -87,6 +95,7 @@ impl Drop for ProcessManager {
 }
 
 impl ProcessManager {
+    /// Set up runtime and run the event loop
     pub fn start(&mut self) {
         match self.setup() {
             Err(content) => {
@@ -117,6 +126,9 @@ impl ProcessManager {
         trace!("Exiting");
     }
 
+    /// `wait()` for terminated child processes
+    ///
+    /// Query for terminated children and update their runtime status.
     fn look_for_finished_children(&mut self) {
         let mut wait_args = wait::WaitPidFlag::empty();
         wait_args.insert(wait::WaitPidFlag::WNOHANG);
@@ -140,6 +152,13 @@ impl ProcessManager {
         }
     }
 
+    /// Mark a child process as terminated
+    ///
+    /// Update the child's status. If the child exitted with a non-zero exit code
+    /// cinit shuts down.
+    ///
+    /// The process_map is cleaned off the child's information and the dependency
+    /// graph is updated.
     fn handle_finished_child(&mut self, pid: Pid, rc: i32) {
         let child_index_option = self.process_map.process_id_for_pid(pid);
 
@@ -184,6 +203,7 @@ impl ProcessManager {
         }
     }
 
+    /// Dispatch events from the various file descriptors via `epoll()`
     fn dispatch_epoll(&mut self) {
         let mut event_buffer = [epoll::EpollEvent::empty(); 10];
         let epoll_result = epoll::epoll_wait(self.epoll_fd, &mut event_buffer, 1000);
@@ -200,6 +220,13 @@ impl ProcessManager {
         }
     }
 
+    /// Open file descriptors and take on init responsibility
+    ///
+    /// Signals will be redirected to a file descriptor. The status reporting
+    /// UNIX socket is opened. The notify socket for children is opened.
+    ///
+    /// cinit declares itself as `PR_SET_CHILD_SUBREAPER` to inherit zombies from
+    /// its process subtree so it can reap them correctly.
     fn setup(&mut self) -> Result<(), nix::Error> {
         self.signal_fd = ProcessManager::setup_signal_handler()?;
         self.status_fd = self.setup_unix_socket(SOCKET_PATH, socket::SockType::Stream)?;
@@ -209,6 +236,14 @@ impl ProcessManager {
         Ok(())
     }
 
+    /// Open signal file descriptor
+    ///
+    /// Declare interest only in selected signals:
+    ///
+    /// * `SIGCHLD`
+    /// * `SIGINT`
+    /// * `SIGTERM`
+    /// * `SIGQUIT`
     fn setup_signal_handler() -> Result<signalfd::SignalFd, nix::Error> {
         let mut signals = signalfd::SigSet::empty();
         signals.add(signalfd::signal::SIGCHLD);
@@ -219,6 +254,9 @@ impl ProcessManager {
         signalfd::SignalFd::with_flags(&signals, signalfd::SfdFlags::SFD_CLOEXEC)
     }
 
+    /// Open a generic UNIX socket
+    ///
+    /// The socket is world-accessible and requires peer authentication
     fn setup_unix_socket(&mut self, path: &str, typ: SockType) -> Result<RawFd, nix::Error> {
         match remove_file(path).map_err(libc_helpers::map_to_errno) {
             Err(nix::Error::Sys(nix::errno::Errno::ENOENT)) => Ok(()),
@@ -254,6 +292,7 @@ impl ProcessManager {
         Ok(socket_fd)
     }
 
+    /// Set up an `epoll()` file descriptor
     fn setup_epoll_fd(&mut self) -> Result<RawFd, nix::Error> {
         let epoll_fd = epoll::epoll_create1(epoll::EpollCreateFlags::EPOLL_CLOEXEC)?;
         epoll::epoll_ctl(
@@ -280,6 +319,7 @@ impl ProcessManager {
         Ok(epoll_fd)
     }
 
+    /// Handle generic `epoll()` event
     fn handle_event(&mut self, event: epoll::EpollEvent) {
         if event.events().contains(epoll::EpollFlags::EPOLLIN) {
             let fd = event.data() as RawFd;
@@ -299,6 +339,11 @@ impl ProcessManager {
         }
     }
 
+    /// Handle various signals
+    ///
+    /// `SIGCHILD` is only logged as child results are yielded via `wait()`.
+    ///
+    /// `SIGINT`, `SIGQUIT` and `SIGTERM` lead to shutdown.
     fn handle_signal(&mut self) {
         match self.signal_fd.read_signal() {
             Ok(Some(signal)) => {
@@ -331,12 +376,16 @@ impl ProcessManager {
         }
     }
 
+    /// Shut down the manager
+    ///
+    /// The event loop is terminated and children are notified to shut down
     fn initiate_shutdown(&mut self, signal: signal::Signal) {
         info!("Received termination signal");
         self.keep_running = false;
         self.signal_children(signal);
     }
 
+    /// Send a signal to all running children
     fn signal_children(&mut self, signal: signal::Signal) {
         info!("Killing children");
         for child in self
@@ -349,6 +398,7 @@ impl ProcessManager {
         }
     }
 
+    /// Register a file descriptor at epoll
     fn register_fd(&mut self, fd: RawFd) {
         debug!("Registering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
@@ -362,6 +412,7 @@ impl ProcessManager {
         }
     }
 
+    /// Remove a file descriptor from epoll
     fn deregister_fd(&mut self, fd: RawFd) {
         debug!("Deregistering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
@@ -382,6 +433,7 @@ impl ProcessManager {
         self.process_map.deregister_fd(fd);
     }
 
+    /// Print out child's message reading from its file descriptor
     fn print_child_output(&mut self, fd: RawFd) {
         let mut buffer = [0_u8; 4096];
         let length = unistd::read(fd, &mut buffer);
@@ -404,6 +456,16 @@ impl ProcessManager {
         }
     }
 
+    /// Check if children are runnable and spawn them
+    ///
+    /// Look for runnable children in the dependency manager and the cron
+    /// scheduler.
+    ///
+    /// A cron job is only spawned if both its dependencies have been resolved
+    /// and the schedule demands it.
+    ///
+    /// A non-cron process is spawned as soon as its dependencies have been
+    /// resolved.
     fn spawn_children(&mut self) {
         while let Some(child_index) = self.dependency_manager.pop_runnable() {
             if self.process_map[child_index].process_type != ProcessType::Cronjob {
@@ -427,6 +489,11 @@ impl ProcessManager {
         }
     }
 
+    /// Spawn the child with the given process id
+    ///
+    /// The child is spawned unless it is already running which can regularly
+    /// happen for cron jobs. The spawned child is indexed via PID, stdout and
+    /// stderr file descriptors and is registered at epoll.
     fn spawn_child(&mut self, child_index: usize) {
         let child_result;
         let child = &mut self.process_map[child_index];

@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Index over process ids
+
 use std::collections::HashMap;
 use std::ops::Index;
 use std::ops::IndexMut;
@@ -24,12 +26,12 @@ use crate::runtime::process::Process;
 
 use nix::unistd::Pid;
 
-#[derive(Debug, Clone, Copy)]
-pub enum StreamType {
-    Stdout,
-    Stderr,
-}
-
+/// Index over process ids
+///
+/// Owner of all [Processes](Process) at runtime. Each process's id corresponds
+/// to the index position inside the `processes` [Vec](std::vec::Vec).
+///
+/// Maintains indices to map file descriptors and PIDs to their owning processes.
 #[derive(Debug)]
 pub struct ProcessMap {
     processes: Vec<Process>,
@@ -42,6 +44,7 @@ pub struct ProcessMap {
 }
 
 impl ProcessMap {
+    /// Build from given processes
     pub fn from(processes: Vec<Process>) -> ProcessMap {
         ProcessMap {
             processes,
@@ -51,42 +54,38 @@ impl ProcessMap {
         }
     }
 
+    /// Get all processes
     pub fn processes(&self) -> &Vec<Process> {
         &self.processes
     }
 
+    /// Check if any process's runtime information is still indexed.
     pub fn has_running_processes(&self) -> bool {
         !self.stdout_dict.is_empty() || !self.stderr_dict.is_empty() || !self.pid_dict.is_empty()
     }
 
+    /// Check the file descriptor is known to the index as stdout
     pub fn is_stdout(&self, fd: RawFd) -> bool {
         self.stdout_dict.contains_key(&fd)
     }
 
+    /// Index a new stdout file descriptor for the given process id
     pub fn register_stdout(&mut self, process_id: usize, fd: RawFd) {
-        self.register_fd(process_id, fd, StreamType::Stdout)
+        self.stdout_dict.insert(fd, process_id);
     }
 
+    /// Index a new stderr file descriptor for the given process id
     pub fn register_stderr(&mut self, process_id: usize, fd: RawFd) {
-        self.register_fd(process_id, fd, StreamType::Stderr)
+        self.stderr_dict.insert(fd, process_id);
     }
 
-    pub fn register_fd(&mut self, process_id: usize, fd: RawFd, kind: StreamType) {
-        match kind {
-            StreamType::Stdout => {
-                self.stdout_dict.insert(fd, process_id);
-            }
-            StreamType::Stderr => {
-                self.stderr_dict.insert(fd, process_id);
-            }
-        }
-    }
-
+    /// Remove file descriptor from the index
     pub fn deregister_fd(&mut self, fd: RawFd) {
         self.stderr_dict.remove(&fd);
         self.stdout_dict.remove(&fd);
     }
 
+    /// Get the [Process](Process) owning this file descriptor
     pub fn process_for_fd(&mut self, fd: RawFd) -> &mut Process {
         if let Some(index) = self.stdout_dict.get(&fd) {
             &mut self.processes[*index]
@@ -97,24 +96,28 @@ impl ProcessMap {
         }
     }
 
+    /// Register a PID in the index for a process
     pub fn register_pid(&mut self, process_id: usize, pid: Pid) {
         self.pid_dict.insert(pid, process_id);
     }
 
+    /// Deregister a PID from the index
     pub fn deregister_pid(&mut self, pid: Pid) {
         self.pid_dict.remove(&pid);
     }
 
-    /// This method returns an Option<> to also query for unknown
-    /// PIDs. If the PID is not known to cinit, this PID is an orphan process
-    /// adopted by cinit.
+    /// Look up a PID in the index
+    ///
+    /// Map a PID into a process id. If the PID is not known to cinit, this PID
+    /// is an orphan process adopted by cinit.
     pub fn process_id_for_pid(&self, pid: Pid) -> Option<usize> {
-        match self.pid_dict.get(&pid) {
-            None => None,
-            Some(result) => Some(*result),
-        }
+        self.pid_dict.get(&pid).copied()
     }
 
+    /// Look up a PID in the index
+    ///
+    /// Map a PID into a [Process](Process). If the PID is not known to cinit,
+    /// this PID is an orphan process adopted by cinit.
     pub fn process_for_pid(&mut self, pid: Pid) -> Option<&mut Process> {
         let index = self.process_id_for_pid(pid)?;
         Some(&mut self.processes[index])

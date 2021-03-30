@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Additions to [ProcessManager](ProcessManager) for the `notify` interface
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -35,18 +37,27 @@ use nix::sys::uio::IoVec;
 use nix::unistd::Pid;
 
 impl ProcessManager {
+    /// Read from the notify socket
+    ///
+    /// This will block unless data is ready to be read.
     pub fn read_notification(&mut self) {
         if let Err(e) = self.read_notification_internally() {
             warn!("Failed to receive notification: {:#?}", e);
         }
     }
 
+    /// Read from the notify socket
+    ///
+    /// # Errors
+    ///
+    /// This can fail when the I/O operation fails
     fn read_notification_internally(&mut self) -> Result<(), nix::Error> {
         let (state, peer) = self.read_socket()?;
         self.process(&state, &peer);
         Ok(())
     }
 
+    /// Read message and sender identity from the notify socket
     fn read_socket(&mut self) -> Result<(String, UnixCredentials), nix::Error> {
         let mut buffer: [u8; 4096] = [0; 4096];
         let mut control = cmsg_space!(UnixCredentials);
@@ -69,6 +80,10 @@ impl ProcessManager {
         Err(nix::Error::Sys(nix::errno::Errno::EBADMSG))
     }
 
+    /// Process the message received from the notify socket
+    ///
+    /// Update both the state of the [ProcessManager](ProcessManager) and of the
+    /// sending [Process](crate::runtime::process::Process).
     fn process(&mut self, state: &str, peer: &UnixCredentials) {
         let pid = Pid::from_raw(peer.pid());
         let process_id_result = self.process_map.process_id_for_pid(pid);
@@ -97,6 +112,8 @@ impl ProcessManager {
         }
     }
 
+    /// Update the state of the [ProcessManager](ProcessManager) according to the
+    /// message
     fn handle_notification(&mut self, process_id: usize, pid: Pid, key: &str, value: &str) {
         if key == "READY" {
             if value != "1" {
@@ -116,6 +133,7 @@ impl ProcessManager {
         }
     }
 
+    /// Parse the raw notification message string
     fn parse(state: &str) -> HashMap<String, String> {
         let mut result = HashMap::new();
         let mut allowed_keys = HashSet::new();

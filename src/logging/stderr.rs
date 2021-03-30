@@ -15,8 +15,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Log a message to stdout
+//!
+//! This module is needed to configure a different log format for children
+//! processes.
+
 use log::info;
 
+/// Log a message from a child process
 pub fn log(child_name: &str, message: &str) {
     info!("[{}] {}", child_name, message);
 }

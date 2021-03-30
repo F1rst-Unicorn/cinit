@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Read the configuration for the analysis phase.
+
 pub mod config_parser;
 
 use std::collections::HashMap;
@@ -24,13 +26,20 @@ use std::fmt::Formatter;
 
 use serde_derive::Deserialize;
 
+/// Error occurring while merging [ProcessConfigs](ProcessConfig)
 #[derive(Debug, PartialEq)]
 pub enum MergeError {
+    /// A path is specified more than once for a program
     PathSpecified(String),
+
+    /// A field which is not allowed in a [dropin](ProcessConfig::merge)
     InvalidFieldSpecified(String, String),
+
+    /// The [dropin](ProcessConfig::merge) was specified to be a cronjob
     CronjobSpecified(String),
 }
 
+/// Format the error for the user
 impl Display for MergeError {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         match self {
@@ -47,14 +56,21 @@ impl Display for MergeError {
     }
 }
 
+/// Programmatic pendant for
+/// [ProcessTypes](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md#program-types)
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum ProcessType {
+    /// Default "simple" process type running once
     #[serde(rename = "oneshot")]
     Oneshot,
 
+    /// Process type running once and notifying cinit of events
     #[serde(rename = "notify")]
     Notify,
 
+    /// Cronjob with timer expression
+    ///
+    /// The timer contains the cron expression
     #[serde(rename = "cronjob")]
     CronJob { timer: String },
 }
@@ -63,6 +79,9 @@ fn default_process_type() -> ProcessType {
     ProcessType::Oneshot
 }
 
+/// (Partial) Configuration of a single process
+///
+/// This is the programatic pendant of the configuration file
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct ProcessConfig {
     pub name: String,
@@ -105,6 +124,17 @@ pub struct ProcessConfig {
 }
 
 impl ProcessConfig {
+    /// Merge two [ProcessConfigs](ProcessConfig) according to the [documentation
+    /// on
+    /// merging](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md#merging-configuration)
+    ///
+    /// The [ProcessConfig](ProcessConfig) containing the `path` (which is only allowed in one place)
+    /// is considered the primary one, the other one the dropin.
+    ///
+    /// # Errors
+    ///
+    /// If the dropin contains values which are only allowed in one of the configurations
+    /// an approriate [MergeError](MergeError) is raised.
     pub fn merge(self, other: Self) -> Result<Self, MergeError> {
         assert_eq!(self.name, other.name);
 
@@ -181,24 +211,16 @@ impl ProcessConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+/// Top-level Configuration
+///
+/// Consists of all programs that are known
+#[derive(Debug, Deserialize, Default)]
 pub struct Config {
     pub programs: Vec<ProcessConfig>,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            programs: Vec::new(),
-        }
-    }
-}
-
 impl Config {
-    pub fn new() -> Config {
-        Default::default()
-    }
-
+    /// Merge two [Config](Config)s into one
     pub fn merge(mut self, mut other: Self) -> Self {
         self.programs.append(&mut other.programs);
         self

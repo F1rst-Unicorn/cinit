@@ -15,5 +15,12 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Perform validity checks and precomputations
+//!
+//! Individual [ProcessConfigs](crate::config::ProcessConfig) are transformed into
+//! [Processes](crate::runtime::process::Process) and are collected into a
+//! [ProcessManager](crate::runtime::process_manager::ProcessManager) which is the
+//! result of the analysis phase.
+
 pub mod process_builder;
 pub mod process_manager_builder;

@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Set up the logging framework
+
 pub mod stderr;
 pub mod stdout;
 
@@ -23,6 +25,7 @@ use log4rs::encode::pattern::PatternEncoder;
 
 use log::LevelFilter;
 
+/// Initialise the log level and format
 pub fn initialise(verbosity_level: u64) {
     let stdout = log4rs::append::console::ConsoleAppender::builder()
         .encoder(Box::new(PatternEncoder::new(

@@ -15,6 +15,30 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Build the [ProcessManager](crate::runtime::process_manager::ProcessManager)
+//! for runtime execution.
+//!
+//! # Precomputations
+//!
+//! Transform each contained [ProcessConfig](ProcessConfig) into a
+//! [Process](Process). Every process is assigned an arbitrary, unique process
+//! id, not to be confused with UNIX PIDs which are only valid while the process
+//! runs.
+//!
+//! Build the dependency graph for efficient unblocking at runtime.
+//!
+//! Parse cron expressions and set up their timers.
+//!
+//! # Validation
+//!
+//! A cycle in the dependency graph raises an error.
+//!
+//! Processes with unknown dependencies raise an error.
+//!
+//! Dependencies on cronjobs raise an error.
+//!
+//! Errors in the cronjob configurations are forwarded.
+
 use std::process::exit;
 
 use crate::config::{Config, ProcessConfig, ProcessType};
@@ -28,9 +52,11 @@ use nix::sys::signalfd;
 
 use log::{error, trace};
 
+/// Unique exit code for this module
 const EXIT_CODE: i32 = 2;
 
 impl ProcessManager {
+    /// See [analysis phase](crate::analyse::process_manager_builder)
     pub fn from(config: &Config) -> ProcessManager {
         let mut processes = Vec::new();
         for program_config in &config.programs {
@@ -62,6 +88,12 @@ impl ProcessManager {
     }
 }
 
+/// Build the [DependencyManager](DependencyManager)
+///
+/// Every process is assigned an arbitrary unique id using the same procedure as
+/// in [build_cron()](build_cron).
+///
+/// Errors during building are forwarded and terminate cinit.
 fn build_dependency_manager(config: &Config) -> DependencyManager {
     let input: Vec<(usize, ProcessConfig)> = config
         .programs
@@ -125,6 +157,12 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
     }
 }
 
+/// Build the [Cron](Cron)
+///
+/// Every process is assigned an arbitrary unique id using the same procedure as
+/// in [build_dependency_manager()](build_dependency_manager).
+///
+/// Errors during building are forwarded and terminate cinit.
 fn build_cron(config: &Config) -> Cron {
     let input: Vec<(usize, ProcessConfig)> = config
         .programs

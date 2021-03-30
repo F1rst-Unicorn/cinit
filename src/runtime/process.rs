@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Data and behaviour of a single process
+
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::fmt::{Display, Error as FmtError, Formatter};
@@ -43,8 +45,16 @@ use capabilities::Flag;
 
 use log::{debug, error, info, trace, warn};
 
+/// Unique exit code for this module
+///
+/// Raised by child processes where setup failed or by cinit if forking has
+/// failed.
 const EXIT_CODE: i32 = 4;
 
+/// Runtime process type
+///
+/// Runtime pendant to [configuration ProcessType](crate::config::ProcessType)
+/// without unneeded contained parameters.
 #[derive(Debug, PartialEq)]
 pub enum ProcessType {
     Oneshot,
@@ -54,6 +64,7 @@ pub enum ProcessType {
     Cronjob,
 }
 
+/// States a process can take on
 #[derive(Debug, PartialEq)]
 pub enum ProcessState {
     /// The process cannot be started because of dependencies not having
@@ -63,7 +74,8 @@ pub enum ProcessState {
     /// The process is a cronjob and waits for its timer to be triggered
     Sleeping,
 
-    /// The process is a notify and has not told cinit that it has started
+    /// The process is a notify, has been started by cinit and has not told cinit
+    /// that it has started
     Starting,
 
     /// The process is running. Set automatically for oneshot and by the process
@@ -97,6 +109,9 @@ impl Display for ProcessState {
     }
 }
 
+/// Runtime information of a single process
+///
+/// Store information needed during the entire lifetime of the process
 #[derive(Debug)]
 pub struct Process {
     pub name: String,
@@ -127,6 +142,11 @@ pub struct Process {
 }
 
 impl Process {
+    /// Start a new [Process](Process) by forking
+    ///
+    /// Fork off the process returning its PID, `stdout`, and `stderr` file
+    /// descriptors. The child process will configure according to the
+    /// [ProcessConfig](crate::config::ProcessConfig) and then perform an `exec`.
     pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
         info!("Starting {}", self.name);
 
@@ -171,6 +191,14 @@ impl Process {
         }
     }
 
+    /// Handle information received from the `notify` socket.
+    ///
+    /// Keys of interest are:
+    ///
+    /// * `READY`
+    /// * `STOPPING`
+    /// * `STATUS`
+    /// * `MAINPID`
     pub fn handle_notification(&mut self, key: &str, value: &str) {
         match key {
             "READY" => {
@@ -232,6 +260,13 @@ impl Process {
         };
     }
 
+    /// Create file descriptors for stdout and stderr
+    ///
+    /// Either create plain pipes or pty-emulating pipes, depending on
+    /// [`emulate_pty`](crate::config::ProcessConfig::emulate_pty).
+    ///
+    /// The cinit parts of the pipes are closed on exec, so the child cannot
+    /// abuse them.
     fn create_std_fds(&self) -> Result<(Pipe, Pipe), nix::Error> {
         let result = if self.emulate_pty {
             self.create_ptys()
@@ -252,6 +287,14 @@ impl Process {
         result
     }
 
+    /// Run pre-exec setup and do exec.
+    ///
+    /// This call will not return but instead `exec`!
+    ///
+    /// The existing stdout and stderr file descriptors inherited from cinit are
+    /// replaced by the parameters.
+    ///
+    /// cinit's `sigprocmask` is reverted to not mask any signals.
     fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
         while unistd::dup2(stdout, std::io::stdout().as_raw_fd()).is_err() {}
         while unistd::dup2(stderr, std::io::stderr().as_raw_fd()).is_err() {}
@@ -285,6 +328,23 @@ impl Process {
         Ok(())
     }
 
+    /// Set security features of the child process
+    ///
+    /// Switch to the specified UNIX user and group.
+    ///
+    /// Configure ambient capabilities.
+    ///
+    /// These two operations have to happen jointly due to security confinements:
+    ///
+    /// * First temporary capabilities are added to the permitted set to allow
+    ///   transferring them across a uid/gid change.
+    ///
+    /// * Then the uid/gid is changed using `PR_SET_KEEPCAPS` (see `man 7
+    ///   capabilities`)
+    ///
+    /// * Set the [configured
+    ///   capabilities](crate::config::ProcessConfig::capabilities) as the
+    ///   unprivileged user.
     fn set_user_and_caps(&mut self) -> Result<(), nix::Error> {
         let mut temporary_caps = Capabilities::new().map_err(map_to_errno)?;
         let mut actual_caps = Capabilities::new().map_err(map_to_errno)?;

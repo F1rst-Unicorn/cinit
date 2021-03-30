@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Functions for parsing
+
 use std::collections::HashMap;
 use std::fs;
 use std::fs::File;
@@ -28,8 +30,10 @@ use log::{debug, error, trace, warn};
 use crate::config::Config;
 use crate::config::ProcessConfig;
 
+/// Unique exit code for this module
 const EXIT_CODE: i32 = 1;
 
+/// Transform configuration root into a [Config](Config)
 pub fn parse_config(path: &str) -> Config {
     let raw_config = read_config(path);
     debug!(
@@ -44,7 +48,10 @@ pub fn parse_config(path: &str) -> Config {
     merge_dropins(config)
 }
 
-pub fn read_config(path: &str) -> Vec<String> {
+/// Collect file contents from configuration root
+///
+/// Traverse the configuration root to collect all potential configuration files.
+fn read_config(path: &str) -> Vec<String> {
     let metadata_result = fs::metadata(path);
 
     if let Err(err) = metadata_result {
@@ -93,6 +100,7 @@ pub fn read_config(path: &str) -> Vec<String> {
     result
 }
 
+/// Transform separate configuration files into a [Config](Config)
 fn parse_raw_config(raw_config: &[String]) -> Config {
     let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
@@ -109,10 +117,15 @@ fn parse_raw_config(raw_config: &[String]) -> Config {
     } else {
         parse_result
             .map(Result::unwrap)
-            .fold(Config::new(), Config::merge)
+            .fold(Config::default(), Config::merge)
     }
 }
 
+/// Merge [ProcessConfig](ProcessConfig)s of the same program into a single
+/// [ProcessConfig](ProcessConfig) instance.
+///
+/// [ProcessConfig](ProcessConfig)s are considered the same if they have the same
+/// name
 fn merge_dropins(config: Config) -> Config {
     let mut dict: HashMap<String, ProcessConfig> = HashMap::new();
 
@@ -141,6 +154,7 @@ fn merge_dropins(config: Config) -> Config {
     }
 }
 
+/// Read a file into a [String](std::string::String)
 pub fn read_file(file_path: &str) -> Result<String, io::Error> {
     let mut file = File::open(file_path)?;
     let mut content = String::new();

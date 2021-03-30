@@ -15,6 +15,8 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Handle periodic execution of processes
+
 use crate::config::{ProcessConfig, ProcessType};
 
 use std::collections::BTreeMap;
@@ -26,6 +28,7 @@ use chrono::{Datelike, Duration, Timelike};
 
 use log::debug;
 
+/// Explicitly store all instants of a cron expression
 #[derive(Debug)]
 pub struct TimerDescription {
     minute: BTreeSet<u32>,
@@ -40,6 +43,9 @@ pub struct TimerDescription {
 }
 
 impl TimerDescription {
+    /// Parse a cron expression
+    ///
+    /// Transform into a [TimerDescription] or die trying.
     pub fn parse(raw_desc: &str) -> Result<TimerDescription, String> {
         let mut iter = raw_desc.split_whitespace();
         let result = Ok(TimerDescription {
@@ -59,6 +65,17 @@ impl TimerDescription {
         }
     }
 
+    /// Compute the next contained [DateTime](DateTime) starting `from_timepoint`
+    ///
+    /// This is an explicit addition over different time units.
+    ///
+    /// The algorithm is mostly conformant to cron. Notably there is no
+    /// difference between a cron expression `*` and the full domain, e.g. `0-59`
+    /// for minute. This makes a difference when deciding whether a day of week
+    /// or a day of month takes precedence: In standard cron a wildcard will not
+    /// influence the value of the next day of execution while a full domain
+    /// expression will always make the next day from today the next day of
+    /// execution. In practice this won't likely be relevant.
     pub fn get_next_execution(&self, from_timepoint: DateTime<Local>) -> DateTime<Local> {
         let mut result = from_timepoint;
         let mut carry = 0;
@@ -149,6 +166,14 @@ impl TimerDescription {
     }
 }
 
+/// Parse a single cron expression's element into an explicit collection
+///
+/// Translate a cron expression into a complete explicit list of all covered
+/// values. The domain of the values is bounded between `min` and `max`.
+///
+/// # Errors
+///
+/// If parsing fails a brief error description is returned
 fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32>, String> {
     if min > max {
         return Err("Invalid range given".to_string());
@@ -230,14 +255,21 @@ pub enum Error {
     TimeParseError(String, usize),
 }
 
+/// Index to schedule cron jobs
 #[derive(Debug)]
 pub struct Cron {
+    /// Map process ids to their timers
     timers: HashMap<usize, TimerDescription>,
 
+    /// Map trigger instants to their process id
     timer: BTreeMap<DateTime<Local>, usize>,
 }
 
 impl Cron {
+    /// Build a cron scheduler from the configuration
+    ///
+    /// The cron expressions are parsed and the scheduler is initialised with
+    /// their first execution time.
     pub fn with_jobs(config: &[(usize, ProcessConfig)]) -> Result<Cron, Error> {
         let mut result = Cron {
             timers: HashMap::new(),
@@ -265,6 +297,10 @@ impl Cron {
         Ok(result)
     }
 
+    /// Return a process id whose execution is before `now`
+    ///
+    /// The scheduled instant of the returned process id is removed. The next
+    /// execution time is scheduled and inserted into the index.
     pub fn pop_runnable(&mut self, now: DateTime<Local>) -> Option<usize> {
         let next_job = self.timer.iter().next().map(|t| (*t.0, *t.1));
 
@@ -286,6 +322,7 @@ impl Cron {
         }
     }
 
+    /// Get the next execution time of a given process id
     pub fn get_next_execution(&self, id: usize) -> DateTime<Local> {
         for (time, item_id) in &self.timer {
             if id == *item_id {
@@ -295,6 +332,7 @@ impl Cron {
         panic!("Queried cron manager with invalid id");
     }
 
+    /// Schedule the next execution of a process id
     fn insert_job(&mut self, mut next_execution: DateTime<Local>, id: usize) {
         while self.timer.contains_key(&next_execution) {
             next_execution = next_execution + Duration::nanoseconds(1);

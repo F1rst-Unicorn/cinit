@@ -36,6 +36,7 @@ ioctl_read_bad! {
     get_terminal_size, libc::TIOCGWINSZ, pty::Winsize
 }
 
+/// Safe wrapper around `ttyname()`, see `man 3 ttyname`.
 pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     unsafe {
         let raw_name = libc::ttyname(fd);
@@ -47,6 +48,7 @@ pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     }
 }
 
+/// Safe wrapper around `prctl()` with one argument, see `man 2 prctl`.
 pub fn prctl_one(option: libc::c_int, arg1: libc::c_ulong) -> Result<(), nix::Error> {
     unsafe {
         match libc::prctl(option, arg1) {
@@ -56,6 +58,7 @@ pub fn prctl_one(option: libc::c_int, arg1: libc::c_ulong) -> Result<(), nix::Er
     }
 }
 
+/// Safe wrapper around `prctl()` with four argument, see `man 2 prctl`.
 pub fn prctl_four(
     option: libc::c_int,
     arg1: libc::c_ulong,
@@ -71,6 +74,7 @@ pub fn prctl_four(
     }
 }
 
+/// Transform error types by matching `errno`
 pub fn map_to_errno(error: Error) -> nix::Error {
     let raw_error = error.raw_os_error();
     std::mem::drop(error);

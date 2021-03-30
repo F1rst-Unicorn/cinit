@@ -17,6 +17,14 @@
 
 //! Test program revealing information about its runtime
 //!
+//! This program is spawned during system tests to allow introspection of the
+//! spawned process's runtime information. It prints this information into a file.
+//!
+//! The runtime behaviour can be modified in terms of
+//!
+//! * return code
+//! * time until termination
+//! * status to notify cinit about
 
 use std::fs::File;
 use std::io::Write;
@@ -134,6 +142,7 @@ fn main() {
     );
 }
 
+/// Dump runtime information into a file.
 fn dump(output: &str) {
     let mut file =
         File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{}'", output));

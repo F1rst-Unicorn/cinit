@@ -15,6 +15,11 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Manage and evolve the dependency graph at runtime
+//!
+//! This data structure performs a topological sort during execution of the
+//! different processes.
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::VecDeque;
@@ -27,8 +32,9 @@ use crate::config::ProcessConfig;
 use crate::config::ProcessType;
 
 /// Process information relevant for dependency resolution
-/// via ongoing topological sorting
-#[derive(Debug, PartialEq)]
+///
+/// Values found in `after_self` are process ids.
+#[derive(Debug, PartialEq, Default)]
 pub struct ProcessNode {
     after_self: Vec<usize>,
 
@@ -37,30 +43,26 @@ pub struct ProcessNode {
     finished: bool,
 }
 
-impl Default for ProcessNode {
-    fn default() -> Self {
-        ProcessNode {
-            after_self: Vec::new(),
-            predecessor_count: 0,
-            finished: false,
-        }
-    }
-}
-
-impl ProcessNode {
-    pub fn new() -> ProcessNode {
-        Default::default()
-    }
-}
-
+/// Errors occurring during dependency graph construction
 #[derive(Debug, PartialEq)]
 pub enum Error {
+    /// The dependency graph contains a cycle involving the contained process id
     Cycle(usize),
+
+    /// process id `.0` references an unknown program in its
+    /// [`after`](crate::config::ProcessConfig::after) section at index `.1`.
     UnknownAfterReference(usize, usize),
+
+    /// process id `.0` references an unknown program in its
+    /// [`before`](crate::config::ProcessConfig::before) section at index `.1`.
     UnknownBeforeReference(usize, usize),
+
+    /// process id `.0` references a cronjob in its
+    /// [`after`](crate::config::ProcessConfig::after) section
     CronjobDependency(usize),
 }
 
+/// All data structures needed for dependency management.
 #[derive(Debug, PartialEq)]
 pub struct DependencyManager {
     nodes: HashMap<usize, ProcessNode>,
@@ -71,10 +73,12 @@ pub struct DependencyManager {
 }
 
 impl DependencyManager {
-    /// Return a newly constructed dependency manager
+    /// Build a new dependency manager
     ///
-    /// If the config contains cyclic dependency the Err(index)
-    /// contains the index of some program involved in the cycle
+    /// # Errors
+    ///
+    /// During construction the error conditions presented in [Error](Error) are
+    /// checked.
     pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config);
         DependencyManager::validate_references(config, &name_dict)?;
@@ -90,18 +94,24 @@ impl DependencyManager {
         Ok(result)
     }
 
+    /// Check if any process can be run now
     pub fn has_runnables(&self) -> bool {
         !self.runnable.is_empty()
     }
 
+    /// Get the next runnable process
     pub fn pop_runnable(&mut self) -> Option<usize> {
         self.runnable.pop_back()
     }
 
+    /// Check if the given process id has ever reached runnable state according
+    /// to [has_runnables](DependencyManager::has_runnables)
     pub fn is_runnable(&self, process_id: usize) -> bool {
         self.runnable_archive.contains(&process_id)
     }
 
+    /// Remove the process id from the graph and compute new runnables from this
+    /// event.
     pub fn notify_process_finished(&mut self, process_id: usize) {
         let process = self.nodes.get_mut(&process_id).expect("invalid process id");
         if process.finished {
@@ -123,6 +133,7 @@ impl DependencyManager {
         }
     }
 
+    /// Compute initially runnable processes without dependencies
     fn find_initial_runnables(nodes: &HashMap<usize, ProcessNode>) -> VecDeque<usize> {
         let mut result = VecDeque::new();
         nodes
@@ -133,6 +144,7 @@ impl DependencyManager {
         result
     }
 
+    /// Build dependency relations between processes
     fn build_dependencies(
         config: &[(usize, ProcessConfig)],
         name_dict: &HashMap<String, usize>,
@@ -140,7 +152,7 @@ impl DependencyManager {
         let mut result = HashMap::with_capacity(config.len());
 
         for (k, _) in config {
-            result.insert(*k, ProcessNode::new());
+            result.insert(*k, ProcessNode::default());
         }
 
         for (current_index, current_config) in config {
@@ -179,6 +191,7 @@ impl DependencyManager {
         result
     }
 
+    /// Check if the dependency graph allows for a topological order
     fn check_for_cycles(&self) -> Result<(), Error> {
         let mut graph = Graph::<_, _>::new();
         let mut node_dict = HashMap::new();
@@ -202,6 +215,7 @@ impl DependencyManager {
         }
     }
 
+    /// Index [ProcessConfigs](ProcessConfig) by [`name`](ProcessConfig::name)
     fn build_name_dict(descriptions: &[(usize, ProcessConfig)]) -> HashMap<String, usize> {
         let mut result = HashMap::new();
 
@@ -219,6 +233,14 @@ impl DependencyManager {
         result
     }
 
+    /// Check if name references to other processes are valid
+    ///
+    /// Validate references in [`before`](ProcessConfig::before) and
+    /// [`after`](ProcessConfig::after) lists.
+    ///
+    /// # Errors
+    ///
+    /// The first found unknown reference reports an error
     fn validate_references(
         config: &[(usize, ProcessConfig)],
         name_dict: &HashMap<String, usize>,

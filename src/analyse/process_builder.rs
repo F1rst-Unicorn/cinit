@@ -15,6 +15,38 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+//! Transform a [ProcessConfig](ProcessConfig) into a runnable [Process](Process)
+//!
+//! # Precomputations
+//!
+//! The user and group names are mapped to uid and gid respectively.
+//!
+//! The environment of the process is assembled. This involves copying forwarded
+//! environment variables from cinit and resolving the [tera](tera) templates
+//! into strings. After the environment is known, the process's arguments (which
+//! are templates, too) are are resolved.
+//!
+//! The initial [process state](crate::runtime::process::ProcessState) is set.
+//!
+//! # Validation
+//!
+//! A cronjob must not declare outgoing dependencies.
+//!
+//! An unknown user or group name is raised as error.
+//!
+//! The reserved environment variable `NOTIFY_SOCKET` must not occur in the
+//! environment for [Processes](Process) of type [`notify`](ProcessType::Notify).
+//!
+//! A missing [`path`](ProcessConfig::path) is raised as error.
+//!
+//! If a resolved template string [looks like a tera
+//! template](looks_like_tera_template) a warning is raised as the user may have
+//! written the template wrongly.
+//!
+//! If a template resolution fails a warning (but not an error) is raised. This
+//! is treated as warning because a string might just accidentally look like a
+//! template but being used in a non-tera context.
+
 use std::collections::HashMap;
 use std::convert;
 use std::error::Error as StdError;
@@ -38,10 +70,16 @@ use nix::unistd::User;
 use log::trace;
 use log::warn;
 
+/// Errors occuring during analysis
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
+    /// A Cronjob with a dependency
     CronjobDependency,
+
+    /// User or group could not be resolved
     UserGroupInvalid,
+
+    /// The process has no binary path
     PathMissing,
 }
 
@@ -58,6 +96,7 @@ impl Display for Error {
 }
 
 impl Process {
+    /// Build a [Process](Process) from a [ProcessConfig](ProcessConfig).
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
         if let ProcessType::CronJob { .. } = &config.process_type {
             if !config.before.is_empty() {
@@ -131,6 +170,13 @@ impl Process {
     }
 }
 
+/// Set well-known environment variables to defined values
+///
+/// * `HOME`: User's home directory
+/// * `PWD`: [`workdir`](ProcessConfig::workdir)
+/// * `USER`: user name
+/// * `LOGNAME`: user name
+/// * `SHELL`: `/bin/sh`
 fn sanitise_env(env: &mut HashMap<String, String>, user: &User) {
     env.insert("HOME".to_string(), user.dir.to_string_lossy().to_string());
     env.insert("PWD".to_string(), user.dir.to_string_lossy().to_string());
@@ -139,6 +185,7 @@ fn sanitise_env(env: &mut HashMap<String, String>, user: &User) {
     env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
+/// Transform [`uid`](ProcessConfig::uid) or [`user`](ProcessConfig::user) into a [User](User)
 fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
     map_id(
         id,
@@ -148,6 +195,7 @@ fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
     )
 }
 
+/// Transform [`gid`](ProcessConfig::gid) or [`group`](ProcessConfig::group) into a [Group](Group)
 fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
     map_id(
         id,
@@ -157,6 +205,7 @@ fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
     )
 }
 
+/// Common functionality to map users and groups by id or name
 fn map_id<T, F, G>(
     mut id: Option<u32>,
     name: &Option<String>,
@@ -187,12 +236,26 @@ where
     id.or(name).ok_or(Error::UserGroupInvalid)
 }
 
+/// Build the environment of the [Process](Process)
 fn convert_env(env: &[HashMap<String, Option<String>>], user: &User) -> HashMap<String, String> {
     let mut result = get_default_env();
     sanitise_env(&mut result, user);
     copy_from_config(env, result)
 }
 
+/// Get environment by passing allowed values from cinit's environment
+///
+/// Allowed values are:
+///
+/// * `HOME`
+/// * `LANG`
+/// * `LANGUAGE`
+/// * `LOGNAME`
+/// * `PATH`
+/// * `PWD`
+/// * `SHELL`
+/// * `TERM`
+/// * `USER`
 fn get_default_env() -> HashMap<String, String> {
     let mut result: HashMap<String, String> = HashMap::new();
     let default_env = [
@@ -211,6 +274,13 @@ fn get_default_env() -> HashMap<String, String> {
     result
 }
 
+/// Copy environment variables from the [process's config](ProcessConfig::env)
+///
+/// Resolve the templates in each environment variable. If resolution fails the
+/// raw value is used. Environment variables up in the list are available in
+/// subsequent resolutions with their resolved value. Errors in the template will
+/// result in the unresolved, raw value. If the value [looks like a tera
+/// template](looks_like_tera_template) a warning is raised.
 fn copy_from_config(
     env: &[HashMap<String, Option<String>>],
     mut result: HashMap<String, String>,
@@ -255,6 +325,9 @@ fn copy_from_config(
     result
 }
 
+/// Flatten environment variables into binary form
+///
+/// Flatten key and value to `key=value` and append null-byte
 fn flatten_to_strings(result: &HashMap<String, String>) -> Vec<CString> {
     let mut ret: Vec<CString> = Vec::new();
     for (key, value) in result.iter() {
@@ -264,6 +337,7 @@ fn flatten_to_strings(result: &HashMap<String, String>) -> Vec<CString> {
     ret
 }
 
+/// Render a template with a context
 fn render_template(
     name: &str,
     context: &HashMap<String, String>,
@@ -278,6 +352,10 @@ fn render_template(
     tera.render(name, &internal_context)
 }
 
+/// Issue warnings for argument errors
+///
+/// Print warnings if the template is invalid or the string [looks like a
+/// template](looks_like_tera_template).
 fn treat_template_error_in_argument(
     i: usize,
     raw_value: &str,
@@ -307,10 +385,12 @@ fn treat_template_error_in_argument(
     }
 }
 
-fn looks_like_tera_template(value: &str) -> bool {
+/// Check if the string contains `{` or `}`
+pub fn looks_like_tera_template(value: &str) -> bool {
     value.contains('{') || value.contains('}')
 }
 
+/// Pretty-print tera errors for users
 fn render_tera_error(error: &tera::Error) -> String {
     let mut result = String::new();
     result += &format!("{}\n", error);
