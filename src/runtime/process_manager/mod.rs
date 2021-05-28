@@ -58,6 +58,9 @@ pub const NOTIFY_SOCKET_PATH: &str = "/run/cinit-notify.socket";
 /// Unique exit code for this module
 const EXIT_CODE: i32 = 3;
 
+/// Exit code returned when a child exitted with non-zero exit code
+const CHILD_CRASH_EXIT_CODE: i32 = 6;
+
 /// Overall runtime data structure
 #[derive(Debug)]
 pub struct ProcessManager {
@@ -77,6 +80,8 @@ pub struct ProcessManager {
     pub status_fd: RawFd,
 
     pub notify_fd: RawFd,
+
+    pub exit_code: i32,
 }
 
 impl Drop for ProcessManager {
@@ -96,7 +101,7 @@ impl Drop for ProcessManager {
 
 impl ProcessManager {
     /// Set up runtime and run the event loop
-    pub fn start(&mut self) {
+    pub fn start(&mut self) -> i32 {
         match self.setup() {
             Err(content) => {
                 error!("Failed to register with epoll: {}", content);
@@ -124,6 +129,8 @@ impl ProcessManager {
 
         info!("Exiting");
         trace!("Exiting");
+
+        self.exit_code
     }
 
     /// `wait()` for terminated child processes
@@ -190,6 +197,7 @@ impl ProcessManager {
             error!("Child {} crashed with {}", child.name, rc);
             trace!("Child {} crashed with {}", child.name, rc);
             child_crashed = true;
+            self.exit_code = CHILD_CRASH_EXIT_CODE;
             ProcessState::Crashed(rc)
         };
 

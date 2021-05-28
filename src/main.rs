@@ -72,6 +72,10 @@ use crate::runtime::process_manager::ProcessManager;
 use log::info;
 
 fn main() {
+    std::process::exit(run());
+}
+
+fn run() -> i32 {
     let arguments = cli_parser::parse_arguments();
     logging::initialise(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
 
@@ -90,5 +94,5 @@ fn main() {
     let mut manager = ProcessManager::from(&process_tree);
 
     info!("Spawning processes");
-    manager.start();
+    manager.start()
 }

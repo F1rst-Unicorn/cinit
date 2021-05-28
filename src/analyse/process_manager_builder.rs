@@ -84,6 +84,7 @@ impl ProcessManager {
             notify_fd: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
                 .expect("Could not create signalfd"),
+            exit_code: 0,
         }
     }
 }
