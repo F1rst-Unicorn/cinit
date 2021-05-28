@@ -16,6 +16,31 @@ This is achieved by passing the directory or file via CLI argument, e.g.
 
 Production setups SHOULD log without specifying any `--verbose` flag.
 
+## Runtime
+
+### Exit Codes
+
+In case of error cinit returns with an exit code. The following exit codes have
+a defined meaning:
+
+* 0: No error
+
+* 1: Invalid configuration (file permissions, syntax error, etc.)
+
+* 2: Invalid configuration (more semantically, e.g. cyclic dependencies)
+
+* 3: Runtime setup failed (epoll(), signal masking)
+
+* 4: Child startup failed (forking, capabilities, etc.)
+
+* 5: Precondition failed
+
+  * Running as non-root user
+
+  * Running on an unsupported kernel
+
+* 6: Child process exitted with non-zero exit code
+
 ## License
 
 Copyright (C)  2019 The cinit developers.
