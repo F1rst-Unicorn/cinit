@@ -28,3 +28,5 @@ class Test(CinitTest):
             ChildSpawned("second"),
             ChildExited("second"),
         ))
+
+        self.assert_exit_code(0)

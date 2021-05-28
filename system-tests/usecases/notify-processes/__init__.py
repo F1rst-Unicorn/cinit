@@ -51,6 +51,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("second", self)
         ChildProcess("harness", self) \
             .assert_env("NOTIFY_SOCKET", "/run/cinit-notify.socket")

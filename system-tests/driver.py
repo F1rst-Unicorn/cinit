@@ -44,7 +44,7 @@ class CinitTest(unittest.TestCase):
                 stderr=subprocess.STDOUT,
                 cwd=PROJECT_ROOT)
 
-        cinit.wait()
+        self.exit_code = cinit.wait()
         output = cinit.stdout.read().decode("utf-8").split("\n")
         cinit.stdout.close()
 
@@ -55,6 +55,10 @@ class CinitTest(unittest.TestCase):
 
     def assert_on_trace(self):
         return self.trace
+
+    def assert_exit_code(self, expected):
+        self.assertEqual(expected, self.exit_code)
+        return self
 
     @staticmethod
     def get_test_dir(path):

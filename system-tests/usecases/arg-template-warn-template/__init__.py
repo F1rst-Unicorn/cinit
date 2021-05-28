@@ -34,6 +34,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("program", self)\
             .assert_arg("hello world plus appendix")\
             .assert_arg("{{ ENV_VAR } plus appendix")

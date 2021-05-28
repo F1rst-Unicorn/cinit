@@ -26,3 +26,5 @@ class Test(CinitTest):
                 CycleDetected("second"),
                 CycleDetected("third"),
                 CycleDetected("fourth")))
+
+        self.assert_exit_code(2)

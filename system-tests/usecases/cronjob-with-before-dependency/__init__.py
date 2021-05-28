@@ -26,5 +26,7 @@ class Test(CinitTest):
             CronjobDependency("cronjob")
         )
 
+        self.assert_exit_code(2)
+
         NoChildProcess("dummy", self)
         NoChildProcess("cronjob", self)

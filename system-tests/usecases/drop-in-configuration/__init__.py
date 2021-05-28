@@ -50,6 +50,8 @@ class Test(CinitTest):
         )
 
 
+        self.assert_exit_code(0)
+
         ChildProcess("program", self)\
             .assert_arg("-o")\
             .assert_arg("system-tests/child-dump/program.yml")\

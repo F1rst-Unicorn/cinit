@@ -45,3 +45,5 @@ class Test(CinitTest):
                 Exited(),
             )
         )
+
+        self.assert_exit_code(0)

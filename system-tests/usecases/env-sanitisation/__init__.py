@@ -30,6 +30,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("first", self)\
             .assert_uid(1409)\
             .assert_gid(1409)\

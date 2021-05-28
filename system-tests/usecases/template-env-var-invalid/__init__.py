@@ -30,6 +30,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("first", self)\
             .assert_env("FOO", "bar")\
             .assert_env("USER", "root")\

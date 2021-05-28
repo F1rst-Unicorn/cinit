@@ -36,6 +36,8 @@ class Test(CinitTest):
                         ),
                         Exited()))                              \
 
+        self.assert_exit_code(0)
+
         ChildProcess("some-caps", self) \
             .assert_arg("-o") \
             .assert_arg("system-tests/child-dump/some-caps.yml") \

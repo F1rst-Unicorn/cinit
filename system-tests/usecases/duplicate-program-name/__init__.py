@@ -24,4 +24,4 @@ class Test(CinitTest):
 
         self.assert_on_trace().that(DuplicateProgramName("first"))
 
-
+        self.assert_exit_code(1)

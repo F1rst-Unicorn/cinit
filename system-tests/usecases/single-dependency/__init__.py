@@ -32,6 +32,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("ping", self)\
             .assert_arg("-c 4")\
             .assert_arg("google.ch")\

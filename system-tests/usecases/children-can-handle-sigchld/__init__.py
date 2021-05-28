@@ -29,3 +29,5 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+

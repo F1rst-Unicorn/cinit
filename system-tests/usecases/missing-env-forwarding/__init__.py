@@ -30,6 +30,8 @@ class Test(CinitTest):
             )
         )
 
+        self.assert_exit_code(0)
+
         ChildProcess("program", self)\
             .assert_not_env("MISSING_VALUE")
 
