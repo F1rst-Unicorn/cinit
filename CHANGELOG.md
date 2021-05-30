@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Make exit codes part of the public API, see [Integration](doc/Integration.md)
   ([#48](https://gitlab.com/veenj/cinit/issues/48))
 
+### Maintenance
+
+* Update library dependencies
+
 ## [1.5.2]
 
 ### Maintenance

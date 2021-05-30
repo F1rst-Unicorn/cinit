@@ -16,15 +16,13 @@
  */
 extern crate vergen;
 
-use vergen::generate_cargo_keys;
-use vergen::ConstantsFlags;
+use vergen::vergen;
+use vergen::Config;
+use vergen::Error;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rustc-link-search=/usr/lib");
     println!("cargo:rustc-link-lib=static=cap");
 
-    let mut flags = ConstantsFlags::all();
-    flags.toggle(ConstantsFlags::REBUILD_ON_HEAD_CHANGE);
-
-    generate_cargo_keys(flags).expect("vergen could not generate flags");
+    vergen(Config::default()).map_err(Error::into)
 }

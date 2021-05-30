@@ -32,7 +32,7 @@ pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
         .version(concat!(
             env!("CARGO_PKG_VERSION"),
             " ",
-            env!("VERGEN_SHA"),
+            env!("VERGEN_GIT_SHA"),
             " ",
             env!("VERGEN_BUILD_TIMESTAMP")
         ))

@@ -87,7 +87,7 @@ impl Drop for ProcessManager {
     /// Close all open file descriptors
     fn drop(&mut self) {
         let raw_signal_fd = self.signal_fd.as_raw_fd();
-        self.deregister_fd(raw_signal_fd);
+        self.deregister_fd_from_epoll(raw_signal_fd);
 
         self.deregister_fd(self.status_fd);
         self.deregister_fd(self.notify_fd);
@@ -419,8 +419,22 @@ impl ProcessManager {
         }
     }
 
-    /// Remove a file descriptor from epoll
+    /// Remove a file descriptor from epoll and close it
     fn deregister_fd(&mut self, fd: RawFd) {
+        self.deregister_fd_from_epoll(fd);
+        self.close(fd);
+    }
+
+    /// Close a file descriptor and warn on potential error
+    fn close(&mut self, fd: RawFd) {
+        let close_result = unistd::close(fd);
+        if close_result.is_err() {
+            warn!("Could not close fd {}", fd);
+        }
+    }
+
+    /// Remove a file descriptor from epoll
+    fn deregister_fd_from_epoll(&mut self, fd: RawFd) {
         debug!("Deregistering fd {}", fd);
         let epoll_result = epoll::epoll_ctl(
             self.epoll_fd,
@@ -430,11 +444,6 @@ impl ProcessManager {
         );
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
-        }
-
-        let close_result = unistd::close(fd);
-        if close_result.is_err() {
-            warn!("Could not close fd {}", fd);
         }
 
         self.process_map.deregister_fd(fd);
