@@ -88,7 +88,12 @@ fn run() -> i32 {
     info!("Config is at {}", config_path);
 
     info!("Parsing config");
-    let process_tree = config_parser::parse_config(config_path);
+    let process_tree = match config_parser::parse_config(config_path) {
+        Err(exit_code) => {
+            return exit_code;
+        }
+        Ok(v) => v,
+    };
 
     info!("Perform analysis on programs");
     let mut manager = ProcessManager::from(&process_tree);

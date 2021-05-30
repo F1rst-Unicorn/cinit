@@ -22,7 +22,6 @@ use std::fs;
 use std::fs::File;
 use std::io;
 use std::io::Read;
-use std::process::exit;
 use std::result::Result;
 
 use log::{debug, error, trace, warn};
@@ -34,8 +33,8 @@ use crate::config::ProcessConfig;
 const EXIT_CODE: i32 = 1;
 
 /// Transform configuration root into a [Config](Config)
-pub fn parse_config(path: &str) -> Config {
-    let raw_config = read_config(path);
+pub fn parse_config(path: &str) -> Result<Config, i32> {
+    let raw_config = read_config(path)?;
     debug!(
         "Complete configuration:\n{}",
         raw_config
@@ -45,18 +44,18 @@ pub fn parse_config(path: &str) -> Config {
     );
     let config = parse_raw_config(&raw_config);
 
-    merge_dropins(config)
+    Ok(merge_dropins(config?)?)
 }
 
 /// Collect file contents from configuration root
 ///
 /// Traverse the configuration root to collect all potential configuration files.
-fn read_config(path: &str) -> Vec<String> {
+fn read_config(path: &str) -> Result<Vec<String>, i32> {
     let metadata_result = fs::metadata(path);
 
     if let Err(err) = metadata_result {
         error!("Failed to read metadata of {}: {}", path, err);
-        exit(EXIT_CODE);
+        return Err(EXIT_CODE);
     }
 
     let mut result: Vec<String>;
@@ -66,7 +65,7 @@ fn read_config(path: &str) -> Vec<String> {
         let content = fs::read_dir(path);
         if let Err(err) = content {
             error!("Failed to get directory content of {}: {}", path, err);
-            exit(EXIT_CODE);
+            return Err(EXIT_CODE);
         }
 
         result = Vec::new();
@@ -74,19 +73,19 @@ fn read_config(path: &str) -> Vec<String> {
         for entry in content.unwrap() {
             if let Err(err) = entry {
                 error!("Failed to read {}: {}", path, err);
-                exit(EXIT_CODE);
+                return Err(EXIT_CODE);
             }
             let entry_path = entry.unwrap().path();
             let entry_path_string = entry_path.to_str().unwrap();
             let content = read_config(entry_path_string);
 
-            result.extend(content);
+            result.extend(content?);
         }
     } else if metadata.file_type().is_file() {
         match read_file(path) {
             Err(error) => {
                 error!("Failed to read file {}: {}", path, error);
-                exit(EXIT_CODE);
+                return Err(EXIT_CODE);
             }
             Ok(content) => {
                 result = vec![content];
@@ -97,11 +96,11 @@ fn read_config(path: &str) -> Vec<String> {
         result = Vec::new();
     }
 
-    result
+    Ok(result)
 }
 
 /// Transform separate configuration files into a [Config](Config)
-fn parse_raw_config(raw_config: &[String]) -> Config {
+fn parse_raw_config(raw_config: &[String]) -> Result<Config, i32> {
     let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
     let parse_errors: Vec<serde_yaml::Result<Config>> =
@@ -113,11 +112,11 @@ fn parse_raw_config(raw_config: &[String]) -> Config {
             error!("{:#?}", error.unwrap_err());
         }
         trace!("Error in configuration file");
-        exit(EXIT_CODE);
+        return Err(EXIT_CODE);
     } else {
-        parse_result
+        Ok(parse_result
             .map(Result::unwrap)
-            .fold(Config::default(), Config::merge)
+            .fold(Config::default(), Config::merge))
     }
 }
 
@@ -126,7 +125,7 @@ fn parse_raw_config(raw_config: &[String]) -> Config {
 ///
 /// [ProcessConfig](ProcessConfig)s are considered the same if they have the same
 /// name
-fn merge_dropins(config: Config) -> Config {
+fn merge_dropins(config: Config) -> Result<Config, i32> {
     let mut dict: HashMap<String, ProcessConfig> = HashMap::new();
 
     for process_config in config.programs {
@@ -137,7 +136,7 @@ fn merge_dropins(config: Config) -> Config {
                 if let Err(e) = merged {
                     error!("{}", e);
                     trace!("{}", e);
-                    exit(EXIT_CODE);
+                    return Err(EXIT_CODE);
                 }
 
                 let merged = merged.unwrap();
@@ -149,9 +148,9 @@ fn merge_dropins(config: Config) -> Config {
         };
     }
     let processes = dict.drain().map(|(_, v)| v).collect();
-    Config {
+    Ok(Config {
         programs: processes,
-    }
+    })
 }
 
 /// Read a file into a [String](std::string::String)
