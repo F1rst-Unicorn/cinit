@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Added
+
+* Return dedicated exit code if child fails with non-zero exit code
+  ([#48](https://gitlab.com/veenj/cinit/issues/48))
+
+* Make exit codes part of the public API, see [Integration](doc/Integration.md)
+  ([#48](https://gitlab.com/veenj/cinit/issues/48))
+
 ## [1.5.2]
 
 ### Maintenance

@@ -5,7 +5,7 @@ Init program for UNIX processes. Inspired by
 
 ## Usage
 
-See `doc/README.md` for user documentation.
+See [here](doc/README.md) for user documentation.
 
 Run `cargo doc --no-deps --open -p cinit` to view internal developer
 documentation.

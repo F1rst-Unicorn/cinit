@@ -4,8 +4,8 @@ Init program for UNIX processes. Original development was done
 [here](https://github.com/vs-eth/scinit).
 
 This is the user manual for developers wanting to start their programs in a
-cinit enabled container. See `Integration.md` for information about building a
-cinit enabled container.
+cinit enabled container. See [Integration](Integration.md) for information about
+building a cinit enabled container.
 
 ## Configuration
 

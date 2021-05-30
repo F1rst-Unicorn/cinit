@@ -1,7 +1,7 @@
 # cinit Integration
 
 If you want to configure your program to be started by cinit, please refer to
-`README.md`.
+[README.md](README.md).
 
 ## Configuration
 
