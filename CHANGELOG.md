@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [1.6.0]
+
 ### Added
 
 * Return dedicated exit code if child fails with non-zero exit code
