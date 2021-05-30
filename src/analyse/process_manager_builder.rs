@@ -39,8 +39,6 @@
 //!
 //! Errors in the cronjob configurations are forwarded.
 
-use std::process::exit;
-
 use crate::config::{Config, ProcessConfig, ProcessType};
 use crate::runtime::cronjob::{Cron, Error as CronError};
 use crate::runtime::dependency_graph::{DependencyManager, Error};
@@ -57,7 +55,7 @@ const EXIT_CODE: i32 = 2;
 
 impl ProcessManager {
     /// See [analysis phase](crate::analyse::process_manager_builder)
-    pub fn from(config: &Config) -> ProcessManager {
+    pub fn from(config: &Config) -> Result<ProcessManager, i32> {
         let mut processes = Vec::new();
         for program_config in &config.programs {
             let program = Process::from(program_config);
@@ -65,7 +63,7 @@ impl ProcessManager {
             if let Err(error) = program {
                 error!("Program {} contains error: {}", program_config.name, error);
                 trace!("Program {} contains error: {}", program_config.name, error);
-                exit(EXIT_CODE);
+                return Err(EXIT_CODE);
             } else {
                 processes.push(program.unwrap());
             }
@@ -74,18 +72,18 @@ impl ProcessManager {
         let dependency_manager = build_dependency_manager(&config);
         let cron = build_cron(&config);
 
-        ProcessManager {
+        Ok(ProcessManager {
             process_map: ProcessMap::from(processes),
             keep_running: true,
-            dependency_manager,
-            cron,
+            dependency_manager: dependency_manager?,
+            cron: cron?,
             epoll_fd: -1,
             status_fd: -1,
             notify_fd: -1,
             signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
                 .expect("Could not create signalfd"),
             exit_code: 0,
-        }
+        })
     }
 }
 
@@ -95,7 +93,7 @@ impl ProcessManager {
 /// in [build_cron()](build_cron).
 ///
 /// Errors during building are forwarded and terminate cinit.
-fn build_dependency_manager(config: &Config) -> DependencyManager {
+fn build_dependency_manager(config: &Config) -> Result<DependencyManager, i32> {
     let input: Vec<(usize, ProcessConfig)> = config
         .programs
         .iter()
@@ -152,9 +150,9 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
                 );
             }
         }
-        exit(EXIT_CODE);
+        Err(EXIT_CODE)
     } else {
-        dependency_manager.unwrap()
+        Ok(dependency_manager.unwrap())
     }
 }
 
@@ -164,7 +162,7 @@ fn build_dependency_manager(config: &Config) -> DependencyManager {
 /// in [build_dependency_manager()](build_dependency_manager).
 ///
 /// Errors during building are forwarded and terminate cinit.
-fn build_cron(config: &Config) -> Cron {
+fn build_cron(config: &Config) -> Result<Cron, i32> {
     let input: Vec<(usize, ProcessConfig)> = config
         .programs
         .iter()
@@ -189,8 +187,8 @@ fn build_cron(config: &Config) -> Cron {
                 );
             }
         }
-        exit(EXIT_CODE);
+        Err(EXIT_CODE)
     } else {
-        cron.unwrap()
+        Ok(cron.unwrap())
     }
 }

@@ -44,7 +44,7 @@ pub fn parse_config(path: &str) -> Result<Config, i32> {
     );
     let config = parse_raw_config(&raw_config);
 
-    Ok(merge_dropins(config?)?)
+    merge_dropins(config?)
 }
 
 /// Collect file contents from configuration root
@@ -112,7 +112,7 @@ fn parse_raw_config(raw_config: &[String]) -> Result<Config, i32> {
             error!("{:#?}", error.unwrap_err());
         }
         trace!("Error in configuration file");
-        return Err(EXIT_CODE);
+        Err(EXIT_CODE)
     } else {
         Ok(parse_result
             .map(Result::unwrap)
@@ -168,7 +168,7 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn parse_single_program() {
+    fn parse_single_program() -> Result<(), i32> {
         let mut expected_env = Vec::new();
         let mut entry = HashMap::new();
         entry.insert("key".to_owned(), Some("value".to_owned()));
@@ -177,7 +177,7 @@ mod tests {
         entry.insert("empty_key".to_owned(), None);
         expected_env.push(entry);
 
-        let output = parse_raw_config(&vec![FULL_CONFIG.to_owned()]);
+        let output = parse_raw_config(&vec![FULL_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 
@@ -196,11 +196,13 @@ mod tests {
         assert_eq!(false, program.emulate_pty);
         assert_eq!(vec!["some"], program.capabilities);
         assert_eq!(expected_env, program.env);
+
+        Ok(())
     }
 
     #[test]
-    fn parse_omitting_all_optional_values() {
-        let output = parse_raw_config(&vec![MINIMAL_CONFIG.to_owned()]);
+    fn parse_omitting_all_optional_values() -> Result<(), i32> {
+        let output = parse_raw_config(&vec![MINIMAL_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 
@@ -222,11 +224,12 @@ mod tests {
             Vec::new() as Vec<HashMap<String, Option<String>>>,
             program.env
         );
+        Ok(())
     }
 
     #[test]
-    fn parse_cronjob() {
-        let output = parse_raw_config(&vec![CRONJOB_CONFIG.to_owned()]);
+    fn parse_cronjob() -> Result<(), i32> {
+        let output = parse_raw_config(&vec![CRONJOB_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 
@@ -239,6 +242,7 @@ mod tests {
             },
             program.process_type
         );
+        Ok(())
     }
 
     const MINIMAL_CONFIG: &str = "\

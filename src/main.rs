@@ -80,7 +80,9 @@ fn run() -> i32 {
     logging::initialise(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
 
     info!("Starting up");
-    startup_checks::do_startup_checks();
+    if let Err(exit_code) = startup_checks::do_startup_checks() {
+        return exit_code;
+    }
 
     let config_path = arguments
         .value_of(cli_parser::FLAG_CONFIG)
@@ -96,7 +98,12 @@ fn run() -> i32 {
     };
 
     info!("Perform analysis on programs");
-    let mut manager = ProcessManager::from(&process_tree);
+    let mut manager = match ProcessManager::from(&process_tree) {
+        Err(exit_code) => {
+            return exit_code;
+        }
+        Ok(v) => v,
+    };
 
     info!("Spawning processes");
     manager.start()

@@ -20,19 +20,18 @@
 use log::{debug, error, warn};
 use nix::sys::utsname::uname;
 use nix::unistd::getuid;
-use std::process::exit;
 
 /// Unique exit code for this module
 const EXIT_CODE: i32 = 5;
 
 /// Terminate if requirements are not met
-pub fn do_startup_checks() {
-    check_kernel_version();
-    check_user();
+pub fn do_startup_checks() -> Result<(), i32> {
+    check_kernel_version()?;
+    check_user()
 }
 
 /// Terminate if linux version doesn't support capabilities
-fn check_kernel_version() {
+fn check_kernel_version() -> Result<(), i32> {
     let kernel_info = uname();
     let mut release = kernel_info.release().split('.');
     if let Some(major_raw) = release.next() {
@@ -45,7 +44,7 @@ fn check_kernel_version() {
                     "Could not determine kernel version from input '{}'",
                     kernel_info.release()
                 );
-                return;
+                return Ok(());
             }
 
             let major = major.unwrap();
@@ -54,31 +53,36 @@ fn check_kernel_version() {
                 error!("Your kernel is older than 4.3. Ambient capabilities");
                 error!("are not supported on your kernel but are needed for");
                 error!("cinit to work properly. Aborting");
-                exit(EXIT_CODE);
+                Err(EXIT_CODE)
             } else {
                 debug!("Running on kernel version {}", kernel_info.release());
+                Ok(())
             }
         } else {
             warn!(
                 "Could not determine kernel version from input '{}'",
                 kernel_info.release()
             );
+            Ok(())
         }
     } else {
         warn!(
             "Could not determine kernel version from input '{}'",
             kernel_info.release()
         );
+        Ok(())
     }
 }
 
 /// Terminate if not run as root
-fn check_user() {
+fn check_user() -> Result<(), i32> {
     let uid = getuid();
     if !uid.is_root() {
         error!("cinit is not running as root. This is");
         error!("needed to switch users and capabilities");
         error!("Aborting");
-        exit(EXIT_CODE);
+        Err(EXIT_CODE)
+    } else {
+        Ok(())
     }
 }
