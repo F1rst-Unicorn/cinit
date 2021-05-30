@@ -25,7 +25,6 @@ use std::ffi::CString;
 use std::fs::remove_file;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::RawFd;
-use std::process::exit;
 
 use crate::logging;
 use crate::runtime::cronjob;
@@ -105,7 +104,7 @@ impl ProcessManager {
         match self.setup() {
             Err(content) => {
                 error!("Failed to register with epoll: {}", content);
-                exit(EXIT_CODE);
+                return EXIT_CODE;
             }
             _ => {
                 debug!("setup successful");
