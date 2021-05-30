@@ -30,6 +30,7 @@ use crate::util::libc_helpers;
 use crate::util::libc_helpers::get_terminal_size;
 use crate::util::libc_helpers::map_to_errno;
 
+use nix::errno::Errno;
 use nix::fcntl;
 use nix::pty;
 use nix::sys::signal;
@@ -38,6 +39,7 @@ use nix::sys::termios;
 use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
+use nix::Error;
 
 use capabilities::Capabilities;
 use capabilities::Capability;
@@ -147,7 +149,7 @@ impl Process {
     /// Fork off the process returning its PID, `stdout`, and `stderr` file
     /// descriptors. The child process will configure according to the
     /// [ProcessConfig](crate::config::ProcessConfig) and then perform an `exec`.
-    pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), nix::Error> {
+    pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), Error> {
         info!("Starting {}", self.name);
 
         let (stdout, stderr) = self.create_std_fds()?;
@@ -175,18 +177,20 @@ impl Process {
                 Ok(_) => {
                     panic!("exec() was successful but did not replace program");
                 }
-                Err(nix::Error::Sys(errno)) => {
+                Err(Error::Sys(errno)) => {
                     println!("Could not exec child {}: {}", self.name, errno.desc());
+                    // child exit
                     exit(EXIT_CODE);
                 }
                 _ => {
                     println!("Could not exec child {}", self.name);
+                    // child exit
                     exit(EXIT_CODE);
                 }
             },
             _ => {
                 error!("Forking failed");
-                exit(EXIT_CODE)
+                Err(Error::Sys(Errno::EINVAL))
             }
         }
     }
@@ -267,7 +271,7 @@ impl Process {
     ///
     /// The cinit parts of the pipes are closed on exec, so the child cannot
     /// abuse them.
-    fn create_std_fds(&self) -> Result<(Pipe, Pipe), nix::Error> {
+    fn create_std_fds(&self) -> Result<(Pipe, Pipe), Error> {
         let result = if self.emulate_pty {
             self.create_ptys()
         } else {
@@ -295,7 +299,7 @@ impl Process {
     /// replaced by the parameters.
     ///
     /// cinit's `sigprocmask` is reverted to not mask any signals.
-    fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), nix::Error> {
+    fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), Error> {
         while unistd::dup2(stdout, std::io::stdout().as_raw_fd()).is_err() {}
         while unistd::dup2(stderr, std::io::stderr().as_raw_fd()).is_err() {}
 
@@ -306,8 +310,8 @@ impl Process {
         unistd::close(stderr)?;
 
         std::env::set_current_dir(&self.workdir).map_err(|e| match e.raw_os_error() {
-            None => nix::Error::UnsupportedOperation,
-            Some(code) => nix::Error::Sys(nix::errno::Errno::from_i32(code)),
+            None => Error::UnsupportedOperation,
+            Some(code) => Error::Sys(nix::errno::Errno::from_i32(code)),
         })?;
 
         self.set_user_and_caps()?;
@@ -345,7 +349,7 @@ impl Process {
     /// * Set the [configured
     ///   capabilities](crate::config::ProcessConfig::capabilities) as the
     ///   unprivileged user.
-    fn set_user_and_caps(&mut self) -> Result<(), nix::Error> {
+    fn set_user_and_caps(&mut self) -> Result<(), Error> {
         let mut temporary_caps = Capabilities::new().map_err(map_to_errno)?;
         let mut actual_caps = Capabilities::new().map_err(map_to_errno)?;
         let flags = [
@@ -408,10 +412,10 @@ impl Process {
         Ok(())
     }
 
-    fn create_ptys(&self) -> Result<(Pipe, Pipe), nix::Error> {
+    fn create_ptys(&self) -> Result<(Pipe, Pipe), Error> {
         let stdin = std::io::stdin().as_raw_fd();
         let mut tcget_result = termios::tcgetattr(stdin);
-        let ioctl_result: Result<libc::c_int, nix::Error>;
+        let ioctl_result: Result<libc::c_int, Error>;
         let mut winsize = pty::Winsize {
             ws_row: 0,
             ws_col: 0,
@@ -477,7 +481,7 @@ impl Process {
         Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))
     }
 
-    fn create_pipes(&self) -> Result<(Pipe, Pipe), nix::Error> {
+    fn create_pipes(&self) -> Result<(Pipe, Pipe), Error> {
         let stdout = unistd::pipe()?;
         let stderr = unistd::pipe()?;
         Ok((stdout, stderr))
