@@ -69,8 +69,8 @@ impl ProcessManager {
             }
         }
 
-        let dependency_manager = build_dependency_manager(&config);
-        let cron = build_cron(&config);
+        let dependency_manager = build_dependency_manager(config);
+        let cron = build_cron(config);
 
         Ok(ProcessManager {
             process_map: ProcessMap::from(processes),

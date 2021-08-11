@@ -283,7 +283,7 @@ impl Cron {
             };
 
             let time_desc =
-                TimerDescription::parse(&raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
+                TimerDescription::parse(raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
             let next_execution = time_desc.get_next_execution(Local::now());
             debug!(
                 "Scheduled execution of '{}' at {}",

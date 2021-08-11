@@ -173,7 +173,7 @@ impl DependencyManager {
                     .get(successor_name)
                     .expect("Invalid index in name_dict");
                 let mut successor = result
-                    .get_mut(&successor_index)
+                    .get_mut(successor_index)
                     .expect("Invalid index in name_dict");
                 successor.predecessor_count += 1;
             }
@@ -183,7 +183,7 @@ impl DependencyManager {
                     .get(predecessor_name)
                     .expect("Invalid index in name_dict");
                 let predecessor = result
-                    .get_mut(&predecessor_index)
+                    .get_mut(predecessor_index)
                     .expect("Invalid index in name_dict");
                 predecessor.after_self.push(*current_index);
             }
