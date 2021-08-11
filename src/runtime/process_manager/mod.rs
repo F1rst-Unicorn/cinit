@@ -266,7 +266,7 @@ impl ProcessManager {
     /// The socket is world-accessible and requires peer authentication
     fn setup_unix_socket(&mut self, path: &str, typ: SockType) -> Result<RawFd, nix::Error> {
         match remove_file(path).map_err(libc_helpers::map_to_errno) {
-            Err(nix::Error::Sys(nix::errno::Errno::ENOENT)) => Ok(()),
+            Err(nix::errno::Errno::ENOENT) => Ok(()),
             e => e,
         }?;
 
@@ -286,7 +286,7 @@ impl ProcessManager {
             let raw_path = CString::new(path).expect("could not build cstring");
             let res = libc::chmod(raw_path.into_raw(), 0o777);
             if res == -1 {
-                return Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())));
+                return Err(errno::Errno::from_i32(errno::errno()));
             }
         }
 

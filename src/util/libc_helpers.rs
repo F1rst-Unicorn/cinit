@@ -41,7 +41,7 @@ pub fn ttyname(fd: RawFd) -> Result<String, nix::Error> {
     unsafe {
         let raw_name = libc::ttyname(fd);
         if raw_name.is_null() {
-            Err(nix::Error::Sys(errno::Errno::from_i32(errno::errno())))
+            Err(errno::Errno::from_i32(errno::errno()))
         } else {
             Ok(rescue_from_libc(raw_name))
         }
@@ -79,8 +79,8 @@ pub fn map_to_errno(error: Error) -> nix::Error {
     let raw_error = error.raw_os_error();
     std::mem::drop(error);
     match raw_error {
-        Some(errno) => nix::Error::Sys(nix::errno::Errno::from_i32(errno)),
-        _ => nix::Error::Sys(nix::errno::Errno::UnknownErrno),
+        Some(errno) => nix::errno::Errno::from_i32(errno),
+        _ => nix::errno::Errno::UnknownErrno,
     }
 }
 

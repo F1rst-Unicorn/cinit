@@ -16,13 +16,13 @@
  */
 extern crate vergen;
 
+use anyhow::Result;
 use vergen::vergen;
 use vergen::Config;
-use vergen::Error;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> Result<()> {
     println!("cargo:rustc-link-search=/usr/lib");
     println!("cargo:rustc-link-lib=static=cap");
 
-    vergen(Config::default()).map_err(Error::into)
+    vergen(Config::default())
 }

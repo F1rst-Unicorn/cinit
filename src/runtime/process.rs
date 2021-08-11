@@ -30,7 +30,6 @@ use crate::util::libc_helpers;
 use crate::util::libc_helpers::get_terminal_size;
 use crate::util::libc_helpers::map_to_errno;
 
-use nix::errno::Errno;
 use nix::fcntl;
 use nix::pty;
 use nix::sys::signal;
@@ -177,20 +176,15 @@ impl Process {
                 Ok(_) => {
                     panic!("exec() was successful but did not replace program");
                 }
-                Err(Error::Sys(errno)) => {
+                Err(errno) => {
                     println!("Could not exec child {}: {}", self.name, errno.desc());
-                    // child exit
-                    exit(EXIT_CODE);
-                }
-                _ => {
-                    println!("Could not exec child {}", self.name);
                     // child exit
                     exit(EXIT_CODE);
                 }
             },
             _ => {
                 error!("Forking failed");
-                Err(Error::Sys(Errno::EINVAL))
+                Err(Error::EINVAL)
             }
         }
     }
@@ -310,8 +304,8 @@ impl Process {
         unistd::close(stderr)?;
 
         std::env::set_current_dir(&self.workdir).map_err(|e| match e.raw_os_error() {
-            None => Error::UnsupportedOperation,
-            Some(code) => Error::Sys(nix::errno::Errno::from_i32(code)),
+            None => Error::EINVAL,
+            Some(code) => nix::errno::Errno::from_i32(code),
         })?;
 
         self.set_user_and_caps()?;

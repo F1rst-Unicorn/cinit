@@ -77,7 +77,7 @@ impl ProcessManager {
             }
         }
         // should not happen as we request so_passcred when opening the socket
-        Err(nix::Error::Sys(nix::errno::Errno::EBADMSG))
+        Err(nix::errno::Errno::EBADMSG)
     }
 
     /// Process the message received from the notify socket
