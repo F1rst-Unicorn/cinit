@@ -42,8 +42,6 @@ use clap::Arg;
 use nix::sys::signalfd;
 use nix::unistd;
 
-use capabilities::Capabilities;
-
 fn main() {
     let arguments = App::new("cinit-harness")
         .setting(AppSettings::TrailingVarArg)
@@ -181,23 +179,44 @@ fn dump(output: &str) {
 
     file.write_fmt(format_args!("    capabilities:"))
         .expect("Failed to dump");
-    let mut cap_string = Capabilities::from_current_proc()
-        .expect("Could not get capabilities")
-        .to_string();
-    if cap_string.len() < 2 {
+
+    let effective = caps::read(None, caps::CapSet::Effective).expect("Failed to read capabilities");
+    let permitted = caps::read(None, caps::CapSet::Permitted).expect("Failed to read capabilities");
+    let inheritable =
+        caps::read(None, caps::CapSet::Inheritable).expect("Failed to read capabilities");
+    let ambient = caps::read(None, caps::CapSet::Ambient).expect("Failed to read capabilities");
+    let bounding = caps::read(None, caps::CapSet::Bounding).expect("Failed to read capabilities");
+
+    let mut printed = false;
+    for cap in caps::all() {
+        let mut sets = String::new();
+        if effective.contains(&cap) {
+            sets += "e";
+        }
+        if permitted.contains(&cap) {
+            sets += "p";
+        }
+        if inheritable.contains(&cap) {
+            sets += "i";
+        }
+        if ambient.contains(&cap) {
+            sets += "a";
+        }
+        if bounding.contains(&cap) {
+            sets += "b";
+        }
+        if !sets.is_empty() {
+            if !printed {
+                file.write_fmt(format_args!("\n")).expect("Failed to dump");
+            }
+            file.write_fmt(format_args!("      - {}: {}\n", cap, sets))
+                .expect("Failed to dump");
+            printed = true;
+        }
+    }
+    if !printed {
         file.write_fmt(format_args!(" []\n"))
             .expect("Failed to dump");
-    } else {
-        cap_string = cap_string
-            .split('=')
-            .next()
-            .expect("Could not parse caps")
-            .to_string();
-        file.write_fmt(format_args!("\n")).expect("Failed to dump");
-        for cap in cap_string.split(',') {
-            file.write_fmt(format_args!("      - '{}'\n", cap.to_ascii_uppercase()))
-                .expect("Failed to dump");
-        }
     }
 
     file.write_fmt(format_args!("    env:\n"))
