@@ -37,11 +37,8 @@ class Test(CinitTest):
         ChildProcess("ping", self)\
             .assert_arg("-c 4")\
             .assert_arg("google.ch")\
-            .assert_uid(0)\
-            .assert_gid(0)\
             .assert_default_env()\
-            .assert_pty(False)\
-            .assert_capabilities({"CAP_NET_RAW"})
+            .assert_pty(False)
 
         ChildProcess("failping", self)\
             .assert_arg("-c 4")\
@@ -49,7 +46,6 @@ class Test(CinitTest):
             .assert_uid(1409)\
             .assert_gid(1409)\
             .assert_default_env()\
-            .assert_pty(False)\
-            .assert_capabilities({})
+            .assert_pty(False)
 
 

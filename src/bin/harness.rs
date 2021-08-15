@@ -185,7 +185,6 @@ fn dump(output: &str) {
     let inheritable =
         caps::read(None, caps::CapSet::Inheritable).expect("Failed to read capabilities");
     let ambient = caps::read(None, caps::CapSet::Ambient).expect("Failed to read capabilities");
-    let bounding = caps::read(None, caps::CapSet::Bounding).expect("Failed to read capabilities");
 
     let mut printed = false;
     for cap in caps::all() {
@@ -202,20 +201,17 @@ fn dump(output: &str) {
         if ambient.contains(&cap) {
             sets += "a";
         }
-        if bounding.contains(&cap) {
-            sets += "b";
-        }
         if !sets.is_empty() {
             if !printed {
                 file.write_fmt(format_args!("\n")).expect("Failed to dump");
             }
-            file.write_fmt(format_args!("      - {}: {}\n", cap, sets))
+            file.write_fmt(format_args!("      {}: {}\n", cap, sets))
                 .expect("Failed to dump");
             printed = true;
         }
     }
     if !printed {
-        file.write_fmt(format_args!(" []\n"))
+        file.write_fmt(format_args!(" {{}}\n"))
             .expect("Failed to dump");
     }
 

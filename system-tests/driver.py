@@ -409,7 +409,7 @@ class ChildProcess:
             self.uid = program['uid']
             self.gid = program['gid']
             self.pty = program['pty']
-            self.capabilities = set(program['capabilities'])
+            self.capabilities = program['capabilities']
             self.env = program['env']
             self.workdir = program['workdir']
 
@@ -434,8 +434,11 @@ class ChildProcess:
         self.test.assertEqual(pty, self.pty, "pty mismatch")
         return self
 
-    def assert_capabilities(self, caps):
-        self.test.assertEqual(set(caps), self.capabilities)
+    def assert_capabilities(self, expected):
+        expected_dict = {}
+        for cap in expected:
+            expected_dict[cap] = 'epia'
+        self.test.assertEqual(expected_dict, self.capabilities)
         return self
 
     def assert_default_env(self):
