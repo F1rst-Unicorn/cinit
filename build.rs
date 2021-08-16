@@ -21,8 +21,5 @@ use vergen::vergen;
 use vergen::Config;
 
 fn main() -> Result<()> {
-    println!("cargo:rustc-link-search=/usr/lib");
-    println!("cargo:rustc-link-lib=static=cap");
-
     vergen(Config::default())
 }

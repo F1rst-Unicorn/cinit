@@ -32,9 +32,6 @@ RUN apt update && \
                 python3-yaml && \
         rm -rf /var/lib/apt/lists/*
 
-COPY scripts/container/compile-libcap /tmp
-RUN /tmp/compile-libcap
-
 ARG USER_ID
 ARG GROUP_ID
 
