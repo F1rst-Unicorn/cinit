@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Maintenance
 
+* Replace [capabilities](https://crates.io/crates/capabilities) by
+  [caps](https://crates.io/crates/caps) as the former has been yanked from
+  crates.io
+
 * Update library dependencies
 
 * Fix Linter issues
