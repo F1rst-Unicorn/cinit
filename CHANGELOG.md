@@ -5,6 +5,13 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Fixed
+
+* cinit now properly cleans the supplementary groups of each child process.
+  Before every process still had the left-over groups from the root user.
+
+### Maintenance
+
 * Update library dependencies
 
 * Fix Linter issues

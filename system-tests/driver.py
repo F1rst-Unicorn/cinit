@@ -409,6 +409,7 @@ class ChildProcess:
             self.args = program['args']
             self.uid = program['uid']
             self.gid = program['gid']
+            self.groups = program['groups']
             self.pty = program['pty']
             self.capabilities = program['capabilities']
             self.env = program['env']
@@ -429,6 +430,10 @@ class ChildProcess:
 
     def assert_gid(self, gid):
         self.test.assertEqual(gid, self.gid, "gid mismatch")
+        return self
+
+    def assert_groups(self, groups):
+        self.test.assertEqual(groups, self.groups, "groups mismatch")
         return self
 
     def assert_pty(self, pty):

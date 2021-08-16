@@ -170,6 +170,13 @@ fn dump(output: &str) {
     file.write_fmt(format_args!("    gid: {}\n", unistd::getgid()))
         .expect("Failed to dump");
 
+    file.write_fmt(format_args!("    groups:\n"))
+        .expect("Failed to dump");
+    for group in unistd::getgroups().expect("Failed to get groups") {
+        file.write_fmt(format_args!("      - {}\n", group))
+            .expect("Failed to dump");
+    }
+
     file.write_fmt(format_args!(
         "    pty: {}\n",
         unistd::isatty(std::io::stdout().as_raw_fd()).unwrap_or(false)

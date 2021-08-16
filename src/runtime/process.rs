@@ -369,6 +369,7 @@ impl Process {
         apply_capabilities(None, CapSet::Effective, &temporary_caps).map_err(map_to_errno)?;
         libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 1)?;
         unistd::setgid(self.gid)?;
+        unistd::setgroups(&[self.gid])?;
         unistd::setuid(self.uid)?;
         libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 0)?;
         apply_capabilities(None, CapSet::Inheritable, &temporary_caps).map_err(map_to_errno)?;
