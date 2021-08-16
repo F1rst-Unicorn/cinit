@@ -98,15 +98,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
-name = "capabilities"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8aee082d97a2cb85e1282361758d96aa5162967c34a257c6c4d7fa0711a1028f"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "caps"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,7 +151,6 @@ name = "cinit"
 version = "1.6.0"
 dependencies = [
  "anyhow",
- "capabilities",
  "caps",
  "chrono",
  "clap",
