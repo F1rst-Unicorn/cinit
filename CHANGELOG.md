@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Replace [capabilities](https://crates.io/crates/capabilities) by
   [caps](https://crates.io/crates/caps) as the former has been yanked from
-  crates.io
+  crates.io ([#49](https://gitlab.com/veenj/cinit/issues/49))
 
 * Update library dependencies
 
