@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-FROM rust:buster
+FROM rust:bullseye
 
 RUN rustup target add x86_64-unknown-linux-musl
 RUN rustup component add clippy
