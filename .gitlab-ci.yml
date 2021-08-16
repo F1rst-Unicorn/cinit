@@ -16,30 +16,111 @@
 
 ---
 
-image: docker:latest
 services:
   - docker:dind
 
 stages:
-  - build-debug
+  - build
   - build-release
 
-build-debug:
-  stage: build-debug
+system-test:
+  stage: build
+  image: docker:latest
   script:
     - scripts/local/build
   artifacts:
     paths:
       - target/path/cinit
+  cache:
+    key: ${CI_JOB_NAME}
+    paths:
+      - target
+      - .cargo
 
 build-release:
   stage: build-release
+  image: docker:latest
   script:
     - export BUILD_FLAGS="--release"
     - scripts/local/build
   artifacts:
     paths:
       - target/path/cinit
+  cache:
+    key: ${CI_JOB_NAME}
+    paths:
+      - target
+      - .cargo
   only:
     - tags
 
+build:
+  stage: build
+  image: rust:latest
+  script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install libsystemd-dev
+    - cargo build
+  cache:
+    key: ${CI_JOB_NAME}
+    policy: pull
+    paths:
+      - target
+      - .cargo
+
+format:
+  stage: build
+  image: rust:latest
+  script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install libsystemd-dev
+    - rustup component add rustfmt
+    - cargo fmt --all -- --check
+  cache:
+    key: ${CI_JOB_NAME}
+    policy: pull
+    paths:
+      - target
+      - .cargo
+
+audit:
+  stage: build
+  image: rust:latest
+  script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install libsystemd-dev
+    - cargo install cargo-audit
+    - cargo audit
+  cache:
+    key: ${CI_JOB_NAME}
+    policy: pull
+    paths:
+      - target
+      - .cargo
+
+clippy:
+  stage: build
+  image: rust:latest
+  script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install libsystemd-dev
+    - rustup component add clippy
+    - cargo clippy --release -j 8 -- -D clippy::all
+  cache:
+    key: ${CI_JOB_NAME}
+    paths:
+      - target
+      - .cargo
+
+test:
+  stage: build
+  image: rust:latest
+  script:
+    - apt-get update
+    - apt-get -y --no-install-recommends install libsystemd-dev
+    - cargo test
+  cache:
+    key: ${CI_JOB_NAME}
+    paths:
+      - target
+      - .cargo
