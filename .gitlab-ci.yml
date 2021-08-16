@@ -118,6 +118,7 @@ test:
   script:
     - apt-get update
     - apt-get -y --no-install-recommends install libsystemd-dev
+    - ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
     - cargo test
   cache:
     key: ${CI_JOB_NAME}
