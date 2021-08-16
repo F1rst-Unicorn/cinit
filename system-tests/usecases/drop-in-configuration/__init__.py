@@ -57,13 +57,15 @@ class Test(CinitTest):
             .assert_arg("system-tests/child-dump/program.yml")\
             .assert_arg("one-two")\
             .assert_arg("three-four")\
+            .assert_uid(1409)\
+            .assert_gid(1409)\
             .assert_env("ONE", "one")\
             .assert_env("TWO", "two")\
             .assert_env("THREE", "three")\
             .assert_env("FOUR", "four")\
             .assert_env("ONETWO", "one-two")\
             .assert_env("THREEFOUR", "three-four")\
-            .assert_capabilities(["CAP_CHOWN",
-                                  "CAP_NET_BIND_SERVICE",
-                                  "CAP_DAC_OVERRIDE"])
+            .assert_capabilities({"CAP_CHOWN": 'epia',
+                                  "CAP_NET_BIND_SERVICE": 'epia',
+                                  "CAP_DAC_OVERRIDE": 'epia'})
 

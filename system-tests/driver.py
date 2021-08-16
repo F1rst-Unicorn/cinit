@@ -33,6 +33,7 @@ class CinitTest(unittest.TestCase):
             os.unlink(child_dumps + file)
 
     def run_cinit(self, test_dir, dump_log=False):
+        self.maxDiff = None
         cinit = subprocess.Popen([
                         UUT_PATH,
                         "--verbose",
@@ -435,10 +436,7 @@ class ChildProcess:
         return self
 
     def assert_capabilities(self, expected):
-        expected_dict = {}
-        for cap in expected:
-            expected_dict[cap] = 'epia'
-        self.test.assertEqual(expected_dict, self.capabilities)
+        self.test.assertEqual(expected, self.capabilities)
         return self
 
     def assert_default_env(self):

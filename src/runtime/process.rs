@@ -28,7 +28,6 @@ use std::str::FromStr;
 
 use crate::util::libc_helpers;
 use crate::util::libc_helpers::get_terminal_size;
-use crate::util::libc_helpers::map_to_errno;
 
 use nix::fcntl;
 use nix::pty;
@@ -40,9 +39,11 @@ use nix::unistd::fork;
 use nix::unistd::Pid;
 use nix::Error;
 
-use capabilities::Capabilities;
-use capabilities::Capability;
-use capabilities::Flag;
+use caps::clear as clear_capabilities;
+use caps::set as apply_capabilities;
+use caps::CapSet;
+use caps::Capability;
+use caps::CapsHashSet;
 
 use log::{debug, error, info, trace, warn};
 
@@ -344,27 +345,13 @@ impl Process {
     ///   capabilities](crate::config::ProcessConfig::capabilities) as the
     ///   unprivileged user.
     fn set_user_and_caps(&mut self) -> Result<(), Error> {
-        let mut temporary_caps = Capabilities::new().map_err(map_to_errno)?;
-        let mut actual_caps = Capabilities::new().map_err(map_to_errno)?;
-        let flags = [
-            Capability::CAP_SETUID,
-            Capability::CAP_SETGID,
-            Capability::CAP_SETPCAP,
-            Capability::CAP_SETFCAP,
-        ];
-        temporary_caps.update(&flags, Flag::Permitted, true);
-        temporary_caps.update(&flags, Flag::Effective, true);
-        temporary_caps.update(&flags, Flag::Inheritable, true);
+        let mut actual_caps = CapsHashSet::default();
+
         for raw_cap in &self.capabilities {
             let new_cap = Capability::from_str(raw_cap);
             match new_cap {
                 Ok(cap) => {
-                    actual_caps.update(&[cap], Flag::Permitted, true);
-                    actual_caps.update(&[cap], Flag::Effective, true);
-                    actual_caps.update(&[cap], Flag::Inheritable, true);
-                    temporary_caps.update(&[cap], Flag::Permitted, true);
-                    temporary_caps.update(&[cap], Flag::Effective, true);
-                    temporary_caps.update(&[cap], Flag::Inheritable, true);
+                    actual_caps.insert(cap);
                 }
                 _ => {
                     println!("Failed to set {}", raw_cap);
@@ -372,37 +359,25 @@ impl Process {
             }
         }
 
-        temporary_caps.apply().map_err(map_to_errno)?;
+        let mut temporary_caps = actual_caps.clone();
+        temporary_caps.insert(Capability::CAP_SETUID);
+        temporary_caps.insert(Capability::CAP_SETGID);
+        temporary_caps.insert(Capability::CAP_SETPCAP);
+        temporary_caps.insert(Capability::CAP_SETFCAP);
+
+        apply_capabilities(None, CapSet::Inheritable, &temporary_caps).map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Effective, &temporary_caps).map_err(map_to_errno)?;
         libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 1)?;
         unistd::setgid(self.gid)?;
         unistd::setuid(self.uid)?;
         libc_helpers::prctl_one(libc::PR_SET_KEEPCAPS, 0)?;
-        temporary_caps.apply().map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Inheritable, &temporary_caps).map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Effective, &temporary_caps).map_err(map_to_errno)?;
+        clear_capabilities(None, CapSet::Ambient).map_err(map_to_errno)?;
 
-        libc_helpers::prctl_four(
-            libc::PR_CAP_AMBIENT,
-            libc::PR_CAP_AMBIENT_CLEAR_ALL as libc::c_ulong,
-            0,
-            0,
-            0,
-        )?;
-        for raw_cap in &self.capabilities {
-            let new_cap = Capability::from_str(raw_cap);
-            match new_cap {
-                Ok(cap) => libc_helpers::prctl_four(
-                    libc::PR_CAP_AMBIENT,
-                    libc::PR_CAP_AMBIENT_RAISE as libc::c_ulong,
-                    cap as libc::c_ulong,
-                    0,
-                    0,
-                )?,
-                _ => {
-                    println!("Failed to set {}", raw_cap);
-                }
-            }
-        }
-
-        actual_caps.apply().map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Ambient, &actual_caps).map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Inheritable, &actual_caps).map_err(map_to_errno)?;
+        apply_capabilities(None, CapSet::Effective, &actual_caps).map_err(map_to_errno)?;
         Ok(())
     }
 
@@ -480,4 +455,9 @@ impl Process {
         let stderr = unistd::pipe()?;
         Ok((stdout, stderr))
     }
+}
+
+fn map_to_errno(e: caps::errors::CapsError) -> Error {
+    println!("capability error: {}", e);
+    Error::EINVAL
 }

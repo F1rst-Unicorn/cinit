@@ -44,9 +44,8 @@ class Test(CinitTest):
             .assert_uid(1409) \
             .assert_gid(1409) \
             .assert_default_env() \
-            .assert_pty(True) \
-            .assert_capabilities({"CAP_NET_RAW",
-                                  "CAP_KILL"})
+            .assert_capabilities({"CAP_NET_RAW": 'epia',
+                                  "CAP_KILL": 'epia'})
 
         ChildProcess("no-caps", self) \
             .assert_arg("-o") \
@@ -54,5 +53,28 @@ class Test(CinitTest):
             .assert_uid(1409) \
             .assert_gid(1409) \
             .assert_default_env() \
-            .assert_pty(True) \
             .assert_capabilities({})
+
+        ChildProcess("root-gets-all-caps", self) \
+            .assert_arg("-o") \
+            .assert_arg("system-tests/child-dump/root-gets-all-caps.yml") \
+            .assert_uid(0) \
+            .assert_gid(0) \
+            .assert_default_env() \
+            .assert_capabilities({
+                'CAP_NET_RAW': 'epia',
+                'CAP_KILL': 'epia',
+                'CAP_CHOWN': 'ep',
+                'CAP_DAC_OVERRIDE': 'ep',
+                'CAP_FOWNER': 'ep',
+                'CAP_FSETID': 'ep',
+                'CAP_SETGID': 'ep',
+                'CAP_SETUID': 'ep',
+                'CAP_SETPCAP': 'ep',
+                'CAP_NET_BIND_SERVICE': 'ep',
+                'CAP_MKNOD': 'ep',
+                'CAP_AUDIT_WRITE': 'ep',
+                'CAP_SETFCAP': 'ep',
+                'CAP_SYS_CHROOT': 'ep',
+                'CAP_SETUID': 'ep',
+            })

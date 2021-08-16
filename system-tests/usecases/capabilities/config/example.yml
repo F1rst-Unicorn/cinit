@@ -22,7 +22,15 @@ programs:
       - system-tests/child-dump/some-caps.yml
     uid: 1409
     gid: 1409
-    pty: true
+    capabilities:
+      - CAP_KILL
+      - CAP_NET_RAW
+
+  - name: root-gets-all-caps
+    path: target/path/harness
+    args:
+      - -o
+      - system-tests/child-dump/root-gets-all-caps.yml
     capabilities:
       - CAP_KILL
       - CAP_NET_RAW
@@ -34,4 +42,3 @@ programs:
       - system-tests/child-dump/no-caps.yml
     uid: 1409
     gid: 1409
-    pty: true
