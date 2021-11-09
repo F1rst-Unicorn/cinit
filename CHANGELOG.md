@@ -7,6 +7,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Maintenance
 
+* Update to Rust Edition 2021
+
 * Update library dependencies
 
 ### Fixed

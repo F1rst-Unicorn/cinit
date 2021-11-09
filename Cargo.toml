@@ -7,7 +7,7 @@ authors = ["Maximilian Falkenstein <uubk@users.noreply.github.com>",
 description = "Init program for UNIX processes"
 license = "GPL-3.0-or-later"
 build = "build.rs"
-edition = "2018"
+edition = "2021"
 
 [profile.release]
 lto = true
