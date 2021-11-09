@@ -23,23 +23,27 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
-use chrono::prelude::{DateTime, Local};
-use chrono::{Datelike, Duration, Timelike};
+use time::error::IndeterminateOffset;
+use time::format_description::well_known::Rfc3339;
+use time::Duration;
+use time::OffsetDateTime;
 
 use log::debug;
+
+use thiserror::Error;
 
 /// Explicitly store all instants of a cron expression
 #[derive(Debug)]
 pub struct TimerDescription {
-    minute: BTreeSet<u32>,
+    minute: BTreeSet<u8>,
 
-    hour: BTreeSet<u32>,
+    hour: BTreeSet<u8>,
 
-    day: BTreeSet<u32>,
+    day: BTreeSet<u8>,
 
-    month: BTreeSet<u32>,
+    month: BTreeSet<u8>,
 
-    weekday: BTreeSet<u32>,
+    weekday: BTreeSet<u8>,
 }
 
 impl TimerDescription {
@@ -65,7 +69,7 @@ impl TimerDescription {
         }
     }
 
-    /// Compute the next contained [DateTime](DateTime) starting `from_timepoint`
+    /// Compute the next contained [OffsetDateTime](OffsetDateTime) starting `from_timepoint`
     ///
     /// This is an explicit addition over different time units.
     ///
@@ -76,18 +80,19 @@ impl TimerDescription {
     /// influence the value of the next day of execution while a full domain
     /// expression will always make the next day from today the next day of
     /// execution. In practice this won't likely be relevant.
-    pub fn get_next_execution(&self, from_timepoint: DateTime<Local>) -> DateTime<Local> {
+    pub fn get_next_execution(&self, from_timepoint: OffsetDateTime) -> OffsetDateTime {
         let mut result = from_timepoint;
-        let mut carry = 0;
+        let mut carry = 0u8;
 
-        let min = match self.minute.range((from_timepoint.minute() + 1u32)..).next() {
+        let min = match self.minute.range((from_timepoint.minute() + 1u8)..).next() {
             Some(&min) => min,
             None => {
                 carry = 1;
                 *self.minute.iter().next().unwrap()
             }
         };
-        result = result.with_minute(min).unwrap();
+        result -= Duration::minutes(result.minute().into());
+        result += Duration::minutes(min.into());
 
         let hour = match self.hour.range((from_timepoint.hour() + carry)..).next() {
             Some(&h) => {
@@ -99,11 +104,12 @@ impl TimerDescription {
                 *self.hour.iter().next().unwrap()
             }
         };
-        result = result.with_hour(hour).unwrap();
+        result -= Duration::hours(result.hour().into());
+        result += Duration::hours(hour.into());
 
         let next_weekday = match self
             .weekday
-            .range((from_timepoint.weekday().num_days_from_sunday() + carry)..)
+            .range((from_timepoint.weekday().number_days_from_sunday() + carry)..)
             .next()
         {
             Some(&day) => day,
@@ -121,7 +127,11 @@ impl TimerDescription {
             }
         };
 
-        let next_month = match self.month.range((from_timepoint.month() + carry)..).next() {
+        let next_month = match self
+            .month
+            .range((u8::from(from_timepoint.month()) + carry)..)
+            .next()
+        {
             Some(&month) => {
                 carry = 0;
                 month
@@ -136,10 +146,10 @@ impl TimerDescription {
         let date_relevant = self.day.len() != 31 || self.month.len() != 12;
 
         let week_duration = Duration::days(i64::from(
-            if next_weekday < result.weekday().num_days_from_sunday() {
-                7 - (result.weekday().num_days_from_sunday() - next_weekday)
+            if next_weekday < result.weekday().number_days_from_sunday() {
+                7 - (result.weekday().number_days_from_sunday() - next_weekday)
             } else {
-                next_weekday - result.weekday().num_days_from_sunday()
+                next_weekday - result.weekday().number_days_from_sunday()
             },
         ));
 
@@ -147,8 +157,8 @@ impl TimerDescription {
         if date_relevant {
             // only compute this if really needed
             let mut tmp = result + date_duration;
-            while tmp.day() != next_day || tmp.month() != next_month {
-                date_duration = date_duration + Duration::days(1);
+            while tmp.day() != next_day || u8::from(tmp.month()) != next_month {
+                date_duration += Duration::days(1);
                 tmp = result + date_duration;
             }
         }
@@ -174,7 +184,7 @@ impl TimerDescription {
 /// # Errors
 ///
 /// If parsing fails a brief error description is returned
-fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32>, String> {
+fn parse_element(input: Option<&str>, min: u8, max: u8) -> Result<BTreeSet<u8>, String> {
     if min > max {
         return Err("Invalid range given".to_string());
     }
@@ -198,13 +208,13 @@ fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32
                     let interval = values.next().ok_or("Invalid timespec")?;
 
                     let step = if let Some(step) = values.next() {
-                        step.parse::<u32>().map_err(|_| "Invalid step number")?
+                        step.parse::<u8>().map_err(|_| "Invalid step number")?
                     } else {
                         1
                     };
 
-                    let begin: u32;
-                    let end: u32;
+                    let begin: u8;
+                    let end: u8;
                     if interval == "*" {
                         begin = min;
                         end = max;
@@ -213,12 +223,12 @@ fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32
                         begin = interval_split
                             .next()
                             .ok_or("Invalid timespec")?
-                            .parse::<u32>()
+                            .parse::<u8>()
                             .map_err(|_| "Invalid number")?;
 
                         if let Some(end_str) = interval_split.next() {
                             end = end_str
-                                .parse::<u32>()
+                                .parse::<u8>()
                                 .map_err(|_| "Invalid number in end of interval")?;
                         } else {
                             end = begin;
@@ -250,9 +260,13 @@ fn parse_element(input: Option<&str>, min: u32, max: u32) -> Result<BTreeSet<u32
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum Error {
+    #[error("could not parse cron expression of program {1}: {0}")]
     TimeParseError(String, usize),
+
+    #[error("could not determine timezone offset: {0}")]
+    IndeterminateOffset(#[from] IndeterminateOffset),
 }
 
 /// Index to schedule cron jobs
@@ -262,7 +276,7 @@ pub struct Cron {
     timers: HashMap<usize, TimerDescription>,
 
     /// Map trigger instants to their process id
-    timer: BTreeMap<DateTime<Local>, usize>,
+    timer: BTreeMap<OffsetDateTime, usize>,
 }
 
 impl Cron {
@@ -284,11 +298,14 @@ impl Cron {
 
             let time_desc =
                 TimerDescription::parse(raw_desc).map_err(|s| Error::TimeParseError(s, *id))?;
-            let next_execution = time_desc.get_next_execution(Local::now());
+            let now = OffsetDateTime::now_local()?;
+            let next_execution = time_desc.get_next_execution(now);
             debug!(
                 "Scheduled execution of '{}' at {}",
                 program_config.name,
-                &next_execution.to_rfc3339()
+                &next_execution
+                    .format(&Rfc3339)
+                    .unwrap_or_else(|_| "format error".to_string())
             );
             result.insert_job(next_execution, *id);
             result.timers.insert(*id, time_desc);
@@ -301,7 +318,7 @@ impl Cron {
     ///
     /// The scheduled instant of the returned process id is removed. The next
     /// execution time is scheduled and inserted into the index.
-    pub fn pop_runnable(&mut self, now: DateTime<Local>) -> Option<usize> {
+    pub fn pop_runnable(&mut self, now: OffsetDateTime) -> Option<usize> {
         let next_job = self.timer.iter().next().map(|t| (*t.0, *t.1));
 
         if let Some((next_exec_time, process_id)) = next_job {
@@ -310,7 +327,9 @@ impl Cron {
                 let next_execution = self.timers[&process_id].get_next_execution(now);
                 debug!(
                     "Scheduled next execution at {}",
-                    &next_execution.to_rfc3339()
+                    &next_execution
+                        .format(&Rfc3339)
+                        .unwrap_or_else(|_| "format error".to_string())
                 );
                 self.insert_job(next_execution, process_id);
                 Some(process_id)
@@ -323,7 +342,7 @@ impl Cron {
     }
 
     /// Get the next execution time of a given process id
-    pub fn get_next_execution(&self, id: usize) -> DateTime<Local> {
+    pub fn get_next_execution(&self, id: usize) -> OffsetDateTime {
         for (time, item_id) in &self.timer {
             if id == *item_id {
                 return *time;
@@ -333,9 +352,9 @@ impl Cron {
     }
 
     /// Schedule the next execution of a process id
-    fn insert_job(&mut self, mut next_execution: DateTime<Local>, id: usize) {
+    fn insert_job(&mut self, mut next_execution: OffsetDateTime, id: usize) {
         while self.timer.contains_key(&next_execution) {
-            next_execution = next_execution + Duration::nanoseconds(1);
+            next_execution += Duration::nanoseconds(1);
         }
         self.timer.insert(next_execution, id);
     }
@@ -344,7 +363,7 @@ impl Cron {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::offset::TimeZone;
+    use time::macros::offset;
 
     #[test]
     fn parse_star() {
@@ -781,15 +800,22 @@ mod tests {
         assert_eq!(mock_time() + Duration::days(1), result);
     }
 
-    // Return 1970-06-15T12:30:00 CET Monday
-    fn mock_time() -> DateTime<Local> {
-        Local.timestamp(14297400, 0)
+    // Return 1970-06-15T12:30:00+01:00  Monday
+    fn mock_time() -> OffsetDateTime {
+        let result = OffsetDateTime::from_unix_timestamp(14297400)
+            .unwrap()
+            .to_offset(offset!(+1));
+        assert_eq!(1970, result.year());
+        assert_eq!(6u8, u8::from(result.month()));
+        assert_eq!(15, result.day());
+        assert_eq!(12, result.hour());
+        result
     }
 
     #[test]
     fn cronjobs_at_same_time_are_both_executed() {
         // setup two jobs at precisely the same time
-        let mut timer: BTreeMap<DateTime<Local>, usize> = BTreeMap::new();
+        let mut timer: BTreeMap<OffsetDateTime, usize> = BTreeMap::new();
         let mut timers: HashMap<usize, TimerDescription> = HashMap::new();
         timers.insert(1, TimerDescription::parse("* * * * *").unwrap());
         timers.insert(2, TimerDescription::parse("* * * * *").unwrap());

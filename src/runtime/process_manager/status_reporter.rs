@@ -21,6 +21,7 @@ use crate::runtime::process::{ProcessState, ProcessType};
 use crate::runtime::process_manager::ProcessManager;
 use crate::util::libc_helpers;
 
+use log::error;
 use log::warn;
 
 use nix::sys::socket;
@@ -29,6 +30,8 @@ use nix::unistd;
 use std::io::Write;
 use std::os::unix::io::AsRawFd;
 use std::os::unix::io::FromRawFd;
+
+use time::format_description::well_known::Rfc3339;
 
 impl ProcessManager {
     /// Print the runtime state handling potential errors
@@ -82,11 +85,16 @@ impl ProcessManager {
             }
 
             if p.process_type == ProcessType::Cronjob {
-                file.write_fmt(format_args!(
-                    "    scheduled_at: '{}'\n",
-                    &self.cron.get_next_execution(id).to_rfc3339()
-                ))
-                .map_err(libc_helpers::map_to_errno)?;
+                match self.cron.get_next_execution(id).format(&Rfc3339) {
+                    Err(e) => error!(
+                        "failed to format cronjob's next execution at '{}': {}",
+                        self.cron.get_next_execution(id),
+                        e
+                    ),
+                    Ok(v) => file
+                        .write_fmt(format_args!("    scheduled_at: '{}'\n", &v))
+                        .map_err(libc_helpers::map_to_errno)?,
+                }
             }
         }
         Ok(())

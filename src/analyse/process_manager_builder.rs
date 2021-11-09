@@ -175,6 +175,9 @@ fn build_cron(config: &Config) -> Result<Cron, i32> {
 
     if let Err(error) = cron {
         match error {
+            CronError::IndeterminateOffset(e) => {
+                error!("Timezone could not be determined: {}", e);
+            }
             CronError::TimeParseError(message, id) => {
                 error!(
                     "Timer parse error for program '{}': {}",

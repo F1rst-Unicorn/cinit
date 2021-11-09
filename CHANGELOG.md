@@ -9,6 +9,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 * Update library dependencies
 
+* Port code from [`chrono`](https://docs.rs/chrono/0.4.19/chrono/index.html) to
+  [`time`](https://docs.rs/time/0.3.4/time/index.html)
+  ([#50](https://gitlab.com/veenj/cinit/issues/50)).
+
 ### Fixed
 
 * cinit now properly cleans the supplementary groups of each child process.

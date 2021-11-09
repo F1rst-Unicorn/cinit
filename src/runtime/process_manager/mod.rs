@@ -44,7 +44,7 @@ use nix::sys::wait;
 use nix::unistd::Pid;
 use nix::{errno, unistd};
 
-use chrono::prelude::Local;
+use time::OffsetDateTime;
 
 use log::{debug, error, info, trace, warn};
 
@@ -489,7 +489,18 @@ impl ProcessManager {
             }
         }
 
-        while let Some(child_index) = self.cron.pop_runnable(Local::now()) {
+        let now = match OffsetDateTime::now_local() {
+            Err(e) => {
+                error!(
+                    "Cannot determine local timezone, so no cronjobs will run: {}",
+                    e
+                );
+                return;
+            }
+            Ok(v) => v,
+        };
+
+        while let Some(child_index) = self.cron.pop_runnable(now) {
             if self.dependency_manager.is_runnable(child_index) {
                 self.spawn_child(child_index);
             } else {
