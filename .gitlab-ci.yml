@@ -91,6 +91,8 @@ audit:
     - apt-get -y --no-install-recommends install libsystemd-dev
     - cargo install cargo-audit
     - cargo audit
+        --ignore RUSTSEC-2020-0071
+        --ignore RUSTSEC-2020-0159
   cache:
     key: ${CI_JOB_NAME}
     policy: pull

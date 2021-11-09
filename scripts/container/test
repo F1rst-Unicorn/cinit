@@ -27,7 +27,7 @@ export TARGET="--target=x86_64-unknown-linux-musl"
 su $U -c "/usr/local/cargo/bin/cargo build $BUILD_FLAGS $TARGET -j 8"
 su $U -c "/usr/local/cargo/bin/cargo fmt --all -- --check"
 su $U -c "/usr/local/cargo/bin/cargo clippy $BUILD_FLAGS $TARGET -j 8 -- -D clippy::all"
-su $U -c "/usr/local/cargo/bin/cargo audit"
+su $U -c "/usr/local/cargo/bin/cargo audit --ignore RUSTSEC-2020-0071 --ignore RUSTSEC-2020-0159"
 su $U -c "RUST_BACKTRACE=1 /usr/local/cargo/bin/cargo test -j 1 $TARGET"
 su $U -c "/usr/local/cargo/bin/cargo doc"
 
