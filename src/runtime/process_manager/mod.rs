@@ -511,7 +511,6 @@ impl ProcessManager {
     /// happen for cron jobs. The spawned child is indexed via PID, stdout and
     /// stderr file descriptors and is registered at epoll.
     fn spawn_child(&mut self, child_index: usize) {
-        let child_result;
         let child = &mut self.process_map[child_index];
         if child.state != ProcessState::Blocked && child.state != ProcessState::Sleeping {
             warn!(
@@ -526,7 +525,7 @@ impl ProcessManager {
             return;
         }
 
-        child_result = child.start();
+        let child_result = child.start();
         if let Err(child_result) = child_result {
             error!("Failed to spawn child: {}", child_result);
             return;
