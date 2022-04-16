@@ -57,7 +57,7 @@ impl Display for MergeError {
 }
 
 /// Programmatic pendant for
-/// [ProcessTypes](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md#program-types)
+/// [ProcessTypes](https://j.njsm.de/git/veenj/cinit/src/branch/master/doc/README.md#program-types)
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum ProcessType {
     /// Default "simple" process type running once
@@ -126,7 +126,7 @@ pub struct ProcessConfig {
 impl ProcessConfig {
     /// Merge two [ProcessConfigs](ProcessConfig) according to the [documentation
     /// on
-    /// merging](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md#merging-configuration)
+    /// merging](https://j.njsm.de/git/veenj/cinit/src/branch/master/doc/README.md#merging-configuration)
     ///
     /// The [ProcessConfig](ProcessConfig) containing the `path` (which is only allowed in one place)
     /// is considered the primary one, the other one the dropin.

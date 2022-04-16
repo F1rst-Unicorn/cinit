@@ -182,7 +182,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   ([#37](https://j.njsm.de/git/veenj/cinit/issues/37))
 
 * Implement
-  [drop-in configuration](https://gitlab.com/veenj/cinit/tree/master/doc#merging-configuration)
+  [drop-in configuration](https://j.njsm.de/git/veenj/cinit/src/branch/master/doc#merging-configuration)
   ([#36](https://j.njsm.de/git/veenj/cinit/issues/36))
 
 ## Release [1.2.6]

@@ -18,7 +18,7 @@
 //! container init system
 //!
 //! This documentation targets developers of cinit. If you want to learn how to
-//! use cinit, see [`doc/README.md`](https://gitlab.com/veenj/cinit/-/blob/master/doc/README.md).
+//! use cinit, see [`doc/README.md`](https://j.njsm.de/git/veenj/cinit/src/branch/master/README.md).
 //!
 //! Run processes and take init (PID 0) responsibilities inside containers.
 //!
