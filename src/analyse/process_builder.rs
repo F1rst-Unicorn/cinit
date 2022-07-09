@@ -393,10 +393,10 @@ pub fn looks_like_tera_template(value: &str) -> bool {
 /// Pretty-print tera errors for users
 fn render_tera_error(error: &tera::Error) -> String {
     let mut result = String::new();
-    result += &format!("{}\n", error);
+    result = format!("{}{}\n", result, error);
     let mut source = error.source();
     while let Some(error) = source {
-        result += &format!("{}\n", error);
+        result = format!("{}{}\n", result, error);
         source = error.source();
     }
     result
