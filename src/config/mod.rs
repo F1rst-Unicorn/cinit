@@ -27,7 +27,7 @@ use std::fmt::Formatter;
 use serde_derive::Deserialize;
 
 /// Error occurring while merging [ProcessConfigs](ProcessConfig)
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum MergeError {
     /// A path is specified more than once for a program
     PathSpecified(String),
@@ -58,7 +58,7 @@ impl Display for MergeError {
 
 /// Programmatic pendant for
 /// [ProcessTypes](https://j.njsm.de/git/veenj/cinit/src/branch/master/doc/README.md#program-types)
-#[derive(Debug, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub enum ProcessType {
     /// Default "simple" process type running once
     #[serde(rename = "oneshot")]
@@ -82,7 +82,7 @@ fn default_process_type() -> ProcessType {
 /// (Partial) Configuration of a single process
 ///
 /// This is the programatic pendant of the configuration file
-#[derive(Debug, Deserialize, Clone, PartialEq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
 pub struct ProcessConfig {
     pub name: String,
 

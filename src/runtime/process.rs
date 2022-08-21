@@ -57,7 +57,7 @@ const EXIT_CODE: i32 = 4;
 ///
 /// Runtime pendant to [configuration ProcessType](crate::config::ProcessType)
 /// without unneeded contained parameters.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProcessType {
     Oneshot,
 
@@ -67,7 +67,7 @@ pub enum ProcessType {
 }
 
 /// States a process can take on
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ProcessState {
     /// The process cannot be started because of dependencies not having
     /// finished yet.

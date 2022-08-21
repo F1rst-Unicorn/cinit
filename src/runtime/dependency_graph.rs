@@ -34,7 +34,7 @@ use crate::config::ProcessType;
 /// Process information relevant for dependency resolution
 ///
 /// Values found in `after_self` are process ids.
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct ProcessNode {
     after_self: Vec<usize>,
 
@@ -44,7 +44,7 @@ pub struct ProcessNode {
 }
 
 /// Errors occurring during dependency graph construction
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     /// The dependency graph contains a cycle involving the contained process id
     Cycle(usize),
@@ -63,7 +63,7 @@ pub enum Error {
 }
 
 /// All data structures needed for dependency management.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct DependencyManager {
     nodes: HashMap<usize, ProcessNode>,
 
