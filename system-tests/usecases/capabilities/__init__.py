@@ -61,7 +61,7 @@ class Test(CinitTest):
             .assert_uid(0) \
             .assert_gid(0) \
             .assert_default_env() \
-            .assert_capabilities({
+            .assert_capabilities_at_least({
                 'CAP_NET_RAW': 'epia',
                 'CAP_KILL': 'epia',
                 'CAP_CHOWN': 'ep',

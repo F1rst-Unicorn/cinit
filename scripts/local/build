@@ -16,40 +16,37 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-set -e
+set -ex
 
 PROJECT_ROOT="$( cd "$( dirname "$(readlink -f $0)" )" && pwd )/../.."
-
-USER_ID=$(ls -lnd $PROJECT_ROOT | awk '{ print $3 }')
-GROUP_ID=$(ls -lnd $PROJECT_ROOT | awk '{ print $4 }')
 
 DOCKER_NAME=cinit
 DOCKER_TAG="$DOCKER_NAME:build"
 DOCKER_PROJECT_ROOT=/usr/src/cinit
 
 mkdir -p "$PROJECT_ROOT/target/registry/"
-chown -R "$USER_ID:$GROUP_ID" "$PROJECT_ROOT/target/"
 
 docker pull docker.io/rust:bullseye
 
-docker build -t $DOCKER_TAG                                                 \
-        --build-arg USER_ID=$USER_ID                                        \
-        --build-arg GROUP_ID=$GROUP_ID                                      \
-        .
+docker build -t $DOCKER_TAG .
 
 # Build servers don't have a TTY
 if [ -t 1 ] ; then
     TTY=--tty
 fi
 
+# Only outside gitlab for capability tests
+if [ "$CI_JOB_NAME" = "" ] ; then
+    PRIVILEGED=--privileged
+fi
+
 docker run --rm                                                             \
         $TTY                                                                \
         --interactive                                                       \
+        $PRIVILEGED                                                         \
         --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
         --volume "$PROJECT_ROOT/target/registry/:/usr/local/cargo/registry" \
         --workdir "$DOCKER_PROJECT_ROOT"                                    \
-        --env USER_ID=$USER_ID                                              \
-        --env GROUP_ID=$GROUP_ID                                            \
         --env BUILD_FLAGS="$BUILD_FLAGS"                                    \
         $DOCKER_TAG                                                         \
         $DOCKER_PROJECT_ROOT/scripts/container/test

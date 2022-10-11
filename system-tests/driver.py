@@ -444,6 +444,11 @@ class ChildProcess:
         self.test.assertEqual(expected, self.capabilities)
         return self
 
+    def assert_capabilities_at_least(self, expected):
+        for capability in expected:
+            self.test.assertIn(capability, self.capabilities)
+        return self
+
     def assert_default_env(self):
         self.assert_env_is_keys(ChildProcess.get_default_env())
         return self
