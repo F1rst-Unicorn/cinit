@@ -335,7 +335,7 @@ impl Cron {
     /// Schedule the next execution of a process id
     fn insert_job(&mut self, mut next_execution: DateTime<Local>, id: usize) {
         while self.timer.contains_key(&next_execution) {
-            next_execution = next_execution + Duration::nanoseconds(1);
+            next_execution += Duration::nanoseconds(1);
         }
         self.timer.insert(next_execution, id);
     }

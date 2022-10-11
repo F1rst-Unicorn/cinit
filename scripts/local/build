@@ -30,7 +30,7 @@ DOCKER_PROJECT_ROOT=/usr/src/cinit
 mkdir -p "$PROJECT_ROOT/target/registry/"
 chown -R "$USER_ID:$GROUP_ID" "$PROJECT_ROOT/target/"
 
-docker pull rust:bullseye
+docker pull docker.io/rust:bullseye
 
 docker build -t $DOCKER_TAG                                                 \
         --build-arg USER_ID=$USER_ID                                        \

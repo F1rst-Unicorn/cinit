@@ -32,8 +32,15 @@ pub fn do_startup_checks() -> Result<(), i32> {
 
 /// Terminate if linux version doesn't support capabilities
 fn check_kernel_version() -> Result<(), i32> {
-    let kernel_info = uname();
-    let mut release = kernel_info.release().split('.');
+    let kernel_info = match uname() {
+        Err(e) => {
+            warn!("Could not read kernel version: {}", e);
+            return Ok(());
+        }
+        Ok(v) => v,
+    };
+    let release_string = kernel_info.release().to_string_lossy();
+    let mut release = release_string.split('.');
     if let Some(major_raw) = release.next() {
         if let Some(minor_raw) = release.next() {
             let major = major_raw.parse::<u32>();
@@ -42,7 +49,7 @@ fn check_kernel_version() -> Result<(), i32> {
             if major.is_err() || minor.is_err() {
                 warn!(
                     "Could not determine kernel version from input '{}'",
-                    kernel_info.release()
+                    release_string
                 );
                 return Ok(());
             }
@@ -55,20 +62,20 @@ fn check_kernel_version() -> Result<(), i32> {
                 error!("cinit to work properly. Aborting");
                 Err(EXIT_CODE)
             } else {
-                debug!("Running on kernel version {}", kernel_info.release());
+                debug!("Running on kernel version {}", release_string);
                 Ok(())
             }
         } else {
             warn!(
                 "Could not determine kernel version from input '{}'",
-                kernel_info.release()
+                release_string
             );
             Ok(())
         }
     } else {
         warn!(
             "Could not determine kernel version from input '{}'",
-            kernel_info.release()
+            release_string
         );
         Ok(())
     }

@@ -17,8 +17,8 @@
 
 //! Parse command line
 
-use clap::App;
 use clap::Arg;
+use clap::Command;
 
 /// Control cinit's logging verbosity
 pub const FLAG_VERBOSE: &str = "verbose";
@@ -27,8 +27,8 @@ pub const FLAG_VERBOSE: &str = "verbose";
 pub const FLAG_CONFIG: &str = "config";
 
 /// Transform command line into [clap](clap) struct
-pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
-    let app = App::new("cinit")
+pub fn parse_arguments() -> clap::ArgMatches {
+    let app = Command::new("cinit")
         .version(concat!(
             env!("CARGO_PKG_VERSION"),
             " ",
@@ -38,21 +38,20 @@ pub fn parse_arguments<'a>() -> clap::ArgMatches<'a> {
         ))
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
-            Arg::with_name("config")
-                .short("c")
+            Arg::new("config")
+                .short('c')
                 .long(FLAG_CONFIG)
                 .value_name("PATH")
                 .help("The config file or directory to run with")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("/etc/cinit.yml"),
         )
         .arg(
-            Arg::with_name("verbose")
-                .short("v")
+            Arg::new("verbose")
+                .short('v')
                 .long(FLAG_VERBOSE)
                 .help("Output information while running")
-                .multiple(true)
-                .takes_value(false),
+                .action(clap::ArgAction::Count),
         );
     app.get_matches()
 }

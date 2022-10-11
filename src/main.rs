@@ -77,7 +77,7 @@ fn main() {
 
 fn run() -> i32 {
     let arguments = cli_parser::parse_arguments();
-    logging::initialise(arguments.occurrences_of(cli_parser::FLAG_VERBOSE));
+    logging::initialise(arguments.get_count(cli_parser::FLAG_VERBOSE).into());
 
     info!("Starting up");
     if let Err(exit_code) = startup_checks::do_startup_checks() {
@@ -85,7 +85,7 @@ fn run() -> i32 {
     }
 
     let config_path = arguments
-        .value_of(cli_parser::FLAG_CONFIG)
+        .get_one::<String>(cli_parser::FLAG_CONFIG)
         .expect("Missing default value in cli_parser");
     info!("Config is at {}", config_path);
 

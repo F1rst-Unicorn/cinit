@@ -35,65 +35,65 @@ use std::process::exit;
 use std::thread;
 use std::time;
 
-use clap::App;
-use clap::AppSettings;
 use clap::Arg;
+use clap::Command;
 
 use nix::sys::signalfd;
 use nix::unistd;
 
 fn main() {
-    let arguments = App::new("cinit-harness")
-        .setting(AppSettings::TrailingVarArg)
+    let arguments = Command::new("cinit-harness")
         .arg(
-            Arg::with_name("return-code")
+            Arg::new("return-code")
                 .long("return-code")
-                .short("r")
+                .short('r')
                 .value_name("CODE")
                 .help("The result code to return")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("0"),
         )
         .arg(
-            Arg::with_name("sleep")
+            Arg::new("sleep")
                 .long("sleep")
-                .short("s")
+                .short('s')
                 .value_name("SECONDS")
                 .help("Sleep before termination")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("0"),
         )
         .arg(
-            Arg::with_name("output")
+            Arg::new("output")
                 .long("output")
-                .short("o")
+                .short('o')
                 .value_name("FILE")
                 .help("Where to dump to")
-                .takes_value(true)
+                .num_args(1)
                 .default_value("test-output/harness.txt"),
         )
         .arg(
-            Arg::with_name("status")
+            Arg::new("status")
                 .long("status")
-                .short("S")
+                .short('S')
                 .value_name("TEXT")
                 .help("Status to report")
-                .takes_value(true),
+                .num_args(1),
         )
         .arg(
-            Arg::with_name("ready")
+            Arg::new("ready")
                 .long("ready")
-                .short("n")
+                .short('n')
+                .num_args(0)
                 .help("Notify cinit that we are ready"),
         )
         .arg(
-            Arg::with_name("rest")
+            Arg::new("rest")
+                .trailing_var_arg(true)
                 .help("Anything else to pass")
-                .multiple(true),
+                .num_args(..),
         )
         .get_matches();
 
-    if arguments.is_present("ready") {
+    if arguments.contains_id("ready") {
         let sock = UnixDatagram::unbound().expect("failed to create socket");
         sock.connect("/run/cinit-notify.socket")
             .expect("failed to connect to notify socket");
@@ -102,7 +102,7 @@ fn main() {
             .expect("failed to close socket");
     }
 
-    if let Some(status) = arguments.value_of("status") {
+    if let Some(status) = arguments.get_one::<String>("status") {
         let sock = UnixDatagram::unbound().expect("failed to create socket");
         sock.connect("/run/cinit-notify.socket")
             .expect("failed to connect to notify socket");
@@ -112,10 +112,10 @@ fn main() {
             .expect("failed to close socket");
     }
 
-    dump(arguments.value_of("output").unwrap());
+    dump(arguments.get_one::<String>("output").unwrap());
 
     let sleep_seconds = arguments
-        .value_of("sleep")
+        .get_one::<String>("sleep")
         .unwrap()
         .parse::<u64>()
         .expect("invalid sleep seconds");
@@ -133,7 +133,7 @@ fn main() {
 
     exit(
         arguments
-            .value_of("return-code")
+            .get_one::<String>("return-code")
             .unwrap()
             .parse::<i32>()
             .expect("invalid return code"),

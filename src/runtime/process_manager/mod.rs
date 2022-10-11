@@ -277,10 +277,7 @@ impl ProcessManager {
             None,
         )?;
 
-        socket::bind(
-            socket_fd,
-            &socket::SockAddr::Unix(socket::UnixAddr::new(path)?),
-        )?;
+        socket::bind(socket_fd, &socket::UnixAddr::new(path)?)?;
 
         unsafe {
             let raw_path = CString::new(path).expect("could not build cstring");

@@ -281,16 +281,14 @@ none is given.
 ```text
 Init program for UNIX processes
 
-USAGE:
-    cinit [FLAGS] [OPTIONS]
+Usage: cinit [OPTIONS]
 
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-    -v, --verbose    Output information while running
+Options:
+  -c, --config <PATH>  The config file or directory to run with [default: /etc/cinit.yml]
+  -v, --verbose...     Output information while running
+  -h, --help           Print help information
+  -V, --version        Print version information
 
-OPTIONS:
-    -c, --config <PATH>    The config file or directory to run with [default: /etc/cinit.yml]
 ```
 
 ## Logging

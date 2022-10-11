@@ -79,6 +79,11 @@ fn default_process_type() -> ProcessType {
     ProcessType::Oneshot
 }
 
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+pub struct CronJob {
+    pub timer: String,
+}
+
 /// (Partial) Configuration of a single process
 ///
 /// This is the programatic pendant of the configuration file
@@ -96,6 +101,7 @@ pub struct ProcessConfig {
 
     #[serde(rename = "type")]
     #[serde(default = "default_process_type")]
+    #[serde(with = "serde_yaml::with::singleton_map")]
     pub process_type: ProcessType,
 
     pub uid: Option<u32>,

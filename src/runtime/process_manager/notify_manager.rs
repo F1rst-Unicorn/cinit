@@ -19,6 +19,7 @@
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::io::IoSliceMut;
 
 use crate::runtime::process::ProcessType;
 use crate::runtime::process_manager::ProcessManager;
@@ -32,8 +33,8 @@ use nix::cmsg_space;
 use nix::sys::socket::recvmsg;
 use nix::sys::socket::ControlMessageOwned::ScmCredentials;
 use nix::sys::socket::MsgFlags;
+use nix::sys::socket::RecvMsg;
 use nix::sys::socket::UnixCredentials;
-use nix::sys::uio::IoVec;
 use nix::unistd::Pid;
 
 impl ProcessManager {
@@ -61,9 +62,9 @@ impl ProcessManager {
     fn read_socket(&mut self) -> Result<(String, UnixCredentials), nix::Error> {
         let mut buffer: [u8; 4096] = [0; 4096];
         let mut control = cmsg_space!(UnixCredentials);
-        let result = recvmsg(
+        let result: RecvMsg<()> = recvmsg(
             self.notify_fd,
-            &[IoVec::from_mut_slice(&mut buffer)],
+            &mut [IoSliceMut::new(&mut buffer)],
             Some(&mut control),
             MsgFlags::empty(),
         )?;
