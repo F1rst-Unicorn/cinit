@@ -40,12 +40,18 @@ if [ "$CI_JOB_NAME" = "" ] ; then
     PRIVILEGED=--privileged
 fi
 
+ALTERNATES=$(cat $PROJECT_ROOT/.git/objects/info/alternates || true)
+if [ ! -z $ALTERNATES ] ; then
+    ALTERNATES="--volume $ALTERNATES:$ALTERNATES"
+fi
+
 docker run --rm                                                             \
         $TTY                                                                \
         --interactive                                                       \
         $PRIVILEGED                                                         \
         --volume "$PROJECT_ROOT/:$DOCKER_PROJECT_ROOT"                      \
         --volume "$PROJECT_ROOT/target/registry/:/usr/local/cargo/registry" \
+        $ALTERNATES                                                         \
         --workdir "$DOCKER_PROJECT_ROOT"                                    \
         --env BUILD_FLAGS="$BUILD_FLAGS"                                    \
         $DOCKER_TAG                                                         \
