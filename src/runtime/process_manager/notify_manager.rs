@@ -68,7 +68,8 @@ impl ProcessManager {
             Some(&mut control),
             MsgFlags::empty(),
         )?;
-        let message = slice_to_string(&buffer);
+        // unwrapping is safe because we pass exactly one iov buffer which we retrieve here
+        let message = slice_to_string(result.iovs().next().unwrap());
         let peer;
         for m in result.cmsgs() {
             if let ScmCredentials(credentials) = m {
