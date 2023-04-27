@@ -16,10 +16,10 @@
  */
 extern crate vergen;
 
-use anyhow::Result;
-use vergen::vergen;
-use vergen::Config;
+use std::error::Error;
+use vergen::EmitBuilder;
 
-fn main() -> Result<()> {
-    vergen(Config::default())
+fn main() -> Result<(), Box<dyn Error>> {
+    EmitBuilder::builder().all_git().all_build().emit()?;
+    Ok(())
 }

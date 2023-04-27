@@ -27,5 +27,4 @@ log4rs = "1.0.0"
 caps = "0.5.2"
 
 [build-dependencies]
-vergen = "7"
-anyhow = "1"
+vergen = { version = "8", features = ["build", "git", "git2"] }
