@@ -26,7 +26,7 @@ DOCKER_PROJECT_ROOT=/usr/src/cinit
 
 mkdir -p "$PROJECT_ROOT/target/registry/"
 
-docker pull docker.io/rust:bullseye
+docker pull docker.io/rust:bookworm
 
 docker build -t $DOCKER_TAG .
 
