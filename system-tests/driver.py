@@ -402,7 +402,7 @@ class ChildProcess:
         self.test = test
         child_dumps = PROJECT_ROOT + "/system-tests/child-dump/"
         with open(child_dumps + name + ".yml") as stream:
-            tree = yaml.load(stream)
+            tree = yaml.safe_load(stream)
             if dump:
                 print(tree)
             program = tree['programs'][0]
