@@ -20,6 +20,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io::IoSliceMut;
+use std::os::fd::AsRawFd;
 
 use crate::runtime::process::ProcessType;
 use crate::runtime::process_manager::ProcessManager;
@@ -62,9 +63,10 @@ impl ProcessManager {
     fn read_socket(&mut self) -> Result<(String, UnixCredentials), nix::Error> {
         let mut buffer: [u8; 4096] = [0; 4096];
         let mut control = cmsg_space!(UnixCredentials);
+        let buffer_slice = &mut [IoSliceMut::new(&mut buffer)];
         let result: RecvMsg<()> = recvmsg(
-            self.notify_fd,
-            &mut [IoSliceMut::new(&mut buffer)],
+            self.notify_fd.as_raw_fd(),
+            buffer_slice,
             Some(&mut control),
             MsgFlags::empty(),
         )?;

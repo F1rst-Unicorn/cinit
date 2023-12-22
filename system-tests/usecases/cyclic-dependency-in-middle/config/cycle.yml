@@ -22,7 +22,6 @@ programs:
       - system-tests/child-dump/first.yml
     uid: 1409
     gid: 1409
-    pty: true
 
   - name: second
     path: target/path/harness
@@ -34,7 +33,6 @@ programs:
       - fourth
     uid: 1409
     gid: 1409
-    pty: true
 
   - name: third
     path: target/path/harness
@@ -46,7 +44,6 @@ programs:
       - second
     uid: 1409
     gid: 1409
-    pty: true
 
   - name: fourth
     path: target/path/harness
@@ -58,4 +55,3 @@ programs:
       - third
     uid: 1409
     gid: 1409
-    pty: true

@@ -59,7 +59,6 @@ use std::path::PathBuf;
 use crate::config::{ProcessConfig, ProcessType};
 use crate::runtime::process::ProcessType as RuntimeType;
 use crate::runtime::process::{Process, ProcessState};
-use crate::runtime::process_manager::NOTIFY_SOCKET_PATH;
 
 use nix::unistd::Gid;
 use nix::unistd::Group;
@@ -67,6 +66,7 @@ use nix::unistd::Pid;
 use nix::unistd::Uid;
 use nix::unistd::User;
 
+use crate::analyse::process_manager_builder::NOTIFY_SOCKET_PATH;
 use log::trace;
 use log::warn;
 

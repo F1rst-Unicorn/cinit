@@ -123,7 +123,7 @@ impl DependencyManager {
         }
         process.finished = true;
         for successor_index in self.nodes[&process_id].after_self.clone() {
-            let mut successor = self.nodes.get_mut(&successor_index).expect("Invalid index");
+            let successor = self.nodes.get_mut(&successor_index).expect("Invalid index");
             successor.predecessor_count -= 1;
             if successor.predecessor_count == 0 {
                 // no need to remove `process` from successor's dependencies
@@ -156,7 +156,7 @@ impl DependencyManager {
         }
 
         for (current_index, current_config) in config {
-            let mut current = result
+            let current = result
                 .get_mut(current_index)
                 .expect("Invalid index in name_dict");
             for successor_name in &current_config.before {
@@ -172,7 +172,7 @@ impl DependencyManager {
                 let successor_index = name_dict
                     .get(successor_name)
                     .expect("Invalid index in name_dict");
-                let mut successor = result
+                let successor = result
                     .get_mut(successor_index)
                     .expect("Invalid index in name_dict");
                 successor.predecessor_count += 1;

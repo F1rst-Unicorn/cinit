@@ -17,18 +17,14 @@
 
 //! Data and behaviour of a single process
 
-use std::ffi::CStr;
-use std::ffi::CString;
-use std::fmt::{Display, Error as FmtError, Formatter};
-use std::os::unix::io::AsRawFd;
-use std::os::unix::io::RawFd;
-use std::path::PathBuf;
-use std::process::exit;
-use std::str::FromStr;
-
 use crate::util::libc_helpers;
 use crate::util::libc_helpers::get_terminal_size;
-
+use caps::clear as clear_capabilities;
+use caps::set as apply_capabilities;
+use caps::CapSet;
+use caps::Capability;
+use caps::CapsHashSet;
+use log::{debug, error, info, trace, warn};
 use nix::fcntl;
 use nix::pty;
 use nix::sys::signal;
@@ -38,14 +34,15 @@ use nix::unistd;
 use nix::unistd::fork;
 use nix::unistd::Pid;
 use nix::Error;
-
-use caps::clear as clear_capabilities;
-use caps::set as apply_capabilities;
-use caps::CapSet;
-use caps::Capability;
-use caps::CapsHashSet;
-
-use log::{debug, error, info, trace, warn};
+use std::ffi::CStr;
+use std::ffi::CString;
+use std::fmt::{Display, Error as FmtError, Formatter};
+use std::os::fd::AsRawFd;
+use std::os::fd::FromRawFd;
+use std::os::fd::OwnedFd;
+use std::path::PathBuf;
+use std::process::exit;
+use std::str::FromStr;
 
 /// Unique exit code for this module
 ///
@@ -94,7 +91,7 @@ pub enum ProcessState {
     Crashed(i32),
 }
 
-type Pipe = (RawFd, RawFd);
+type Pipe = (OwnedFd, OwnedFd);
 
 impl Display for ProcessState {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
@@ -149,7 +146,7 @@ impl Process {
     /// Fork off the process returning its PID, `stdout`, and `stderr` file
     /// descriptors. The child process will configure according to the
     /// [ProcessConfig](crate::config::ProcessConfig) and then perform an `exec`.
-    pub fn start(&mut self) -> Result<(Pid, RawFd, RawFd), Error> {
+    pub fn start(&mut self) -> Result<(Pid, OwnedFd, OwnedFd), Error> {
         info!("Starting {}", self.name);
 
         let (stdout, stderr) = self.create_std_fds()?;
@@ -169,8 +166,8 @@ impl Process {
                     _ => ProcessState::Running,
                 };
                 self.pid = child_pid;
-                unistd::close(stdout.1)?;
-                unistd::close(stderr.1)?;
+                drop(stdout.1);
+                drop(stderr.1);
                 Ok((child_pid, stdout.0, stderr.0))
             }
             Ok(unistd::ForkResult::Child) => match self.setup_child(stdout.1, stderr.1) {
@@ -273,13 +270,13 @@ impl Process {
             self.create_pipes()
         };
 
-        if let Ok(fds) = result {
+        if let Ok(fds) = &result {
             fcntl::fcntl(
-                (fds.0).0,
+                fds.0 .0.as_raw_fd(),
                 fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
             )?;
             fcntl::fcntl(
-                (fds.1).0,
+                fds.1 .0.as_raw_fd(),
                 fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
             )?;
         }
@@ -294,15 +291,15 @@ impl Process {
     /// replaced by the parameters.
     ///
     /// cinit's `sigprocmask` is reverted to not mask any signals.
-    fn setup_child(&mut self, stdout: RawFd, stderr: RawFd) -> Result<(), Error> {
-        while unistd::dup2(stdout, std::io::stdout().as_raw_fd()).is_err() {}
-        while unistd::dup2(stderr, std::io::stderr().as_raw_fd()).is_err() {}
+    fn setup_child(&mut self, stdout: OwnedFd, stderr: OwnedFd) -> Result<(), Error> {
+        while unistd::dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd()).is_err() {}
+        while unistd::dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd()).is_err() {}
 
-        let signals = nix::sys::signal::SigSet::empty();
+        let signals = signal::SigSet::empty();
         signal::sigprocmask(signal::SigmaskHow::SIG_SETMASK, Some(&signals), None)?;
 
-        unistd::close(stdout)?;
-        unistd::close(stderr)?;
+        drop(stdout);
+        drop(stderr);
 
         std::env::set_current_dir(&self.workdir).map_err(|e| match e.raw_os_error() {
             None => Error::EINVAL,
@@ -383,8 +380,8 @@ impl Process {
     }
 
     fn create_ptys(&self) -> Result<(Pipe, Pipe), Error> {
-        let stdin = std::io::stdin().as_raw_fd();
-        let mut tcget_result = termios::tcgetattr(stdin);
+        let stdin = std::io::stdin();
+        let mut tcget_result = termios::tcgetattr(&stdin);
         let ioctl_result: Result<libc::c_int, Error>;
         let mut winsize = pty::Winsize {
             ws_row: 0,
@@ -394,7 +391,7 @@ impl Process {
         };
 
         unsafe {
-            ioctl_result = get_terminal_size(stdin, &mut winsize);
+            ioctl_result = get_terminal_size(stdin.as_raw_fd(), &mut winsize);
         }
 
         if tcget_result.is_err() {
@@ -434,8 +431,8 @@ impl Process {
         let stdout = pty::openpty(Some(&winsize), &tcget_result.clone().ok())?;
         let stderr = pty::openpty(Some(&winsize), &tcget_result.ok())?;
 
-        let stdout_name = libc_helpers::ttyname(stdout.slave)?;
-        let stderr_name = libc_helpers::ttyname(stderr.slave)?;
+        let stdout_name = libc_helpers::ttyname(stdout.slave.as_raw_fd())?;
+        let stderr_name = libc_helpers::ttyname(stderr.slave.as_raw_fd())?;
 
         unistd::chown(stdout_name.as_bytes(), Some(self.uid), Some(self.gid))?;
         unistd::chown(stderr_name.as_bytes(), Some(self.uid), Some(self.gid))?;
@@ -444,8 +441,8 @@ impl Process {
         mode.insert(stat::Mode::S_IRUSR);
         mode.insert(stat::Mode::S_IWUSR);
         mode.insert(stat::Mode::S_IWGRP);
-        stat::fchmod(stdout.slave, mode)?;
-        stat::fchmod(stderr.slave, mode)?;
+        stat::fchmod(stdout.slave.as_raw_fd(), mode)?;
+        stat::fchmod(stderr.slave.as_raw_fd(), mode)?;
 
         info!("Pseudo terminals created");
         Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))
@@ -454,7 +451,18 @@ impl Process {
     fn create_pipes(&self) -> Result<(Pipe, Pipe), Error> {
         let stdout = unistd::pipe()?;
         let stderr = unistd::pipe()?;
-        Ok((stdout, stderr))
+        Ok(unsafe {
+            (
+                (
+                    OwnedFd::from_raw_fd(stdout.0),
+                    OwnedFd::from_raw_fd(stdout.1),
+                ),
+                (
+                    OwnedFd::from_raw_fd(stderr.0),
+                    OwnedFd::from_raw_fd(stderr.1),
+                ),
+            )
+        })
     }
 }
 

@@ -45,13 +45,27 @@ use crate::runtime::dependency_graph::{DependencyManager, Error};
 use crate::runtime::process::Process;
 use crate::runtime::process_manager::ProcessManager;
 use crate::runtime::process_map::ProcessMap;
-
-use nix::sys::signalfd;
-
-use log::{error, trace};
+use crate::util::libc_helpers;
+use log::{debug, error, trace};
+use nix::errno;
+use nix::sys::epoll::Epoll;
+use nix::sys::signalfd::SignalFd;
+use nix::sys::socket::sockopt::PassCred;
+use nix::sys::socket::{setsockopt, SockType};
+use nix::sys::{epoll, signal, signalfd, socket};
+use std::ffi::CString;
+use std::fs::remove_file;
+use std::os::fd::OwnedFd;
+use std::os::unix::io::AsRawFd;
 
 /// Unique exit code for this module
 const EXIT_CODE: i32 = 2;
+
+/// Path of the report socket
+const SOCKET_PATH: &str = "/run/cinit.socket";
+
+/// Path of the notify socket for children
+pub const NOTIFY_SOCKET_PATH: &str = "/run/cinit-notify.socket";
 
 impl ProcessManager {
     /// See [analysis phase](crate::analyse::process_manager_builder)
@@ -71,19 +85,86 @@ impl ProcessManager {
 
         let dependency_manager = build_dependency_manager(config);
         let cron = build_cron(config);
+        let (signal_fd, status_fd, notify_fd) = match Self::setup_file_descriptors() {
+            Err(e) => {
+                error!("Could not setup sockets: {}", e);
+                return Err(EXIT_CODE);
+            }
+            Ok(v) => v,
+        };
 
         Ok(ProcessManager {
             process_map: ProcessMap::from(processes),
             keep_running: true,
             dependency_manager: dependency_manager?,
             cron: cron?,
-            epoll_fd: -1,
-            status_fd: -1,
-            notify_fd: -1,
-            signal_fd: signalfd::SignalFd::new(&signalfd::SigSet::empty())
-                .expect("Could not create signalfd"),
+            epoll: Epoll::new(epoll::EpollCreateFlags::EPOLL_CLOEXEC)
+                .expect("Could not create epoll fd"),
+            status_fd,
+            notify_fd,
+            signal_fd,
             exit_code: 0,
         })
+    }
+
+    fn setup_file_descriptors() -> Result<(SignalFd, OwnedFd, OwnedFd), nix::Error> {
+        let signal_fd = Self::setup_signal_handler()?;
+        let status_fd = Self::setup_unix_socket(SOCKET_PATH, SockType::Stream)?;
+        let notify_fd = Self::setup_unix_socket(NOTIFY_SOCKET_PATH, SockType::Datagram)?;
+        Ok((signal_fd, status_fd, notify_fd))
+    }
+
+    /// Open signal file descriptor
+    ///
+    /// Declare interest only in selected signals:
+    ///
+    /// * `SIGCHLD`
+    /// * `SIGINT`
+    /// * `SIGTERM`
+    /// * `SIGQUIT`
+    fn setup_signal_handler() -> Result<signalfd::SignalFd, nix::Error> {
+        let mut signals = signalfd::SigSet::empty();
+        signals.add(signal::SIGCHLD);
+        signals.add(signal::SIGINT);
+        signals.add(signal::SIGTERM);
+        signals.add(signal::SIGQUIT);
+        signal::sigprocmask(signal::SigmaskHow::SIG_BLOCK, Some(&signals), None)?;
+        SignalFd::with_flags(&signals, signalfd::SfdFlags::SFD_CLOEXEC)
+    }
+
+    /// Open a generic UNIX socket
+    ///
+    /// The socket is world-accessible and requires peer authentication
+    fn setup_unix_socket(path: &str, typ: SockType) -> Result<OwnedFd, nix::Error> {
+        match remove_file(path).map_err(libc_helpers::map_to_errno) {
+            Err(errno::Errno::ENOENT) => Ok(()),
+            e => e,
+        }?;
+
+        let socket_fd = socket::socket(
+            socket::AddressFamily::Unix,
+            typ,
+            socket::SockFlag::SOCK_CLOEXEC,
+            None,
+        )?;
+
+        socket::bind(socket_fd.as_raw_fd(), &socket::UnixAddr::new(path)?)?;
+
+        unsafe {
+            let raw_path = CString::new(path).expect("could not build cstring");
+            let res = libc::chmod(raw_path.into_raw(), 0o777);
+            if res == -1 {
+                return Err(errno::Errno::from_i32(errno::errno()));
+            }
+        }
+
+        setsockopt(&socket_fd, PassCred {}, &true)?;
+        if typ == SockType::Stream {
+            socket::listen(&socket_fd, 0)?;
+        }
+
+        debug!("{} unix domain socket open", path);
+        Ok(socket_fd)
     }
 }
 

@@ -20,12 +20,6 @@
 mod notify_manager;
 mod status_reporter;
 
-use std::convert::TryFrom;
-use std::ffi::CString;
-use std::fs::remove_file;
-use std::os::unix::io::AsRawFd;
-use std::os::unix::io::RawFd;
-
 use crate::logging;
 use crate::runtime::cronjob;
 use crate::runtime::dependency_graph;
@@ -33,26 +27,18 @@ use crate::runtime::process::ProcessState;
 use crate::runtime::process::ProcessType;
 use crate::runtime::process_map::ProcessMap;
 use crate::util::libc_helpers;
-
+use chrono::prelude::Local;
+use log::{debug, error, info, trace, warn};
 use nix::sys::epoll;
 use nix::sys::signal;
 use nix::sys::signalfd;
-use nix::sys::socket;
-use nix::sys::socket::sockopt::PassCred;
-use nix::sys::socket::{setsockopt, SockType};
 use nix::sys::wait;
+use nix::unistd;
 use nix::unistd::Pid;
-use nix::{errno, unistd};
-
-use chrono::prelude::Local;
-
-use log::{debug, error, info, trace, warn};
-
-/// Path of the report socket
-const SOCKET_PATH: &str = "/run/cinit.socket";
-
-/// Path of the notify socket for children
-pub const NOTIFY_SOCKET_PATH: &str = "/run/cinit-notify.socket";
+use std::convert::TryFrom;
+use std::os::fd::{AsFd, BorrowedFd, OwnedFd};
+use std::os::unix::io::AsRawFd;
+use std::os::unix::io::RawFd;
 
 /// Unique exit code for this module
 const EXIT_CODE: i32 = 3;
@@ -72,13 +58,13 @@ pub struct ProcessManager {
 
     pub cron: cronjob::Cron,
 
-    pub epoll_fd: RawFd,
+    pub epoll: epoll::Epoll,
 
     pub signal_fd: signalfd::SignalFd,
 
-    pub status_fd: RawFd,
+    pub status_fd: OwnedFd,
 
-    pub notify_fd: RawFd,
+    pub notify_fd: OwnedFd,
 
     pub exit_code: i32,
 }
@@ -86,15 +72,9 @@ pub struct ProcessManager {
 impl Drop for ProcessManager {
     /// Close all open file descriptors
     fn drop(&mut self) {
-        let raw_signal_fd = self.signal_fd.as_raw_fd();
-        self.deregister_fd_from_epoll(raw_signal_fd);
-
-        self.deregister_fd(self.status_fd);
-        self.deregister_fd(self.notify_fd);
-
-        if let Err(some) = unistd::close(self.epoll_fd) {
-            warn!("Could not close epoll fd: {}", some);
-        }
+        self.deregister_fd_from_epoll(&self.signal_fd);
+        self.deregister_fd_from_epoll(&self.status_fd);
+        self.deregister_fd_from_epoll(&self.notify_fd);
     }
 }
 
@@ -213,7 +193,7 @@ impl ProcessManager {
     /// Dispatch events from the various file descriptors via `epoll()`
     fn dispatch_epoll(&mut self) {
         let mut event_buffer = [epoll::EpollEvent::empty(); 10];
-        let epoll_result = epoll::epoll_wait(self.epoll_fd, &mut event_buffer, 1000);
+        let epoll_result = self.epoll.wait(&mut event_buffer, 1000);
         match epoll_result {
             Ok(count) => {
                 debug!("Got {} events", count);
@@ -235,92 +215,34 @@ impl ProcessManager {
     /// cinit declares itself as `PR_SET_CHILD_SUBREAPER` to inherit zombies from
     /// its process subtree so it can reap them correctly.
     fn setup(&mut self) -> Result<(), nix::Error> {
-        self.signal_fd = ProcessManager::setup_signal_handler()?;
-        self.status_fd = self.setup_unix_socket(SOCKET_PATH, socket::SockType::Stream)?;
-        self.notify_fd = self.setup_unix_socket(NOTIFY_SOCKET_PATH, socket::SockType::Datagram)?;
-        self.epoll_fd = self.setup_epoll_fd()?;
+        self.setup_epoll_fd()?;
         libc_helpers::prctl_one(libc::PR_SET_CHILD_SUBREAPER, 1)?;
         Ok(())
     }
 
-    /// Open signal file descriptor
-    ///
-    /// Declare interest only in selected signals:
-    ///
-    /// * `SIGCHLD`
-    /// * `SIGINT`
-    /// * `SIGTERM`
-    /// * `SIGQUIT`
-    fn setup_signal_handler() -> Result<signalfd::SignalFd, nix::Error> {
-        let mut signals = signalfd::SigSet::empty();
-        signals.add(signalfd::signal::SIGCHLD);
-        signals.add(signalfd::signal::SIGINT);
-        signals.add(signalfd::signal::SIGTERM);
-        signals.add(signalfd::signal::SIGQUIT);
-        signal::sigprocmask(signal::SigmaskHow::SIG_BLOCK, Some(&signals), None)?;
-        signalfd::SignalFd::with_flags(&signals, signalfd::SfdFlags::SFD_CLOEXEC)
-    }
-
-    /// Open a generic UNIX socket
-    ///
-    /// The socket is world-accessible and requires peer authentication
-    fn setup_unix_socket(&mut self, path: &str, typ: SockType) -> Result<RawFd, nix::Error> {
-        match remove_file(path).map_err(libc_helpers::map_to_errno) {
-            Err(nix::errno::Errno::ENOENT) => Ok(()),
-            e => e,
-        }?;
-
-        let socket_fd = socket::socket(
-            socket::AddressFamily::Unix,
-            typ,
-            socket::SockFlag::SOCK_CLOEXEC,
-            None,
-        )?;
-
-        socket::bind(socket_fd, &socket::UnixAddr::new(path)?)?;
-
-        unsafe {
-            let raw_path = CString::new(path).expect("could not build cstring");
-            let res = libc::chmod(raw_path.into_raw(), 0o777);
-            if res == -1 {
-                return Err(errno::Errno::from_i32(errno::errno()));
-            }
-        }
-
-        setsockopt(socket_fd, PassCred {}, &true)?;
-        if typ == socket::SockType::Stream {
-            socket::listen(socket_fd, 0)?;
-        }
-
-        debug!("{} unix domain socket open", path);
-        Ok(socket_fd)
-    }
-
     /// Set up an `epoll()` file descriptor
-    fn setup_epoll_fd(&mut self) -> Result<RawFd, nix::Error> {
-        let epoll_fd = epoll::epoll_create1(epoll::EpollCreateFlags::EPOLL_CLOEXEC)?;
-        epoll::epoll_ctl(
-            epoll_fd,
-            epoll::EpollOp::EpollCtlAdd,
-            self.signal_fd.as_raw_fd(),
-            &mut epoll::EpollEvent::new(
+    fn setup_epoll_fd(&mut self) -> Result<(), nix::Error> {
+        self.epoll.add(
+            &self.signal_fd,
+            epoll::EpollEvent::new(
                 epoll::EpollFlags::EPOLLIN,
                 self.signal_fd.as_raw_fd() as u64,
             ),
         )?;
-        epoll::epoll_ctl(
-            epoll_fd,
-            epoll::EpollOp::EpollCtlAdd,
-            self.status_fd,
-            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.status_fd as u64),
+        self.epoll.add(
+            &self.status_fd,
+            epoll::EpollEvent::new(
+                epoll::EpollFlags::EPOLLIN,
+                self.status_fd.as_raw_fd() as u64,
+            ),
         )?;
-        epoll::epoll_ctl(
-            epoll_fd,
-            epoll::EpollOp::EpollCtlAdd,
-            self.notify_fd,
-            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, self.notify_fd as u64),
-        )?;
-        Ok(epoll_fd)
+        self.epoll.add(
+            &self.notify_fd,
+            epoll::EpollEvent::new(
+                epoll::EpollFlags::EPOLLIN,
+                self.notify_fd.as_raw_fd() as u64,
+            ),
+        )
     }
 
     /// Handle generic `epoll()` event
@@ -329,15 +251,18 @@ impl ProcessManager {
             let fd = event.data() as RawFd;
             if fd == self.signal_fd.as_raw_fd() {
                 self.handle_signal();
-            } else if fd == self.status_fd {
+            } else if fd == self.status_fd.as_raw_fd() {
                 self.report_status();
-            } else if fd == self.notify_fd {
+            } else if fd == self.notify_fd.as_raw_fd() {
                 self.read_notification();
             } else {
+                let fd = unsafe { BorrowedFd::borrow_raw(fd) };
                 self.print_child_output(fd);
             }
         } else if event.events().contains(epoll::EpollFlags::EPOLLHUP) {
-            self.deregister_fd(event.data() as RawFd);
+            let fd = unsafe { BorrowedFd::borrow_raw(event.data() as RawFd) };
+            self.deregister_fd_from_epoll(fd);
+            self.process_map.deregister_fd(fd)
         } else {
             warn!("Received unknown event");
         }
@@ -403,53 +328,29 @@ impl ProcessManager {
     }
 
     /// Register a file descriptor at epoll
-    fn register_fd(&mut self, fd: RawFd) {
-        debug!("Registering fd {}", fd);
-        let epoll_result = epoll::epoll_ctl(
-            self.epoll_fd,
-            epoll::EpollOp::EpollCtlAdd,
+    fn register_fd_at_epoll(&mut self, fd: &OwnedFd) {
+        debug!("Registering fd {}", fd.as_raw_fd());
+        let epoll_result = self.epoll.add(
             fd,
-            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
+            epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd.as_raw_fd() as u64),
         );
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
-        }
-    }
-
-    /// Remove a file descriptor from epoll and close it
-    fn deregister_fd(&mut self, fd: RawFd) {
-        self.deregister_fd_from_epoll(fd);
-        self.close(fd);
-    }
-
-    /// Close a file descriptor and warn on potential error
-    fn close(&mut self, fd: RawFd) {
-        let close_result = unistd::close(fd);
-        if close_result.is_err() {
-            warn!("Could not close fd {}", fd);
         }
     }
 
     /// Remove a file descriptor from epoll
-    fn deregister_fd_from_epoll(&mut self, fd: RawFd) {
-        debug!("Deregistering fd {}", fd);
-        let epoll_result = epoll::epoll_ctl(
-            self.epoll_fd,
-            epoll::EpollOp::EpollCtlDel,
-            fd as RawFd,
-            &mut epoll::EpollEvent::new(epoll::EpollFlags::EPOLLIN, fd as u64),
-        );
+    fn deregister_fd_from_epoll<Fd: AsFd>(&self, fd: Fd) {
+        let epoll_result = self.epoll.delete(fd);
         if epoll_result.is_err() {
             warn!("Could not unregister fd from epoll");
         }
-
-        self.process_map.deregister_fd(fd);
     }
 
     /// Print out child's message reading from its file descriptor
-    fn print_child_output(&mut self, fd: RawFd) {
+    fn print_child_output(&mut self, fd: BorrowedFd) {
         let mut buffer = [0_u8; 4096];
-        let length = unistd::read(fd, &mut buffer);
+        let length = unistd::read(fd.as_raw_fd(), &mut buffer);
 
         if let Ok(length) = length {
             let raw_output = String::from_utf8_lossy(&buffer[..length]);
@@ -522,16 +423,17 @@ impl ProcessManager {
             return;
         }
 
-        let child_result = child.start();
-        if let Err(child_result) = child_result {
-            error!("Failed to spawn child: {}", child_result);
-            return;
-        }
-        let child = child_result.unwrap();
+        let child = match child.start() {
+            Err(child_result) => {
+                error!("Failed to spawn child: {}", child_result);
+                return;
+            }
+            Ok(v) => v,
+        };
+        self.register_fd_at_epoll(&child.1);
+        self.register_fd_at_epoll(&child.2);
         self.process_map.register_pid(child_index, child.0);
         self.process_map.register_stdout(child_index, child.1);
         self.process_map.register_stderr(child_index, child.2);
-        self.register_fd(child.1);
-        self.register_fd(child.2);
     }
 }

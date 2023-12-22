@@ -20,7 +20,7 @@
 use std::collections::HashMap;
 use std::ops::Index;
 use std::ops::IndexMut;
-use std::os::unix::io::RawFd;
+use std::os::fd::{AsRawFd, BorrowedFd, OwnedFd, RawFd};
 
 use crate::runtime::process::Process;
 
@@ -41,6 +41,8 @@ pub struct ProcessMap {
     stderr_dict: HashMap<RawFd, usize>,
 
     pid_dict: HashMap<Pid, usize>,
+
+    fd_dict: HashMap<RawFd, OwnedFd>,
 }
 
 impl ProcessMap {
@@ -51,6 +53,7 @@ impl ProcessMap {
             stderr_dict: HashMap::new(),
             stdout_dict: HashMap::new(),
             pid_dict: HashMap::new(),
+            fd_dict: HashMap::new(),
         }
     }
 
@@ -65,31 +68,34 @@ impl ProcessMap {
     }
 
     /// Check the file descriptor is known to the index as stdout
-    pub fn is_stdout(&self, fd: RawFd) -> bool {
-        self.stdout_dict.contains_key(&fd)
+    pub fn is_stdout(&self, fd: BorrowedFd) -> bool {
+        self.stdout_dict.contains_key(&fd.as_raw_fd())
     }
 
     /// Index a new stdout file descriptor for the given process id
-    pub fn register_stdout(&mut self, process_id: usize, fd: RawFd) {
-        self.stdout_dict.insert(fd, process_id);
+    pub fn register_stdout(&mut self, process_id: usize, fd: OwnedFd) {
+        self.stdout_dict.insert(fd.as_raw_fd(), process_id);
+        self.fd_dict.insert(fd.as_raw_fd(), fd);
     }
 
     /// Index a new stderr file descriptor for the given process id
-    pub fn register_stderr(&mut self, process_id: usize, fd: RawFd) {
-        self.stderr_dict.insert(fd, process_id);
+    pub fn register_stderr(&mut self, process_id: usize, fd: OwnedFd) {
+        self.stderr_dict.insert(fd.as_raw_fd(), process_id);
+        self.fd_dict.insert(fd.as_raw_fd(), fd);
     }
 
     /// Remove file descriptor from the index
-    pub fn deregister_fd(&mut self, fd: RawFd) {
-        self.stderr_dict.remove(&fd);
-        self.stdout_dict.remove(&fd);
+    pub fn deregister_fd(&mut self, fd: BorrowedFd) {
+        self.stderr_dict.remove(&fd.as_raw_fd());
+        self.stdout_dict.remove(&fd.as_raw_fd());
+        self.fd_dict.remove(&fd.as_raw_fd());
     }
 
     /// Get the [Process](Process) owning this file descriptor
-    pub fn process_for_fd(&mut self, fd: RawFd) -> &mut Process {
-        if let Some(index) = self.stdout_dict.get(&fd) {
+    pub fn process_for_fd(&mut self, fd: BorrowedFd) -> &mut Process {
+        if let Some(index) = self.stdout_dict.get(&fd.as_raw_fd()) {
             &mut self.processes[*index]
-        } else if let Some(index) = self.stderr_dict.get(&fd) {
+        } else if let Some(index) = self.stderr_dict.get(&fd.as_raw_fd()) {
             &mut self.processes[*index]
         } else {
             panic!("Requested invalid fd");

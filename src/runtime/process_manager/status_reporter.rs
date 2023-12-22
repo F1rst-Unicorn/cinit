@@ -40,7 +40,8 @@ impl ProcessManager {
 
     /// Open the socket and write a report to it
     fn write_report(&mut self) -> Result<(), nix::Error> {
-        let mut file = unsafe { std::fs::File::from_raw_fd(socket::accept(self.status_fd)?) };
+        let mut file =
+            unsafe { std::fs::File::from_raw_fd(socket::accept(self.status_fd.as_raw_fd())?) };
 
         self.format_report(&mut file)?;
 
