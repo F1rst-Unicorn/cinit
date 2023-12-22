@@ -5,11 +5,21 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [1.6.3]
+
+### Maintenance
+
+* Update library dependencies
+
+## [1.6.2]
+
 ### Maintenance
 
 * Fix linter issues
 
 * Update library dependencies
+
+* Building in podman is now supported
 
 ## [1.6.1]
 
