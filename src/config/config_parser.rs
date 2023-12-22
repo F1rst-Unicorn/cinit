@@ -32,7 +32,7 @@ use crate::config::ProcessConfig;
 /// Unique exit code for this module
 const EXIT_CODE: i32 = 1;
 
-/// Transform configuration root into a [Config](Config)
+/// Transform configuration root into a [Config]
 pub fn parse_config(path: &str) -> Result<Config, i32> {
     let raw_config = read_config(path)?;
     debug!(
@@ -99,7 +99,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
     Ok(result)
 }
 
-/// Transform separate configuration files into a [Config](Config)
+/// Transform separate configuration files into a [Config]
 fn parse_raw_config(raw_config: &[String]) -> Result<Config, i32> {
     let parse_result = raw_config.iter().map(|s| serde_yaml::from_str(s));
 
@@ -120,10 +120,10 @@ fn parse_raw_config(raw_config: &[String]) -> Result<Config, i32> {
     }
 }
 
-/// Merge [ProcessConfig](ProcessConfig)s of the same program into a single
-/// [ProcessConfig](ProcessConfig) instance.
+/// Merge [ProcessConfig]s of the same program into a single
+/// [ProcessConfig] instance.
 ///
-/// [ProcessConfig](ProcessConfig)s are considered the same if they have the same
+/// [ProcessConfig]s are considered the same if they have the same
 /// name
 fn merge_dropins(config: Config) -> Result<Config, i32> {
     let mut dict: HashMap<String, ProcessConfig> = HashMap::new();
@@ -153,7 +153,7 @@ fn merge_dropins(config: Config) -> Result<Config, i32> {
     })
 }
 
-/// Read a file into a [String](std::string::String)
+/// Read a file into a [String]
 pub fn read_file(file_path: &str) -> Result<String, io::Error> {
     let mut file = File::open(file_path)?;
     let mut content = String::new();

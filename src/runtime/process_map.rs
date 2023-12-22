@@ -29,7 +29,7 @@ use nix::unistd::Pid;
 /// Index over process ids
 ///
 /// Owner of all [Processes](Process) at runtime. Each process's id corresponds
-/// to the index position inside the `processes` [Vec](std::vec::Vec).
+/// to the index position inside the `processes` [Vec].
 ///
 /// Maintains indices to map file descriptors and PIDs to their owning processes.
 #[derive(Debug)]
@@ -91,7 +91,7 @@ impl ProcessMap {
         self.fd_dict.remove(&fd.as_raw_fd());
     }
 
-    /// Get the [Process](Process) owning this file descriptor
+    /// Get the [Process] owning this file descriptor
     pub fn process_for_fd(&mut self, fd: BorrowedFd) -> &mut Process {
         if let Some(index) = self.stdout_dict.get(&fd.as_raw_fd()) {
             &mut self.processes[*index]
@@ -122,7 +122,7 @@ impl ProcessMap {
 
     /// Look up a PID in the index
     ///
-    /// Map a PID into a [Process](Process). If the PID is not known to cinit,
+    /// Map a PID into a [Process]. If the PID is not known to cinit,
     /// this PID is an orphan process adopted by cinit.
     pub fn process_for_pid(&mut self, pid: Pid) -> Option<&mut Process> {
         let index = self.process_id_for_pid(pid)?;

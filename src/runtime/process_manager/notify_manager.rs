@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! Additions to [ProcessManager](ProcessManager) for the `notify` interface
+//! Additions to [ProcessManager] for the `notify` interface
 
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -86,7 +86,7 @@ impl ProcessManager {
 
     /// Process the message received from the notify socket
     ///
-    /// Update both the state of the [ProcessManager](ProcessManager) and of the
+    /// Update both the state of the [ProcessManager] and of the
     /// sending [Process](crate::runtime::process::Process).
     fn process(&mut self, state: &str, peer: &UnixCredentials) {
         let pid = Pid::from_raw(peer.pid());
@@ -116,7 +116,7 @@ impl ProcessManager {
         }
     }
 
-    /// Update the state of the [ProcessManager](ProcessManager) according to the
+    /// Update the state of the [ProcessManager] according to the
     /// message
     fn handle_notification(&mut self, process_id: usize, pid: Pid, key: &str, value: &str) {
         if key == "READY" {

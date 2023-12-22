@@ -65,7 +65,7 @@ impl TimerDescription {
         }
     }
 
-    /// Compute the next contained [DateTime](DateTime) starting `from_timepoint`
+    /// Compute the next contained [DateTime] starting `from_timepoint`
     ///
     /// This is an explicit addition over different time units.
     ///
@@ -783,7 +783,7 @@ mod tests {
 
     // Return 1970-06-15T12:30:00 CET Monday
     fn mock_time() -> DateTime<Local> {
-        Local.timestamp(14297400, 0)
+        Local.timestamp_opt(14297400, 0).unwrap()
     }
 
     #[test]

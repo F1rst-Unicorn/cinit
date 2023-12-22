@@ -15,14 +15,14 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! Transform a [ProcessConfig](ProcessConfig) into a runnable [Process](Process)
+//! Transform a [ProcessConfig] into a runnable [Process]
 //!
 //! # Precomputations
 //!
 //! The user and group names are mapped to uid and gid respectively.
 //!
 //! The environment of the process is assembled. This involves copying forwarded
-//! environment variables from cinit and resolving the [tera](tera) templates
+//! environment variables from cinit and resolving the [tera] templates
 //! into strings. After the environment is known, the process's arguments (which
 //! are templates, too) are are resolved.
 //!
@@ -96,7 +96,7 @@ impl Display for Error {
 }
 
 impl Process {
-    /// Build a [Process](Process) from a [ProcessConfig](ProcessConfig).
+    /// Build a [Process] from a [ProcessConfig].
     pub fn from(config: &ProcessConfig) -> Result<Process, Error> {
         if let ProcessType::CronJob { .. } = &config.process_type {
             if !config.before.is_empty() {
@@ -185,7 +185,7 @@ fn sanitise_env(env: &mut HashMap<String, String>, user: &User) {
     env.insert("SHELL".to_string(), "/bin/sh".to_string());
 }
 
-/// Transform [`uid`](ProcessConfig::uid) or [`user`](ProcessConfig::user) into a [User](User)
+/// Transform [`uid`](ProcessConfig::uid) or [`user`](ProcessConfig::user) into a [User]
 fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
     map_id(
         id,
@@ -195,7 +195,7 @@ fn map_uid(id: Option<u32>, name: &Option<String>) -> Result<User, Error> {
     )
 }
 
-/// Transform [`gid`](ProcessConfig::gid) or [`group`](ProcessConfig::group) into a [Group](Group)
+/// Transform [`gid`](ProcessConfig::gid) or [`group`](ProcessConfig::group) into a [Group]
 fn map_gid(id: Option<u32>, name: &Option<String>) -> Result<Group, Error> {
     map_id(
         id,
@@ -236,7 +236,7 @@ where
     id.or(name).ok_or(Error::UserGroupInvalid)
 }
 
-/// Build the environment of the [Process](Process)
+/// Build the environment of the [Process]
 fn convert_env(env: &[HashMap<String, Option<String>>], user: &User) -> HashMap<String, String> {
     let mut result = get_default_env();
     sanitise_env(&mut result, user);

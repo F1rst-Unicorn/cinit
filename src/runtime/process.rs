@@ -141,7 +141,7 @@ pub struct Process {
 }
 
 impl Process {
-    /// Start a new [Process](Process) by forking
+    /// Start a new [Process] by forking
     ///
     /// Fork off the process returning its PID, `stdout`, and `stderr` file
     /// descriptors. The child process will configure according to the

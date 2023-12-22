@@ -130,17 +130,17 @@ pub struct ProcessConfig {
 }
 
 impl ProcessConfig {
-    /// Merge two [ProcessConfigs](ProcessConfig) according to the [documentation
+    /// Merge two [ProcessConfig]s according to the [documentation
     /// on
     /// merging](https://j.njsm.de/git/veenj/cinit/src/branch/master/doc/README.md#merging-configuration)
     ///
-    /// The [ProcessConfig](ProcessConfig) containing the `path` (which is only allowed in one place)
+    /// The [ProcessConfig] containing the `path` (which is only allowed in one place)
     /// is considered the primary one, the other one the dropin.
     ///
     /// # Errors
     ///
     /// If the dropin contains values which are only allowed in one of the configurations
-    /// an approriate [MergeError](MergeError) is raised.
+    /// an approriate [MergeError] is raised.
     pub fn merge(self, other: Self) -> Result<Self, MergeError> {
         assert_eq!(self.name, other.name);
 
@@ -226,7 +226,7 @@ pub struct Config {
 }
 
 impl Config {
-    /// Merge two [Config](Config)s into one
+    /// Merge two [Config]s into one
     pub fn merge(mut self, mut other: Self) -> Self {
         self.programs.append(&mut other.programs);
         self

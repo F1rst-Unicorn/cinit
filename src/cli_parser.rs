@@ -26,7 +26,7 @@ pub const FLAG_VERBOSE: &str = "verbose";
 /// Control cinit's configuration root
 pub const FLAG_CONFIG: &str = "config";
 
-/// Transform command line into [clap](clap) struct
+/// Transform command line into [clap] struct
 pub fn parse_arguments() -> clap::ArgMatches {
     let app = Command::new("cinit")
         .version(concat!(

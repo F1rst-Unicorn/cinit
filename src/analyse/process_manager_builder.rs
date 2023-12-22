@@ -15,13 +15,13 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! Build the [ProcessManager](crate::runtime::process_manager::ProcessManager)
+//! Build the [ProcessManager]
 //! for runtime execution.
 //!
 //! # Precomputations
 //!
-//! Transform each contained [ProcessConfig](ProcessConfig) into a
-//! [Process](Process). Every process is assigned an arbitrary, unique process
+//! Transform each contained [ProcessConfig] into a
+//! [Process]. Every process is assigned an arbitrary, unique process
 //! id, not to be confused with UNIX PIDs which are only valid while the process
 //! runs.
 //!
@@ -168,7 +168,7 @@ impl ProcessManager {
     }
 }
 
-/// Build the [DependencyManager](DependencyManager)
+/// Build the [DependencyManager]
 ///
 /// Every process is assigned an arbitrary unique id using the same procedure as
 /// in [build_cron()](build_cron).
@@ -237,7 +237,7 @@ fn build_dependency_manager(config: &Config) -> Result<DependencyManager, i32> {
     }
 }
 
-/// Build the [Cron](Cron)
+/// Build the [Cron]
 ///
 /// Every process is assigned an arbitrary unique id using the same procedure as
 /// in [build_dependency_manager()](build_dependency_manager).

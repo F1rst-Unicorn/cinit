@@ -15,7 +15,7 @@
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-//! Additions to [ProcessManager](ProcessManager) to report the runtime status
+//! Additions to [ProcessManager] to report the runtime status
 
 use crate::runtime::process::{ProcessState, ProcessType};
 use crate::runtime::process_manager::ProcessManager;

@@ -77,7 +77,7 @@ impl DependencyManager {
     ///
     /// # Errors
     ///
-    /// During construction the error conditions presented in [Error](Error) are
+    /// During construction the error conditions presented in [Error] are
     /// checked.
     pub fn with_nodes(config: &[(usize, ProcessConfig)]) -> Result<Self, Error> {
         let name_dict = DependencyManager::build_name_dict(config);
