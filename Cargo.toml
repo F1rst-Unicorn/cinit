@@ -26,7 +26,7 @@ log4rs = "1.0.0"
 caps = "0.5.2"
 
 [dependencies.nix]
-version = "0.27.1"
+version = "0.28.0"
 features = ["signal", "user", "fs", "term", "ioctl", "socket", "uio", "event"]
 
 [build-dependencies]

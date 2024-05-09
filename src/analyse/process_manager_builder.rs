@@ -51,7 +51,7 @@ use nix::errno;
 use nix::sys::epoll::Epoll;
 use nix::sys::signalfd::SignalFd;
 use nix::sys::socket::sockopt::PassCred;
-use nix::sys::socket::{setsockopt, SockType};
+use nix::sys::socket::{setsockopt, Backlog, SockType};
 use nix::sys::{epoll, signal, signalfd, socket};
 use std::ffi::CString;
 use std::fs::remove_file;
@@ -122,7 +122,7 @@ impl ProcessManager {
     /// * `SIGINT`
     /// * `SIGTERM`
     /// * `SIGQUIT`
-    fn setup_signal_handler() -> Result<signalfd::SignalFd, nix::Error> {
+    fn setup_signal_handler() -> Result<SignalFd, nix::Error> {
         let mut signals = signalfd::SigSet::empty();
         signals.add(signal::SIGCHLD);
         signals.add(signal::SIGINT);
@@ -154,13 +154,16 @@ impl ProcessManager {
             let raw_path = CString::new(path).expect("could not build cstring");
             let res = libc::chmod(raw_path.into_raw(), 0o777);
             if res == -1 {
-                return Err(errno::Errno::from_i32(errno::errno()));
+                return Err(errno::Errno::last());
             }
         }
 
         setsockopt(&socket_fd, PassCred {}, &true)?;
         if typ == SockType::Stream {
-            socket::listen(&socket_fd, 0)?;
+            socket::listen(
+                &socket_fd,
+                Backlog::new(0).expect("listen() could not set backlog 0"),
+            )?;
         }
 
         debug!("{} unix domain socket open", path);

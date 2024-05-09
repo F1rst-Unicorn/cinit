@@ -38,7 +38,6 @@ use std::ffi::CStr;
 use std::ffi::CString;
 use std::fmt::{Display, Error as FmtError, Formatter};
 use std::os::fd::AsRawFd;
-use std::os::fd::FromRawFd;
 use std::os::fd::OwnedFd;
 use std::path::PathBuf;
 use std::process::exit;
@@ -303,7 +302,7 @@ impl Process {
 
         std::env::set_current_dir(&self.workdir).map_err(|e| match e.raw_os_error() {
             None => Error::EINVAL,
-            Some(code) => nix::errno::Errno::from_i32(code),
+            Some(code) => nix::errno::Errno::from_raw(code),
         })?;
 
         self.set_user_and_caps()?;
@@ -451,18 +450,7 @@ impl Process {
     fn create_pipes(&self) -> Result<(Pipe, Pipe), Error> {
         let stdout = unistd::pipe()?;
         let stderr = unistd::pipe()?;
-        Ok(unsafe {
-            (
-                (
-                    OwnedFd::from_raw_fd(stdout.0),
-                    OwnedFd::from_raw_fd(stdout.1),
-                ),
-                (
-                    OwnedFd::from_raw_fd(stderr.0),
-                    OwnedFd::from_raw_fd(stderr.1),
-                ),
-            )
-        })
+        Ok((stdout, stderr))
     }
 }
 

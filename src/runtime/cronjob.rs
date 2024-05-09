@@ -148,7 +148,7 @@ impl TimerDescription {
             // only compute this if really needed
             let mut tmp = result + date_duration;
             while tmp.day() != next_day || tmp.month() != next_month {
-                date_duration = date_duration + Duration::days(1);
+                date_duration += Duration::days(1);
                 tmp = result + date_duration;
             }
         }

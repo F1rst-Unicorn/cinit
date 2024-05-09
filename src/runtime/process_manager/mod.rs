@@ -193,7 +193,7 @@ impl ProcessManager {
     /// Dispatch events from the various file descriptors via `epoll()`
     fn dispatch_epoll(&mut self) {
         let mut event_buffer = [epoll::EpollEvent::empty(); 10];
-        let epoll_result = self.epoll.wait(&mut event_buffer, 1000);
+        let epoll_result = self.epoll.wait(&mut event_buffer, 1000u16);
         match epoll_result {
             Ok(count) => {
                 debug!("Got {} events", count);
