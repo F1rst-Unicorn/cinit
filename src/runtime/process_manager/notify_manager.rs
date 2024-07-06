@@ -73,7 +73,7 @@ impl ProcessManager {
         // unwrapping is safe because we pass exactly one iov buffer which we retrieve here
         let message = slice_to_string(result.iovs().next().unwrap());
         let peer;
-        for m in result.cmsgs() {
+        for m in result.cmsgs()? {
             if let ScmCredentials(credentials) = m {
                 peer = credentials;
                 debug!("Received notification '{}' from {}", message, peer.pid());

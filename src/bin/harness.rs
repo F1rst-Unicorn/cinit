@@ -121,7 +121,7 @@ fn main() {
         .expect("invalid sleep seconds");
 
     let mask = signalfd::SigSet::all();
-    let mut sfd = signalfd::SignalFd::with_flags(&mask, signalfd::SfdFlags::SFD_NONBLOCK)
+    let sfd = signalfd::SignalFd::with_flags(&mask, signalfd::SfdFlags::SFD_NONBLOCK)
         .expect("Could not setup signalfd");
 
     for _ in 0..sleep_seconds {
