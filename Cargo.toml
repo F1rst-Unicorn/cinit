@@ -13,7 +13,7 @@ edition = "2021"
 lto = true
 
 [dependencies]
-clap = "4.0.13"
+clap = { version = "4.0.13", features = ["string"] }
 log = "0.4.11"
 serde = "1.0.117"
 serde_derive = "1.0.117"
@@ -30,4 +30,4 @@ version = "0.29.0"
 features = ["signal", "user", "fs", "term", "ioctl", "socket", "uio", "event"]
 
 [build-dependencies]
-vergen = { version = "8", features = ["build", "git", "git2"] }
+vergen-git2 = { version = "1.0.0", features = ["build"] }

@@ -14,12 +14,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-extern crate vergen;
 
 use std::error::Error;
-use vergen::EmitBuilder;
+use vergen_git2::Emitter;
+use vergen_git2::Git2Builder;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    EmitBuilder::builder().all_git().all_build().emit()?;
+    let git2 = Git2Builder::all_git()?;
+    Emitter::default().add_instructions(&git2)?.emit()?;
     Ok(())
 }

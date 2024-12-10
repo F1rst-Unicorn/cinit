@@ -28,14 +28,18 @@ pub const FLAG_CONFIG: &str = "config";
 
 /// Transform command line into [clap] struct
 pub fn parse_arguments() -> clap::ArgMatches {
+    let version = format!(
+        "{} {}{}",
+        env!("CARGO_PKG_VERSION"),
+        env!("VERGEN_GIT_SHA"),
+        if env!("VERGEN_GIT_DIRTY") == "true" {
+            "-dirty"
+        } else {
+            ""
+        }
+    );
     let app = Command::new("cinit")
-        .version(concat!(
-            env!("CARGO_PKG_VERSION"),
-            " ",
-            env!("VERGEN_GIT_SHA"),
-            " ",
-            env!("VERGEN_BUILD_TIMESTAMP")
-        ))
+        .version(version)
         .about(env!("CARGO_PKG_DESCRIPTION"))
         .arg(
             Arg::new("config")
