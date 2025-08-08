@@ -12,6 +12,14 @@ edition = "2021"
 [profile.release]
 lto = true
 
+[[bin]]
+name = "forker"
+path = "src/programs/forker.rs"
+
+[[bin]]
+name = "harness"
+path = "src/programs/harness.rs"
+
 [dependencies]
 clap = { version = "4.0.13", features = ["string"] }
 log = "0.4.11"

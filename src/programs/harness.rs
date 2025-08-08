@@ -143,7 +143,7 @@ fn main() {
 /// Dump runtime information into a file.
 fn dump(output: &str) {
     let mut file =
-        File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{}'", output));
+        File::create(output).unwrap_or_else(|_| panic!("Failed to open output file '{output}'"));
 
     file.write_fmt(format_args!("programs:\n"))
         .expect("Failed to open output file");
@@ -173,7 +173,7 @@ fn dump(output: &str) {
     file.write_fmt(format_args!("    groups:\n"))
         .expect("Failed to dump");
     for group in unistd::getgroups().expect("Failed to get groups") {
-        file.write_fmt(format_args!("      - {}\n", group))
+        file.write_fmt(format_args!("      - {group}\n"))
             .expect("Failed to dump");
     }
 
@@ -212,7 +212,7 @@ fn dump(output: &str) {
             if !printed {
                 file.write_fmt(format_args!("\n")).expect("Failed to dump");
             }
-            file.write_fmt(format_args!("      {}: {}\n", cap, sets))
+            file.write_fmt(format_args!("      {cap}: {sets}\n"))
                 .expect("Failed to dump");
             printed = true;
         }
@@ -225,7 +225,7 @@ fn dump(output: &str) {
     file.write_fmt(format_args!("    env:\n"))
         .expect("Failed to open output file");
     for (key, value) in std::env::vars() {
-        file.write_fmt(format_args!("      {}: '{}'\n", key, value))
+        file.write_fmt(format_args!("      {key}: '{value}'\n"))
             .expect("Failed to dump");
     }
 
