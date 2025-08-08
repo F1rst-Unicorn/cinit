@@ -54,7 +54,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
     let metadata_result = fs::metadata(path);
 
     if let Err(err) = metadata_result {
-        error!("Failed to read metadata of {}: {}", path, err);
+        error!("Failed to read metadata of {path}: {err}");
         return Err(EXIT_CODE);
     }
 
@@ -64,7 +64,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
     if metadata.file_type().is_dir() {
         let content = fs::read_dir(path);
         if let Err(err) = content {
-            error!("Failed to get directory content of {}: {}", path, err);
+            error!("Failed to get directory content of {path}: {err}");
             return Err(EXIT_CODE);
         }
 
@@ -72,7 +72,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
 
         for entry in content.unwrap() {
             if let Err(err) = entry {
-                error!("Failed to read {}: {}", path, err);
+                error!("Failed to read {path}: {err}");
                 return Err(EXIT_CODE);
             }
             let entry_path = entry.unwrap().path();
@@ -84,7 +84,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
     } else if metadata.file_type().is_file() {
         match read_file(path) {
             Err(error) => {
-                error!("Failed to read file {}: {}", path, error);
+                error!("Failed to read file {path}: {error}");
                 return Err(EXIT_CODE);
             }
             Ok(content) => {
@@ -92,7 +92,7 @@ fn read_config(path: &str) -> Result<Vec<String>, i32> {
             }
         }
     } else {
-        warn!("Ignoring file {}", path);
+        warn!("Ignoring file {path}");
         result = Vec::new();
     }
 
@@ -134,8 +134,8 @@ fn merge_dropins(config: Config) -> Result<Config, i32> {
                 let merged = process.merge(process_config);
 
                 if let Err(e) = merged {
-                    error!("{}", e);
-                    trace!("{}", e);
+                    error!("{e}");
+                    trace!("{e}");
                     return Err(EXIT_CODE);
                 }
 

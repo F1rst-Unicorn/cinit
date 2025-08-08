@@ -87,7 +87,7 @@ fn run() -> i32 {
     let config_path = arguments
         .get_one::<String>(cli_parser::FLAG_CONFIG)
         .expect("Missing default value in cli_parser");
-    info!("Config is at {}", config_path);
+    info!("Config is at {config_path}");
 
     info!("Parsing config");
     let process_tree = match config_parser::parse_config(config_path) {

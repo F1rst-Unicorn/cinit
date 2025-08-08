@@ -34,7 +34,7 @@ impl ProcessManager {
     /// Print the runtime state handling potential errors
     pub fn report_status(&mut self) {
         if let Err(e) = self.write_report() {
-            warn!("Failed to print report: {:#?}", e);
+            warn!("Failed to print report: {e:#?}");
         }
     }
 

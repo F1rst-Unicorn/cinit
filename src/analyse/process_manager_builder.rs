@@ -87,7 +87,7 @@ impl ProcessManager {
         let cron = build_cron(config);
         let (signal_fd, status_fd, notify_fd) = match Self::setup_file_descriptors() {
             Err(e) => {
-                error!("Could not setup sockets: {}", e);
+                error!("Could not setup sockets: {e}");
                 return Err(EXIT_CODE);
             }
             Ok(v) => v,
@@ -166,7 +166,7 @@ impl ProcessManager {
             )?;
         }
 
-        debug!("{} unix domain socket open", path);
+        debug!("{path} unix domain socket open");
         Ok(socket_fd)
     }
 }

@@ -37,8 +37,8 @@ use nix::Error;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::fmt::{Display, Error as FmtError, Formatter};
-use std::os::fd::AsRawFd;
 use std::os::fd::OwnedFd;
+use std::os::fd::{AsRawFd, FromRawFd};
 use std::path::PathBuf;
 use std::process::exit;
 use std::str::FromStr;
@@ -159,7 +159,7 @@ impl Process {
         match fork_result {
             Ok(unistd::ForkResult::Parent { child: child_pid }) => {
                 trace!("Started child {}", self.name);
-                info!("Started child {}", child_pid);
+                info!("Started child {child_pid}");
                 self.state = match self.process_type {
                     ProcessType::Notify => ProcessState::Starting,
                     _ => ProcessState::Running,
@@ -198,7 +198,7 @@ impl Process {
         match key {
             "READY" => {
                 if value != "1" {
-                    warn!("Expected READY=1 but value was '{}'", value);
+                    warn!("Expected READY=1 but value was '{value}'");
                     return;
                 }
 
@@ -215,7 +215,7 @@ impl Process {
             }
             "STOPPING" => {
                 if value != "1" {
-                    warn!("Expected STOPPING=1 but value was '{}'", value);
+                    warn!("Expected STOPPING=1 but value was '{value}'");
                     return;
                 }
 
@@ -230,7 +230,7 @@ impl Process {
             "MAINPID" => {
                 let pid_result = value.parse::<libc::pid_t>();
                 if let Err(e) = pid_result {
-                    warn!("could not parse new main pid '{}': {}", value, e);
+                    warn!("could not parse new main pid '{value}': {e}");
                     return;
                 }
 
@@ -271,11 +271,11 @@ impl Process {
 
         if let Ok(fds) = &result {
             fcntl::fcntl(
-                fds.0 .0.as_raw_fd(),
+                &fds.0 .0,
                 fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
             )?;
             fcntl::fcntl(
-                fds.1 .0.as_raw_fd(),
+                &fds.1 .0,
                 fcntl::FcntlArg::F_SETFD(fcntl::FdFlag::FD_CLOEXEC),
             )?;
         }
@@ -291,8 +291,10 @@ impl Process {
     ///
     /// cinit's `sigprocmask` is reverted to not mask any signals.
     fn setup_child(&mut self, stdout: OwnedFd, stderr: OwnedFd) -> Result<(), Error> {
-        while unistd::dup2(stdout.as_raw_fd(), std::io::stdout().as_raw_fd()).is_err() {}
-        while unistd::dup2(stderr.as_raw_fd(), std::io::stderr().as_raw_fd()).is_err() {}
+        let mut new_stdout = unsafe { OwnedFd::from_raw_fd(std::io::stdout().as_raw_fd()) };
+        let mut new_stderr = unsafe { OwnedFd::from_raw_fd(std::io::stderr().as_raw_fd()) };
+        while unistd::dup2(&stdout, &mut new_stdout).is_err() {}
+        while unistd::dup2(&stderr, &mut new_stderr).is_err() {}
 
         let signals = signal::SigSet::empty();
         signal::sigprocmask(signal::SigmaskHow::SIG_SETMASK, Some(&signals), None)?;
@@ -440,8 +442,8 @@ impl Process {
         mode.insert(stat::Mode::S_IRUSR);
         mode.insert(stat::Mode::S_IWUSR);
         mode.insert(stat::Mode::S_IWGRP);
-        stat::fchmod(stdout.slave.as_raw_fd(), mode)?;
-        stat::fchmod(stderr.slave.as_raw_fd(), mode)?;
+        stat::fchmod(&stdout.slave, mode)?;
+        stat::fchmod(&stderr.slave, mode)?;
 
         info!("Pseudo terminals created");
         Ok(((stdout.master, stdout.slave), (stderr.master, stderr.slave)))

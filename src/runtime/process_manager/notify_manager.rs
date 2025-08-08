@@ -44,7 +44,7 @@ impl ProcessManager {
     /// This will block unless data is ready to be read.
     pub fn read_notification(&mut self) {
         if let Err(e) = self.read_notification_internally() {
-            warn!("Failed to receive notification: {:#?}", e);
+            warn!("Failed to receive notification: {e:#?}");
         }
     }
 
@@ -151,12 +151,12 @@ impl ProcessManager {
             let key = split.next().expect("At least one split has to exist");
             if let Some(value) = split.next() {
                 if !allowed_keys.contains(key) {
-                    info!("notify manager ignores variable '{}' = '{}'", key, value);
+                    info!("notify manager ignores variable '{key}' = '{value}'");
                     continue;
                 }
                 result.insert(key.to_string(), value.to_string());
             } else {
-                warn!("notify_manager failed to parse status line '{}'", line);
+                warn!("notify_manager failed to parse status line '{line}'");
             }
         }
         result

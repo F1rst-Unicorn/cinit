@@ -115,10 +115,7 @@ impl DependencyManager {
     pub fn notify_process_finished(&mut self, process_id: usize) {
         let process = self.nodes.get_mut(&process_id).expect("invalid process id");
         if process.finished {
-            debug!(
-                "Process {} has already triggered its dependants",
-                process_id
-            );
+            debug!("Process {process_id} has already triggered its dependants");
             return;
         }
         process.finished = true;

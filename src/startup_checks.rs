@@ -34,7 +34,7 @@ pub fn do_startup_checks() -> Result<(), i32> {
 fn check_kernel_version() -> Result<(), i32> {
     let kernel_info = match uname() {
         Err(e) => {
-            warn!("Could not read kernel version: {}", e);
+            warn!("Could not read kernel version: {e}");
             return Ok(());
         }
         Ok(v) => v,
@@ -47,10 +47,7 @@ fn check_kernel_version() -> Result<(), i32> {
             let minor = minor_raw.parse::<u32>();
 
             if major.is_err() || minor.is_err() {
-                warn!(
-                    "Could not determine kernel version from input '{}'",
-                    release_string
-                );
+                warn!("Could not determine kernel version from input '{release_string}'");
                 return Ok(());
             }
 
@@ -62,21 +59,15 @@ fn check_kernel_version() -> Result<(), i32> {
                 error!("cinit to work properly. Aborting");
                 Err(EXIT_CODE)
             } else {
-                debug!("Running on kernel version {}", release_string);
+                debug!("Running on kernel version {release_string}");
                 Ok(())
             }
         } else {
-            warn!(
-                "Could not determine kernel version from input '{}'",
-                release_string
-            );
+            warn!("Could not determine kernel version from input '{release_string}'");
             Ok(())
         }
     } else {
-        warn!(
-            "Could not determine kernel version from input '{}'",
-            release_string
-        );
+        warn!("Could not determine kernel version from input '{release_string}'");
         Ok(())
     }
 }

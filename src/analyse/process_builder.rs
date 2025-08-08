@@ -311,8 +311,8 @@ fn copy_from_config(
                         }
                         Ok(value) => {
                             if looks_like_tera_template(&value) {
-                                warn!("Environment variable {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", key, value);
-                                trace!("Environment variable {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", key, value);
+                                warn!("Environment variable {key} looks like a tera template but has value '{value}' after instantiation. cinit will use raw value");
+                                trace!("Environment variable {key} looks like a tera template but has value '{value}' after instantiation. cinit will use raw value");
                             }
                             value
                         }
@@ -377,8 +377,8 @@ fn treat_template_error_in_argument(
         }
         Ok(value) => {
             if looks_like_tera_template(&value) {
-                warn!("Argument {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", i, value);
-                trace!("Argument {} looks like a tera template but has value '{}' after instantiation. cinit will use raw value", i, value);
+                warn!("Argument {i} looks like a tera template but has value '{value}' after instantiation. cinit will use raw value");
+                trace!("Argument {i} looks like a tera template but has value '{value}' after instantiation. cinit will use raw value");
             }
             value
         }

@@ -24,5 +24,5 @@ use log::info;
 
 /// Log a message from a child process
 pub fn log(child_name: &str, message: &str) {
-    info!("[{}] {}", child_name, message);
+    info!("[{child_name}] {message}");
 }

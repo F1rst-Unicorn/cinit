@@ -83,7 +83,7 @@ impl ProcessManager {
     pub fn start(&mut self) -> i32 {
         match self.setup() {
             Err(content) => {
-                error!("Failed to register with epoll: {}", content);
+                error!("Failed to register with epoll: {content}");
                 return EXIT_CODE;
             }
             _ => {
@@ -121,18 +121,18 @@ impl ProcessManager {
         while let Ok(status) = wait::waitpid(Pid::from_raw(-1), Some(wait_args)) {
             match status {
                 wait::WaitStatus::Exited(pid, rc) => {
-                    debug!("Got signal from child: {:?}", status);
+                    debug!("Got signal from child: {status:?}");
                     self.handle_finished_child(pid, rc)
                 }
                 wait::WaitStatus::Signaled(pid, signal, _) => {
-                    debug!("Got signal from child: {:?}", status);
+                    debug!("Got signal from child: {status:?}");
                     self.handle_finished_child(pid, signal as i32)
                 }
                 wait::WaitStatus::StillAlive => {
                     break;
                 }
                 _ => {
-                    debug!("Got unknown result {:#?}", status);
+                    debug!("Got unknown result {status:#?}");
                 }
             }
         }
@@ -149,8 +149,8 @@ impl ProcessManager {
         let child_index_option = self.process_map.process_id_for_pid(pid);
 
         if child_index_option.is_none() {
-            info!("Reaped zombie process {} with return code {}", pid, rc);
-            trace!("Reaped zombie process {} with return code {}", pid, rc);
+            info!("Reaped zombie process {pid} with return code {rc}");
+            trace!("Reaped zombie process {pid} with return code {rc}");
             return;
         }
 
@@ -196,13 +196,13 @@ impl ProcessManager {
         let epoll_result = self.epoll.wait(&mut event_buffer, 1000u16);
         match epoll_result {
             Ok(count) => {
-                debug!("Got {} events", count);
+                debug!("Got {count} events");
                 for event in event_buffer.iter().take(count) {
                     self.handle_event(*event);
                 }
             }
             Err(error) => {
-                error!("Could not complete epoll: {:#?}", error);
+                error!("Could not complete epoll: {error:#?}");
             }
         }
     }
@@ -292,7 +292,7 @@ impl ProcessManager {
                         );
                     }
                     other => {
-                        debug!("Received unknown signal: {:?}", other);
+                        debug!("Received unknown signal: {other:?}");
                     }
                 }
             }
@@ -300,7 +300,7 @@ impl ProcessManager {
                 debug!("No signal received");
             }
             Err(other) => {
-                debug!("Received unknown signal: {:?}", other);
+                debug!("Received unknown signal: {other:?}");
             }
         }
     }
@@ -350,7 +350,7 @@ impl ProcessManager {
     /// Print out child's message reading from its file descriptor
     fn print_child_output(&mut self, fd: BorrowedFd) {
         let mut buffer = [0_u8; 4096];
-        let length = unistd::read(fd.as_raw_fd(), &mut buffer);
+        let length = unistd::read(fd, &mut buffer);
 
         if let Ok(length) = length {
             let raw_output = String::from_utf8_lossy(&buffer[..length]);
@@ -425,7 +425,7 @@ impl ProcessManager {
 
         let child = match child.start() {
             Err(child_result) => {
-                error!("Failed to spawn child: {}", child_result);
+                error!("Failed to spawn child: {child_result}");
                 return;
             }
             Ok(v) => v,

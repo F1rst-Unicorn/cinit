@@ -29,7 +29,6 @@
 use std::fs::File;
 use std::io::Write;
 use std::net::Shutdown;
-use std::os::unix::io::AsRawFd;
 use std::os::unix::net::UnixDatagram;
 use std::process::exit;
 use std::thread;
@@ -179,8 +178,8 @@ fn dump(output: &str) {
 
     file.write_fmt(format_args!(
         "    pty: {}\n",
-        unistd::isatty(std::io::stdout().as_raw_fd()).unwrap_or(false)
-            && unistd::isatty(std::io::stderr().as_raw_fd()).unwrap_or(false)
+        unistd::isatty(std::io::stdout()).unwrap_or(false)
+            && unistd::isatty(std::io::stderr()).unwrap_or(false)
     ))
     .expect("Failed to dump");
 
