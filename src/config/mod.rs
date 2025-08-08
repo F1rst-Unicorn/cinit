@@ -43,14 +43,13 @@ pub enum MergeError {
 impl Display for MergeError {
     fn fmt(&self, f: &mut Formatter) -> Result<(), FmtError> {
         match self {
-            MergeError::PathSpecified(s) => write!(f, "Duplicate program found for name {}", s),
+            MergeError::PathSpecified(s) => write!(f, "Duplicate program found for name {s}"),
             MergeError::InvalidFieldSpecified(name, field) => write!(
                 f,
-                "Configuration drop-in for {} contains duplicate field {}",
-                name, field
+                "Configuration drop-in for {name} contains duplicate field {field}"
             ),
             MergeError::CronjobSpecified(s) => {
-                write!(f, "Configuration drop-in for {} changes type to cronjob", s)
+                write!(f, "Configuration drop-in for {s} changes type to cronjob")
             }
         }
     }

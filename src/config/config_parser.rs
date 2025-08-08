@@ -177,7 +177,7 @@ mod tests {
         entry.insert("empty_key".to_owned(), None);
         expected_env.push(entry);
 
-        let output = parse_raw_config(&vec![FULL_CONFIG.to_owned()])?;
+        let output = parse_raw_config(&[FULL_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 
@@ -193,7 +193,7 @@ mod tests {
         assert_eq!(Some("group".to_owned()), program.group);
         assert_eq!(vec!["ever"], program.before);
         assert_eq!(vec!["after"], program.after);
-        assert_eq!(false, program.emulate_pty);
+        assert!(!program.emulate_pty);
         assert_eq!(vec!["some"], program.capabilities);
         assert_eq!(expected_env, program.env);
 
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn parse_omitting_all_optional_values() -> Result<(), i32> {
-        let output = parse_raw_config(&vec![MINIMAL_CONFIG.to_owned()])?;
+        let output = parse_raw_config(&[MINIMAL_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 
@@ -218,7 +218,7 @@ mod tests {
         assert_eq!(None, program.group);
         assert_eq!(Vec::new() as Vec<String>, program.before);
         assert_eq!(Vec::new() as Vec<String>, program.after);
-        assert_eq!(false, program.emulate_pty);
+        assert!(!program.emulate_pty);
         assert_eq!(Vec::new() as Vec<String>, program.capabilities);
         assert_eq!(
             Vec::new() as Vec<HashMap<String, Option<String>>>,
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn parse_cronjob() -> Result<(), i32> {
-        let output = parse_raw_config(&vec![CRONJOB_CONFIG.to_owned()])?;
+        let output = parse_raw_config(&[CRONJOB_CONFIG.to_owned()])?;
 
         assert_eq!(1, output.programs.len());
 

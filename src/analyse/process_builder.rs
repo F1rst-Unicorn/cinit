@@ -91,7 +91,7 @@ impl Display for Error {
             Error::PathMissing => "Missing 'path' attribute",
         };
 
-        write!(f, "{}", message)
+        write!(f, "{message}")
     }
 }
 
@@ -160,7 +160,7 @@ impl Process {
                 .args
                 .iter()
                 .enumerate()
-                .map(|(i, x)| (i, x, render_template(&format!("Argument {}", i), &env, x)))
+                .map(|(i, x)| (i, x, render_template(&format!("Argument {i}"), &env, x)))
                 .map(|(i, x, y)| treat_template_error_in_argument(i, x, y))
                 .map(|x| CString::new(x).expect("Could not unwrap arg"))
                 .collect(),
@@ -393,10 +393,10 @@ pub fn looks_like_tera_template(value: &str) -> bool {
 /// Pretty-print tera errors for users
 fn render_tera_error(error: &tera::Error) -> String {
     let mut result = String::new();
-    result = format!("{}{}\n", result, error);
+    result = format!("{result}{error}\n");
     let mut source = error.source();
     while let Some(error) = source {
-        result = format!("{}{}\n", result, error);
+        result = format!("{result}{error}\n");
         source = error.source();
     }
     result

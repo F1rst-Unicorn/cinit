@@ -71,7 +71,7 @@ impl ProcessManager {
                         .map_err(libc_helpers::map_to_errno)?;
                 }
                 ProcessState::Crashed(rc) => {
-                    file.write_fmt(format_args!("    exit_code: {}\n", rc))
+                    file.write_fmt(format_args!("    exit_code: {rc}\n"))
                         .map_err(libc_helpers::map_to_errno)?;
                 }
                 _ => {}

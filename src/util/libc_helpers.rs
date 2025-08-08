@@ -109,7 +109,8 @@ mod tests {
     fn rescuing_works() {
         unsafe {
             let input = "teststring".as_ptr() as *mut libc::c_char;
-            assert_ne!(input, rescue_from_libc(input).as_ptr() as *mut libc::c_char);
+            let saved = rescue_from_libc(input);
+            assert_ne!(input, saved.as_ptr() as *mut libc::c_char);
         }
     }
 

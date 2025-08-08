@@ -103,7 +103,7 @@ impl Display for ProcessState {
             ProcessState::Done => "done",
             ProcessState::Crashed(_) => "crashed",
         };
-        write!(f, "{}", message)
+        write!(f, "{message}")
     }
 }
 
@@ -350,7 +350,7 @@ impl Process {
                     actual_caps.insert(cap);
                 }
                 _ => {
-                    println!("Failed to set {}", raw_cap);
+                    println!("Failed to set {raw_cap}");
                 }
             }
         }
@@ -455,6 +455,6 @@ impl Process {
 }
 
 fn map_to_errno(e: caps::errors::CapsError) -> Error {
-    println!("capability error: {}", e);
+    println!("capability error: {e}");
     Error::EINVAL
 }
