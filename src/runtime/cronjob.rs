@@ -87,7 +87,6 @@ impl TimerDescription {
                 *self.minute.iter().next().unwrap()
             }
         };
-        result = result.with_minute(min).unwrap();
 
         let hour = match self.hour.range((from_timepoint.hour() + carry)..).next() {
             Some(&h) => {
@@ -99,7 +98,64 @@ impl TimerDescription {
                 *self.hour.iter().next().unwrap()
             }
         };
-        result = result.with_hour(hour).unwrap();
+
+        // When setting the hour and minute, we convert the date to a naive
+        // timezone-unaware variant. This is to deal with folds or gaps induced
+        // by DST, since directly setting the time on a timezone-aware date will
+        // result in an error with no option to disambiguate manually. By first
+        // applying the time change on a timezone-unaware date and manually
+        // adding back the timezone, we can explicitly choose how we handle the
+        // cases when there is a fold (leading to ambiguous times) or a gap
+        // (leading to invalid times).
+        //
+        // Specifically, for when the local wall time has a fold, we choose the
+        // timepoint on the timezone with the latest wall clock time (which is
+        // conversely, the timezone that is "earliest" in Earth rotation). This
+        // is consistent with Paul Vixie's cron implementation.
+        // E.G. items scheduled for 2 AM Zurich time when the local wall time
+        // repeats an hour in autumn will be executed at 2 AM CEST (1 AM CET),
+        // and not 3 AM CEST (2 AM CET).
+        //
+        // Conversely, for when the local wall time has a gap, we try to fast
+        // forward minute-by-minute until the point at which we find a valid
+        // time to run the job retroactively. To prevent infinite loops in the
+        // rare case when a local timezone has no future valid times, we impose
+        // a maximum of 24 hours of lookahead. This is different from Vixie cron,
+        // since that one sets a maximum limit of 3 hours, after which any
+        // missed jobs don't get retroactively executed (and must wait for
+        // the subsequent match). Unfortunately, we can't do something like that
+        // with the way our cron implementation is architected, since knowing
+        // the next execution time is a prerequisite for calculating the one
+        // after it (:= skipping a run is impossible).
+        result = match result
+            .date_naive()
+            .and_hms_opt(hour, min, 0)
+            .unwrap()
+            .and_local_timezone(Local)
+            .latest()
+        {
+            Some(result) => result,
+            None => {
+                let invalid_time = result.date_naive().and_hms_opt(hour, min, 0).unwrap();
+                let mut additional_time = Duration::minutes(1);
+
+                loop {
+                    let new_time = (invalid_time + additional_time)
+                        .and_local_timezone(Local)
+                        .latest();
+
+                    if new_time.is_some() {
+                        return new_time.unwrap();
+                    }
+
+                    if additional_time > Duration::hours(24) {
+                        panic!("System local timezone has no valid times in the 24 hour period from {} to schedule a cron job", invalid_time);
+                    }
+
+                    additional_time += Duration::minutes(1);
+                }
+            }
+        };
 
         let next_weekday = match self
             .weekday
@@ -779,6 +835,75 @@ mod tests {
         let result = uut.unwrap().get_next_execution(mock_time());
 
         assert_eq!(mock_time() + Duration::days(1), result);
+    }
+
+    /// Test case where the time is ambiguous during a fold of the local time
+    /// due to changed timezones (e.g. daylight savings time, like CEST to CET).
+    /// For this test, we require simulating a specific local timezone.
+    #[test]
+    fn disambiguate_folds_with_first_run() {
+        // In Europe/Zurich, the local clock moved back 1 hour on 2025/10/26
+        // from 02:59 AM to 02:00 AM due to a switch from CEST to CET.
+        // Therefore, requesting a cronjob scheduled for 2:30 AM (or any time
+        // within the doubled hour) will be ambiguous as there are two
+        // occurences. We test that in that case, we choose the earlier point in
+        // time for disambiguation to follow Vixie cron's implementation.
+        let uut = TimerDescription::parse("30 2 * * *");
+
+        let current_value = std::env::var("TZ").unwrap();
+
+        // Temporarily modify the process timezone to Zurich time so we can
+        // create a DateTime<Local> for testing the DST transition.
+        std::env::set_var("TZ", "Europe/Zurich");
+        let modified_value = std::env::var("TZ");
+        assert_eq!(modified_value, Ok("Europe/Zurich".to_string()));
+
+        let mock_time = Local.with_ymd_and_hms(2025, 10, 26, 0, 0, 0).unwrap();
+
+        let result = uut.unwrap().get_next_execution(mock_time);
+
+        assert_eq!(
+            mock_time + Duration::hours(2) + Duration::minutes(30),
+            result
+        );
+
+        // Revert the temporary change in timezone
+        std::env::set_var("TZ", current_value.as_str());
+        let modified_value = std::env::var("TZ");
+        assert_eq!(modified_value, Ok(current_value));
+    }
+
+    /// Test case where the time doesn't exist due to a gap of the local time
+    /// due to changed timezones (e.g. daylight savings time, like CET to CEST).
+    /// For this test, we require simultaing a specific local timezone.
+    #[test]
+    fn retroactively_run_on_gaps() {
+        // In Europe/Zurich, the local clock moved forward 1 hour on 2025/03/30
+        // from 01:59 AM to 03:00 AM due to a switch from CET to CEST.
+        // Therefore, requesting a cronjob scheduled for 2:30 AM (or any time
+        // within the missing hour) will be invalid. We test that in that case,
+        // we wait until the next valid wall clock time to run all invalid jobs
+        // retroactively, to follow Vixie cron's implementation.
+        let uut = TimerDescription::parse("30 2 * * *");
+
+        let current_value = std::env::var("TZ").unwrap();
+
+        // Temporarily modify the process timezone to Zurich time so we can
+        // create a DateTime<Local> for testing the DST transition.
+        std::env::set_var("TZ", "Europe/Zurich");
+        let modified_value = std::env::var("TZ");
+        assert_eq!(modified_value, Ok("Europe/Zurich".to_string()));
+
+        let mock_time = Local.with_ymd_and_hms(2025, 3, 30, 0, 0, 0).unwrap();
+
+        let result = uut.unwrap().get_next_execution(mock_time);
+
+        assert_eq!(mock_time + Duration::hours(2), result);
+
+        // Revert the temporary change in timezone
+        std::env::set_var("TZ", current_value.as_str());
+        let modified_value = std::env::var("TZ");
+        assert_eq!(modified_value, Ok(current_value));
     }
 
     // Return 1970-06-15T12:30:00 Monday (Local Time, regardless of which TZ the
