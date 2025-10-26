@@ -781,9 +781,11 @@ mod tests {
         assert_eq!(mock_time() + Duration::days(1), result);
     }
 
-    // Return 1970-06-15T12:30:00 CET Monday
+    // Return 1970-06-15T12:30:00 Monday (Local Time, regardless of which TZ the
+    // test is executed in, as the tests rely on facts like the next 12:30 is
+    // on the day after)
     fn mock_time() -> DateTime<Local> {
-        Local.timestamp_opt(14297400, 0).unwrap()
+        Local.with_ymd_and_hms(1970, 6, 15, 12, 30, 0).unwrap()
     }
 
     #[test]
