@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+### Fixed
+
+* If a cronjob execution time falls into a time gap due to daylight savings time
+  or other, don't crash but schedule an execution immediately after the gap.
+
 ## [1.6.4]
 
 ### Maintenance
