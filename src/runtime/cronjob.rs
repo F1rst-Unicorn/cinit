@@ -837,17 +837,19 @@ mod tests {
         assert_eq!(mock_time() + Duration::days(1), result);
     }
 
-    /// Test case where the time is ambiguous during a fold of the local time
-    /// due to changed timezones (e.g. daylight savings time, like CEST to CET).
-    /// For this test, we require simulating a specific local timezone.
+    /// The next execution time is ambiguous during a fold of the local time
+    /// due to changed offset of the timezone (e.g. daylight savings time, like CEST to CET).
+    /// This is achieved by setting a known timezone with DST.
+    ///
+    /// In Europe/Zurich, the local clock moved back 1 hour on 2025-10-26
+    /// from 02:59 to 02:00 due to a switch from CEST to CET.
+    /// Therefore, requesting a cronjob scheduled for 2:30 (or any time
+    /// within the doubled hour) will be ambiguous as there are two
+    /// occurrences. The next execution is moved to the earlier point in
+    /// time for disambiguation, following
+    /// [Vixie cron's implementation](https://manpages.debian.org/trixie/cron/cron.8.en.html).
     #[test]
-    fn disambiguate_folds_with_first_run() {
-        // In Europe/Zurich, the local clock moved back 1 hour on 2025/10/26
-        // from 02:59 AM to 02:00 AM due to a switch from CEST to CET.
-        // Therefore, requesting a cronjob scheduled for 2:30 AM (or any time
-        // within the doubled hour) will be ambiguous as there are two
-        // occurences. We test that in that case, we choose the earlier point in
-        // time for disambiguation to follow Vixie cron's implementation.
+    fn fold_schedules_the_next_execution_to_the_earlier_option() {
         let uut = TimerDescription::parse("30 2 * * *");
         let current_value = set_time_zone(Some("Europe/Zurich".to_string()));
         let mock_time = Local.with_ymd_and_hms(2025, 10, 26, 0, 0, 0).unwrap();
@@ -861,17 +863,18 @@ mod tests {
         set_time_zone(current_value);
     }
 
-    /// Test case where the time doesn't exist due to a gap of the local time
-    /// due to changed timezones (e.g. daylight savings time, like CET to CEST).
-    /// For this test, we require simultaing a specific local timezone.
+    /// The next execution time doesn't exist due to a gap of the local time
+    /// due to changed offset of the timezone (e.g. daylight savings time, like CET to CEST).
+    /// This is achieved by setting a known timezone with DST.
+    ///
+    /// In Europe/Zurich, the local clock moves forward 1 hour on 2025-03-30
+    /// from 01:59 to 03:00 due to a switch from CET to CEST.
+    /// Therefore, requesting a cronjob scheduled for 02:30 (or any time
+    /// within the missing hour) is invalid. The next execution is moved to
+    /// the next valid wall clock time to run retroactively, following
+    /// [Vixie cron's implementation](https://manpages.debian.org/trixie/cron/cron.8.en.html).
     #[test]
-    fn retroactively_run_on_gaps() {
-        // In Europe/Zurich, the local clock moved forward 1 hour on 2025/03/30
-        // from 01:59 AM to 03:00 AM due to a switch from CET to CEST.
-        // Therefore, requesting a cronjob scheduled for 2:30 AM (or any time
-        // within the missing hour) will be invalid. We test that in that case,
-        // we wait until the next valid wall clock time to run all invalid jobs
-        // retroactively, to follow Vixie cron's implementation.
+    fn gap_schedules_the_next_execution_after_the_gap() {
         let uut = TimerDescription::parse("30 2 * * *");
         let current_value = set_time_zone(Some("Europe/Zurich".to_string()));
         let mock_time = Local.with_ymd_and_hms(2025, 3, 30, 0, 0, 0).unwrap();
