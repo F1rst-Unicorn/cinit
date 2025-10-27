@@ -849,15 +849,7 @@ mod tests {
         // occurences. We test that in that case, we choose the earlier point in
         // time for disambiguation to follow Vixie cron's implementation.
         let uut = TimerDescription::parse("30 2 * * *");
-
-        let current_value = std::env::var("TZ").unwrap();
-
-        // Temporarily modify the process timezone to Zurich time so we can
-        // create a DateTime<Local> for testing the DST transition.
-        std::env::set_var("TZ", "Europe/Zurich");
-        let modified_value = std::env::var("TZ");
-        assert_eq!(modified_value, Ok("Europe/Zurich".to_string()));
-
+        let current_value = set_time_zone(Some("Europe/Zurich".to_string()));
         let mock_time = Local.with_ymd_and_hms(2025, 10, 26, 0, 0, 0).unwrap();
 
         let result = uut.unwrap().get_next_execution(mock_time);
@@ -866,11 +858,7 @@ mod tests {
             mock_time + Duration::hours(2) + Duration::minutes(30),
             result
         );
-
-        // Revert the temporary change in timezone
-        std::env::set_var("TZ", current_value.as_str());
-        let modified_value = std::env::var("TZ");
-        assert_eq!(modified_value, Ok(current_value));
+        set_time_zone(current_value);
     }
 
     /// Test case where the time doesn't exist due to a gap of the local time
@@ -885,25 +873,25 @@ mod tests {
         // we wait until the next valid wall clock time to run all invalid jobs
         // retroactively, to follow Vixie cron's implementation.
         let uut = TimerDescription::parse("30 2 * * *");
-
-        let current_value = std::env::var("TZ").unwrap();
-
-        // Temporarily modify the process timezone to Zurich time so we can
-        // create a DateTime<Local> for testing the DST transition.
-        std::env::set_var("TZ", "Europe/Zurich");
-        let modified_value = std::env::var("TZ");
-        assert_eq!(modified_value, Ok("Europe/Zurich".to_string()));
-
+        let current_value = set_time_zone(Some("Europe/Zurich".to_string()));
         let mock_time = Local.with_ymd_and_hms(2025, 3, 30, 0, 0, 0).unwrap();
 
         let result = uut.unwrap().get_next_execution(mock_time);
 
         assert_eq!(mock_time + Duration::hours(2), result);
+        set_time_zone(current_value);
+    }
 
-        // Revert the temporary change in timezone
-        std::env::set_var("TZ", current_value.as_str());
-        let modified_value = std::env::var("TZ");
-        assert_eq!(modified_value, Ok(current_value));
+    fn set_time_zone(time_zone: Option<String>) -> Option<String> {
+        let env = "TZ";
+        let former_value = std::env::var(env).ok();
+        match &time_zone {
+            Some(v) => std::env::set_var(env, v),
+            None => std::env::remove_var(env),
+        }
+        let modified_value = std::env::var(env).ok();
+        assert_eq!(modified_value, time_zone);
+        former_value
     }
 
     // Return 1970-06-15T12:30:00 Monday (Local Time, regardless of which TZ the
