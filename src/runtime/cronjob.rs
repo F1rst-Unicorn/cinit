@@ -897,6 +897,19 @@ mod tests {
         set_time_zone(current_value);
     }
 
+    #[test]
+    fn next_execution_after_gap_is_not_in_the_past() {
+        let uut = TimerDescription::parse("30 2,14 * * *");
+        let current_value = set_time_zone(Some("Europe/Zurich".to_string()));
+        let mock_time = Local.with_ymd_and_hms(2025, 3, 30, 15, 00, 0).unwrap();
+
+        let result = uut.unwrap().get_next_execution(mock_time);
+
+        let expected = Local.with_ymd_and_hms(2025, 3, 31, 2, 30, 0).unwrap();
+        assert_eq!(expected, result);
+        set_time_zone(current_value);
+    }
+
     fn set_time_zone(time_zone: Option<String>) -> Option<String> {
         let env = "TZ";
         let former_value = std::env::var(env).ok();
