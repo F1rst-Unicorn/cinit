@@ -5,6 +5,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 
+## [1.6.5]
+
 ### Fixed
 
 * If a cronjob execution time falls into a time gap due to daylight savings time
