@@ -160,49 +160,41 @@ impl TimerDescription {
             from_timepoint + week_duration
         };
 
+        // Deal with folds and gaps induced by DST etc. by converting the date to
+        // a naive timezone-unaware type.
         let result = next_execution_day
             .date_naive()
             .and_hms_opt(hour, min, 0)
             .unwrap();
-        // When setting the hour and minute, we convert the date to a naive
-        // timezone-unaware variant. This is to deal with folds or gaps induced
-        // by DST, since directly setting the time on a timezone-aware date will
-        // result in an error with no option to disambiguate manually. By first
-        // applying the time change on a timezone-unaware date and manually
-        // adding back the timezone, we can explicitly choose how we handle the
-        // cases when there is a fold (leading to ambiguous times) or a gap
-        // (leading to invalid times).
-        //
-        // Specifically, for when the local wall time has a fold, we choose the
-        // timepoint on the timezone with the latest wall clock time (which is
-        // conversely, the timezone that is "earliest" in Earth rotation). This
-        // is consistent with Paul Vixie's cron implementation.
-        // E.G. items scheduled for 2 AM Zurich time when the local wall time
-        // repeats an hour in autumn will be executed at 2 AM CEST (1 AM CET),
-        // and not 3 AM CEST (2 AM CET).
-        //
-        // Conversely, for when the local wall time has a gap, we try to fast
-        // forward minute-by-minute until the point at which we find a valid
-        // time to run the job retroactively. To prevent infinite loops in the
-        // rare case when a local timezone has no future valid times, we impose
-        // a maximum of 24 hours of lookahead. This is different from Vixie cron,
-        // since that one sets a maximum limit of 3 hours, after which any
-        // missed jobs don't get retroactively executed (and must wait for
-        // the subsequent match). Unfortunately, we can't do something like that
-        // with the way our cron implementation is architected, since knowing
-        // the next execution time is a prerequisite for calculating the one
-        // after it (:= skipping a run is impossible).
         let mut next_valid_minute = Duration::minutes(0);
         loop {
             let invalid_time = result + next_valid_minute;
+            // Apply local time manually to explicitly choose how to handle folds and gaps.
+            // If there is a fold, choose the timepoint on the timezone with the latest wall
+            // clock time (which is conversely, the timezone that is "earliest" in Earth rotation).
+            // This is consistent with Paul Vixie's cron implementation.
+            // E.G. items scheduled for 02:30 Zurich time when the local wall time
+            // repeats an hour in autumn will be executed at 02:30 CEST (01:30 CET),
+            // and not 03:30 CEST (02:30 CET).
             match invalid_time.and_local_timezone(Local).latest() {
                 Some(v) => break v,
+                // Conversely, if the local wall time has a gap, do a linear minute-by-minute
+                // search until there is a valid time to run the job retroactively.
+                // To prevent infinite loops in the rare case when a local timezone has no future
+                // valid times, panic after 11 days which might be the longest known gap duration.
+                // This is different from Vixie cron, which sets a maximum limit of 3 hours, after
+                // which any missed jobs don't get retroactively executed (and must wait for
+                // the subsequent match). Since cinit computes the next execution time based on the
+                // last, it is impossible to skip a run.
                 None => {
                     next_valid_minute += Duration::minutes(1);
                 }
             }
             if next_valid_minute > Duration::days(11) {
-                panic!("System local timezone has no valid times in the 11-day-period from {} to schedule a cron job", invalid_time);
+                panic!(
+                    "System local timezone has no valid times in the 11-day-period from {} to schedule a cron job",
+                    invalid_time
+                );
             }
         }
     }
