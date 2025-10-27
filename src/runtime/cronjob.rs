@@ -144,8 +144,8 @@ impl TimerDescription {
                         .and_local_timezone(Local)
                         .latest();
 
-                    if new_time.is_some() {
-                        return new_time.unwrap();
+                    if let Some(new_time) = new_time {
+                        return new_time;
                     }
 
                     if additional_time > Duration::hours(24) {
