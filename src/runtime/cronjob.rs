@@ -25,7 +25,6 @@ use std::collections::HashMap;
 
 use chrono::prelude::{DateTime, Local};
 use chrono::{Datelike, Duration, Timelike};
-
 use log::debug;
 
 /// Explicitly store all instants of a cron expression
@@ -77,7 +76,6 @@ impl TimerDescription {
     /// expression will always make the next day from today the next day of
     /// execution. In practice this won't likely be relevant.
     pub fn get_next_execution(&self, from_timepoint: DateTime<Local>) -> DateTime<Local> {
-        let mut result = from_timepoint;
         let mut carry = 0;
 
         let min = match self.minute.range((from_timepoint.minute() + 1u32)..).next() {
@@ -96,64 +94,6 @@ impl TimerDescription {
             None => {
                 carry = 1;
                 *self.hour.iter().next().unwrap()
-            }
-        };
-
-        // When setting the hour and minute, we convert the date to a naive
-        // timezone-unaware variant. This is to deal with folds or gaps induced
-        // by DST, since directly setting the time on a timezone-aware date will
-        // result in an error with no option to disambiguate manually. By first
-        // applying the time change on a timezone-unaware date and manually
-        // adding back the timezone, we can explicitly choose how we handle the
-        // cases when there is a fold (leading to ambiguous times) or a gap
-        // (leading to invalid times).
-        //
-        // Specifically, for when the local wall time has a fold, we choose the
-        // timepoint on the timezone with the latest wall clock time (which is
-        // conversely, the timezone that is "earliest" in Earth rotation). This
-        // is consistent with Paul Vixie's cron implementation.
-        // E.G. items scheduled for 2 AM Zurich time when the local wall time
-        // repeats an hour in autumn will be executed at 2 AM CEST (1 AM CET),
-        // and not 3 AM CEST (2 AM CET).
-        //
-        // Conversely, for when the local wall time has a gap, we try to fast
-        // forward minute-by-minute until the point at which we find a valid
-        // time to run the job retroactively. To prevent infinite loops in the
-        // rare case when a local timezone has no future valid times, we impose
-        // a maximum of 24 hours of lookahead. This is different from Vixie cron,
-        // since that one sets a maximum limit of 3 hours, after which any
-        // missed jobs don't get retroactively executed (and must wait for
-        // the subsequent match). Unfortunately, we can't do something like that
-        // with the way our cron implementation is architected, since knowing
-        // the next execution time is a prerequisite for calculating the one
-        // after it (:= skipping a run is impossible).
-        result = match result
-            .date_naive()
-            .and_hms_opt(hour, min, 0)
-            .unwrap()
-            .and_local_timezone(Local)
-            .latest()
-        {
-            Some(result) => result,
-            None => {
-                let invalid_time = result.date_naive().and_hms_opt(hour, min, 0).unwrap();
-                let mut additional_time = Duration::minutes(1);
-
-                loop {
-                    let new_time = (invalid_time + additional_time)
-                        .and_local_timezone(Local)
-                        .latest();
-
-                    if let Some(new_time) = new_time {
-                        return new_time;
-                    }
-
-                    if additional_time > Duration::hours(24) {
-                        panic!("System local timezone has no valid times in the 24 hour period from {} to schedule a cron job", invalid_time);
-                    }
-
-                    additional_time += Duration::minutes(1);
-                }
             }
         };
 
@@ -192,32 +132,78 @@ impl TimerDescription {
         let date_relevant = self.day.len() != 31 || self.month.len() != 12;
 
         let week_duration = Duration::days(i64::from(
-            if next_weekday < result.weekday().num_days_from_sunday() {
-                7 - (result.weekday().num_days_from_sunday() - next_weekday)
+            if next_weekday < from_timepoint.weekday().num_days_from_sunday() {
+                7 - (from_timepoint.weekday().num_days_from_sunday() - next_weekday)
             } else {
-                next_weekday - result.weekday().num_days_from_sunday()
+                next_weekday - from_timepoint.weekday().num_days_from_sunday()
             },
         ));
 
         let mut date_duration = Duration::days(i64::from(carry) * 365_i64);
         if date_relevant {
             // only compute this if really needed
-            let mut tmp = result + date_duration;
+            let mut tmp = from_timepoint + date_duration;
             while tmp.day() != next_day || tmp.month() != next_month {
                 date_duration += Duration::days(1);
-                tmp = result + date_duration;
+                tmp = from_timepoint + date_duration;
             }
         }
 
-        if weekday_relevant && date_relevant {
-            result + std::cmp::min(week_duration, date_duration)
+        let next_execution_day = if weekday_relevant && date_relevant {
+            from_timepoint + std::cmp::min(week_duration, date_duration)
         } else if !weekday_relevant && date_relevant {
-            result + date_duration
+            from_timepoint + date_duration
         } else {
             // For only weekday_relevant this is obviously the result
             // If none of the flags are set, any day works which is expressed
             // already by the week_duration
-            result + week_duration
+            from_timepoint + week_duration
+        };
+
+        let result = next_execution_day
+            .date_naive()
+            .and_hms_opt(hour, min, 0)
+            .unwrap();
+        // When setting the hour and minute, we convert the date to a naive
+        // timezone-unaware variant. This is to deal with folds or gaps induced
+        // by DST, since directly setting the time on a timezone-aware date will
+        // result in an error with no option to disambiguate manually. By first
+        // applying the time change on a timezone-unaware date and manually
+        // adding back the timezone, we can explicitly choose how we handle the
+        // cases when there is a fold (leading to ambiguous times) or a gap
+        // (leading to invalid times).
+        //
+        // Specifically, for when the local wall time has a fold, we choose the
+        // timepoint on the timezone with the latest wall clock time (which is
+        // conversely, the timezone that is "earliest" in Earth rotation). This
+        // is consistent with Paul Vixie's cron implementation.
+        // E.G. items scheduled for 2 AM Zurich time when the local wall time
+        // repeats an hour in autumn will be executed at 2 AM CEST (1 AM CET),
+        // and not 3 AM CEST (2 AM CET).
+        //
+        // Conversely, for when the local wall time has a gap, we try to fast
+        // forward minute-by-minute until the point at which we find a valid
+        // time to run the job retroactively. To prevent infinite loops in the
+        // rare case when a local timezone has no future valid times, we impose
+        // a maximum of 24 hours of lookahead. This is different from Vixie cron,
+        // since that one sets a maximum limit of 3 hours, after which any
+        // missed jobs don't get retroactively executed (and must wait for
+        // the subsequent match). Unfortunately, we can't do something like that
+        // with the way our cron implementation is architected, since knowing
+        // the next execution time is a prerequisite for calculating the one
+        // after it (:= skipping a run is impossible).
+        let mut next_valid_minute = Duration::minutes(0);
+        loop {
+            let invalid_time = result + next_valid_minute;
+            match invalid_time.and_local_timezone(Local).latest() {
+                Some(v) => break v,
+                None => {
+                    next_valid_minute += Duration::minutes(1);
+                }
+            }
+            if next_valid_minute > Duration::days(11) {
+                panic!("System local timezone has no valid times in the 11-day-period from {} to schedule a cron job", invalid_time);
+            }
         }
     }
 }
